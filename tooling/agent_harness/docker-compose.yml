@@ -1,0 +1,40 @@
+name: creativanta-video-engine-harness
+
+services:
+  supervisor:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: creativanta-video-engine-supervisor:1
+    container_name: creativanta-video-engine-supervisor
+    init: true
+    restart: unless-stopped
+    user: "1001:1002"
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    pids_limit: 170
+    mem_limit: 4g
+    cpus: 1.5
+    environment:
+      HOME: /home/whaleorcale
+      XDG_CONFIG_HOME: /home/whaleorcale/.config
+      GIT_TERMINAL_PROMPT: "0"
+      NODE_OPTIONS: "--max-old-space-size=2048"
+    volumes:
+      - ./:/opt/harness:ro
+      - ./data:/var/lib/video-engine-harness:rw
+      - /home/whaleorcale/evergreen/projects/creativanta-video-engine:/workspace/repo:rw
+      - /home/whaleorcale/.local/bin/agy:/usr/local/bin/agy:ro
+      - /home/whaleorcale/.gemini/antigravity-cli:/home/whaleorcale/.gemini/antigravity-cli:rw
+      - /home/whaleorcale/.gemini/config:/home/whaleorcale/.gemini/config:ro
+      - /home/whaleorcale/.config/gh:/home/whaleorcale/.config/gh:ro
+    tmpfs:
+      - /tmp:rw,size=512m,mode=1777
+    healthcheck:
+      test: ["CMD","python3","/opt/harness/supervisor.py","health","--config","/opt/harness/config.json"]
+      interval: 45s
+      timeout: 8s
+      retries: 3
+      start_period: 120s

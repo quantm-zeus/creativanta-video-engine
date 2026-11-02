@@ -1,0 +1,10 @@
+.worktrees/
+.agy/
+.local/
+__pycache__/
+*.pyc
+tooling/agent_harness/data/
+*.log
+.env
+.env.*
+!.env.example

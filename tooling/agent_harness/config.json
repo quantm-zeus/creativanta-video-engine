@@ -1,0 +1,16 @@
+{
+  "repository": "/workspace/repo",
+  "state_dir": "/var/lib/video-engine-harness",
+  "integration_branch": "staging",
+  "max_concurrent": 1,
+  "interval_seconds": 25,
+  "max_agent_minutes": 45,
+  "max_attempts_per_task": 3,
+  "max_runs_per_24h": 12,
+  "ci_timeout_seconds": 10800,
+  "paused": false,
+  "models": {
+    "regular": "gemini-3.8-flash-high",
+    "complex": "gemini-4-argon-high"
+  }
+}
