@@ -1,0 +1,431 @@
+{
+  "$schema": "creativanta.video-engine.contract-threat-review.v1",
+  "task_id": "P0-04",
+  "stream": "A+C",
+  "phase": "P0",
+  "evaluated_on": "2026-11-02",
+  "base_commit": "c3ff673791ac383c003bdbe6490e6ac4b007f066",
+  "scope": "Contract and threat-model review: starter limits, scene & state transitions, tenant entities & RLS, error taxonomy, lease/cancel/idempotency invariants, ambiguity issue resolution, and normative documentation synchronization.",
+  "starter_limits": {
+    "policy_version": "starter-v1",
+    "profiles": {
+      "mp4-720p-v1": {
+        "kind": "render",
+        "allowed_canvases": [
+          {"width": 720, "height": 1280, "aspect": "9:16"},
+          {"width": 1280, "height": 720, "aspect": "16:9"}
+        ],
+        "fps": {"num": 30, "den": 1},
+        "duration_frames_min": 1,
+        "duration_frames_max": 1800,
+        "max_duration_seconds": 60,
+        "container": "mp4",
+        "video_codec": "h264",
+        "pixel_format": "yuv420p",
+        "color_space": "sRGB",
+        "audio_codec": "aac",
+        "audio_sample_rate_hz": 48000,
+        "audio_channels": 2,
+        "faststart": true
+      },
+      "preview-360p-v1": {
+        "kind": "preview",
+        "scale_factor_from_720p": 0.5,
+        "allowed_output_dimensions": [
+          {"width": 360, "height": 640, "aspect": "9:16"},
+          {"width": 640, "height": 360, "aspect": "16:9"}
+        ],
+        "fps": {"num": 30, "den": 1},
+        "clip_duration_frames_min": 1,
+        "clip_duration_frames_max": 300,
+        "max_clip_duration_seconds": 10,
+        "frame_mode_format": "image/png",
+        "clip_mode_format": "video/mp4"
+      }
+    },
+    "schema_vs_admission_bounds": {
+      "schema_canvas_max_px": 3840,
+      "schema_canvas_even_positive_integer": true,
+      "schema_duration_frames_min": 1,
+      "schema_duration_frames_max": 10800,
+      "schema_fps_v1_catalog": ["24/1", "25/1", "30/1"],
+      "starter_v1_enabled_fps": ["30/1"],
+      "starter_v1_enabled_engines": ["html-v1"],
+      "starter_v1_disabled_engines": ["canvas-v1", "svg-v1", "custom-html-v1"],
+      "starter_v1_locales": ["vi-VN", "en-US"],
+      "starter_v1_directions": ["ltr"]
+    },
+    "payload_and_composition_limits": {
+      "http_json_body_max_bytes": 1048576,
+      "client_metadata_max_bytes": 4096,
+      "metadata_max_keys": 32,
+      "metadata_key_max_chars": 64,
+      "metadata_value_max_chars": 256,
+      "scenes_min": 1,
+      "scenes_max": 50,
+      "layers_per_scene_max": 100,
+      "layers_per_composition_max": 500,
+      "assets_per_job_max": 50,
+      "fonts_per_composition_max": 16,
+      "audio_tracks_per_composition_max": 16,
+      "subtitle_tracks_per_composition_max": 8,
+      "subtitle_cues_per_track_max": 500,
+      "subtitle_cue_text_max_chars": 1000,
+      "text_layer_max_chars": 10000,
+      "text_font_size_min_px": 1,
+      "text_font_size_max_px": 512,
+      "text_max_lines_min": 1,
+      "text_max_lines_max": 20,
+      "animations_keyframes_min": 2,
+      "animations_keyframes_max": 64,
+      "template_variables_max": 64,
+      "template_change_note_max_chars": 1000
+    },
+    "media_and_ingest_limits": {
+      "upload_file_max_bytes": 104857600,
+      "job_total_input_max_bytes": 524288000,
+      "source_media_max_duration_seconds": 600,
+      "image_max_megapixels": 40,
+      "image_max_dimension_px": 8192,
+      "font_file_max_bytes": 33554432,
+      "svg_file_max_bytes": 5242880,
+      "svg_max_dom_nodes": 5000,
+      "svg_max_nesting_depth": 16,
+      "signed_upload_url_ttl_seconds": 600,
+      "signed_download_url_ttl_seconds": 300
+    },
+    "tenant_rate_and_concurrency_limits": {
+      "token_bucket_refill_per_second": 1,
+      "token_bucket_burst_capacity": 20,
+      "requests_per_minute_sustained": 60,
+      "active_job_slots_max": 2,
+      "pending_admission_slots_max": 20,
+      "non_terminal_jobs_total_max": 22,
+      "preview_shares_quota": true,
+      "preview_dispatch_weight_ratio": "2:1",
+      "preview_max_global_slot_share": 0.5
+    },
+    "runtime_and_retention_limits": {
+      "worker_vcpu_limit": 2,
+      "worker_memory_mib": 4096,
+      "worker_pids_limit": 256,
+      "worker_temp_disk_mib": 8192,
+      "frame_readiness_timeout_ms": 5000,
+      "render_attempt_timeout_seconds": 600,
+      "render_job_deadline_seconds": 1800,
+      "preview_attempt_timeout_seconds": 120,
+      "preview_job_deadline_seconds": 300,
+      "max_attempts_per_job": 3,
+      "retry_backoff_seconds": [5, 30],
+      "asset_and_artifact_retention_days": 7,
+      "idempotency_record_retention_days": 7,
+      "temp_orphan_sweep_hours": 24,
+      "job_and_usage_metadata_retention_days": 90,
+      "security_audit_retention_days": 180,
+      "backup_max_retention_days": 30
+    }
+  },
+  "transitions": {
+    "scene_transitions_v1": {
+      "supported_types": ["cut", "fade_to_background"],
+      "deferred_types": ["crossfade"],
+      "rules": {
+        "cut": {
+          "duration_frames_const": 0,
+          "timeline_effect": "Immediate switch at scene boundary frame end; total composition duration unchanged."
+        },
+        "fade_to_background": {
+          "duration_frames_min": 2,
+          "duration_frames_max": 300,
+          "semantic_constraint": "F <= scene.duration_frames (otherwise 422 VALIDATION_FAILED with TIMELINE_BOUNDS at /scenes/{i}/transition_out/duration_frames)",
+          "allowed_on_final_scene": true,
+          "active_global_frame_interval": "[scene_end - F, scene_end - 1]",
+          "opacity_formula": "scene_alpha(k) = (scene_end - 1 - k) / (F - 1)",
+          "layer_compositing": "effective_layer_alpha(k) = layer_alpha(k) * scene_alpha(k) over canvas.background; next scene starts at full opacity at frame scene_end."
+        }
+      }
+    },
+    "job_state_machine": {
+      "states": [
+        "queued",
+        "preparing",
+        "rendering",
+        "encoding",
+        "verifying",
+        "retry_wait",
+        "cancel_requested",
+        "succeeded",
+        "failed",
+        "canceled"
+      ],
+      "terminal_states": ["succeeded", "failed", "canceled"],
+      "active_slot_states": ["preparing", "rendering", "encoding", "verifying", "cancel_requested"],
+      "pending_slot_states": ["queued", "retry_wait"],
+      "allowed_transitions": [
+        {"from": "queued", "to": "preparing", "trigger": "dispatcher acquires lease (attempt_id, lease_epoch)"},
+        {"from": "queued", "to": "canceled", "trigger": "customer POST /jobs/{id}/cancel"},
+        {"from": "queued", "to": "failed", "trigger": "job_deadline_seconds exceeded (JOB_DEADLINE_EXCEEDED) or input asset deleted (ASSET_REVOKED)"},
+        {"from": "preparing", "to": "rendering", "trigger": "inputs staged and verified"},
+        {"from": "preparing", "to": "retry_wait", "trigger": "transient error and attempt < max_attempts"},
+        {"from": "preparing", "to": "cancel_requested", "trigger": "customer POST /jobs/{id}/cancel"},
+        {"from": "preparing", "to": "failed", "trigger": "permanent error, attempt == max_attempts, deadline exceeded, or ASSET_REVOKED"},
+        {"from": "rendering", "to": "encoding", "trigger": "all frames captured deterministically"},
+        {"from": "rendering", "to": "retry_wait", "trigger": "worker lost / lease expired or transient error with attempt < max_attempts"},
+        {"from": "rendering", "to": "cancel_requested", "trigger": "customer POST /jobs/{id}/cancel"},
+        {"from": "rendering", "to": "failed", "trigger": "permanent render/preflight/sandbox error, attempt == max_attempts, or ASSET_REVOKED"},
+        {"from": "encoding", "to": "verifying", "trigger": "FFmpeg mux/encode candidate finished"},
+        {"from": "encoding", "to": "retry_wait", "trigger": "transient error with attempt < max_attempts"},
+        {"from": "encoding", "to": "cancel_requested", "trigger": "customer POST /jobs/{id}/cancel"},
+        {"from": "encoding", "to": "failed", "trigger": "invalid encode, resource limit, attempt == max_attempts, or ASSET_REVOKED"},
+        {"from": "verifying", "to": "succeeded", "trigger": "fenced publication transaction commits artifacts, usage settlement, and outbox event"},
+        {"from": "verifying", "to": "retry_wait", "trigger": "transient object store error before publication with attempt < max_attempts"},
+        {"from": "verifying", "to": "cancel_requested", "trigger": "customer POST /jobs/{id}/cancel wins row lock before publication"},
+        {"from": "verifying", "to": "failed", "trigger": "verification mismatch (ENCODE_VERIFICATION_FAILED), attempt == max_attempts, or ASSET_REVOKED"},
+        {"from": "retry_wait", "to": "queued", "trigger": "backoff timer elapsed within job deadline"},
+        {"from": "retry_wait", "to": "canceled", "trigger": "customer POST /jobs/{id}/cancel"},
+        {"from": "retry_wait", "to": "failed", "trigger": "job_deadline_seconds exceeded (JOB_DEADLINE_EXCEEDED) or ASSET_REVOKED"},
+        {"from": "cancel_requested", "to": "canceled", "trigger": "worker stops process group (<=10s) or reaper cleans up expired lease"}
+      ],
+      "invariants": [
+        "state_version and event_seq increment monotonically on every state transition.",
+        "Terminal states (succeeded, failed, canceled) never transition to any other state.",
+        "Once in cancel_requested, the ONLY valid terminal transition is canceled (never succeeded or failed).",
+        "Customer cancel (POST /jobs/{id}/cancel) leads to canceled; asset deletion (DELETE /assets/{id}) on non-terminal jobs leads to failed with error.code = ASSET_REVOKED."
+      ]
+    },
+    "asset_state_machine": {
+      "states": ["uploading", "processing", "ready", "rejected", "deleted"],
+      "allowed_transitions": [
+        {"from": "uploading", "to": "processing", "trigger": "POST /assets/{id}/complete"},
+        {"from": "uploading", "to": "rejected", "trigger": "upload session expired or checksum/byte mismatch"},
+        {"from": "uploading", "to": "deleted", "trigger": "DELETE /assets/{id}"},
+        {"from": "processing", "to": "ready", "trigger": "isolated probe/normalize/sanitize passed"},
+        {"from": "processing", "to": "rejected", "trigger": "corrupt media, policy violation, or disallowed SVG/font/codec"},
+        {"from": "processing", "to": "deleted", "trigger": "DELETE /assets/{id}"},
+        {"from": "ready", "to": "deleted", "trigger": "DELETE /assets/{id} or retention TTL expiry"},
+        {"from": "rejected", "to": "deleted", "trigger": "DELETE /assets/{id} or retention sweep"}
+      ]
+    },
+    "webhook_endpoint_state_machine": {
+      "states": ["pending_verification", "active", "disabled"],
+      "allowed_transitions": [
+        {"from": "pending_verification", "to": "active", "trigger": "POST /webhook-endpoints/{id}/verify challenge echoed with valid HMAC within 5s"},
+        {"from": "pending_verification", "to": "disabled", "trigger": "DELETE /webhook-endpoints/{id}"},
+        {"from": "active", "to": "disabled", "trigger": "DELETE /webhook-endpoints/{id} or receiver returns HTTP 410 Gone"}
+      ]
+    }
+  },
+  "tenant_entities_and_rls": {
+    "system_catalog_sentinel_tenant_id": "00000000-0000-0000-0000-000000000000",
+    "rls_context_setting": "SET LOCAL app.current_tenant_id = '<tenant_uuid>'",
+    "db_roles": [
+      {
+        "role": "cve_migrator",
+        "purpose": "Schema DDL migrations and seeding immutable system_catalog templates/fonts",
+        "bypasses_rls": true
+      },
+      {
+        "role": "cve_api",
+        "purpose": "HTTP control plane CRUD scoped by transaction-local tenant RLS; read-only access to curated_public rows in system_catalog",
+        "bypasses_rls": false
+      },
+      {
+        "role": "cve_dispatcher",
+        "purpose": "Job queue claim, lease renewal, reaper recovery, and fenced publication across tenants via security-definer or scoped policies",
+        "bypasses_rls": false
+      },
+      {
+        "role": "cve_ingest",
+        "purpose": "Quarantine asset probe, normalization, SVG sanitization, and transition to ready/rejected",
+        "bypasses_rls": false
+      },
+      {
+        "role": "cve_sender",
+        "purpose": "Transactional outbox reader and webhook delivery writer",
+        "bypasses_rls": false
+      }
+    ],
+    "tables": [
+      {"table": "tenants", "primary_key": ["id"], "tenant_scoped": true},
+      {"table": "api_keys", "primary_key": ["tenant_id", "id"], "unique_indexes": [["key_prefix"]], "tenant_scoped": true},
+      {"table": "policies", "primary_key": ["tenant_id", "policy_version"], "tenant_scoped": true},
+      {"table": "templates", "primary_key": ["tenant_id", "id"], "supports_system_catalog": true, "tenant_scoped": true},
+      {"table": "template_revisions", "primary_key": ["tenant_id", "template_id", "revision"], "supports_system_catalog": true, "immutable": true, "tenant_scoped": true},
+      {"table": "compositions", "primary_key": ["tenant_id", "id"], "tenant_scoped": true},
+      {"table": "composition_revisions", "primary_key": ["tenant_id", "composition_id", "revision"], "immutable": true, "tenant_scoped": true},
+      {"table": "assets", "primary_key": ["tenant_id", "id"], "supports_system_catalog": true, "tenant_scoped": true},
+      {"table": "asset_versions", "primary_key": ["tenant_id", "asset_id", "version"], "supports_system_catalog": true, "immutable": true, "tenant_scoped": true},
+      {"table": "scene_bundles", "primary_key": ["tenant_id", "id"], "tenant_scoped": true},
+      {"table": "scene_bundle_revisions", "primary_key": ["tenant_id", "bundle_id", "revision"], "immutable": true, "tenant_scoped": true},
+      {"table": "jobs", "primary_key": ["tenant_id", "id"], "tenant_scoped": true},
+      {"table": "job_attempts", "primary_key": ["tenant_id", "job_id", "attempt_id"], "unique_indexes": [["tenant_id", "job_id", "lease_epoch"]], "tenant_scoped": true},
+      {"table": "job_events", "primary_key": ["tenant_id", "job_id", "event_seq"], "immutable": true, "tenant_scoped": true},
+      {"table": "artifacts", "primary_key": ["tenant_id", "id"], "unique_indexes": [["tenant_id", "job_id", "kind"]], "tenant_scoped": true},
+      {"table": "idempotency_records", "primary_key": ["tenant_id", "method", "normalized_path", "key"], "tenant_scoped": true},
+      {"table": "outbox", "primary_key": ["tenant_id", "id"], "tenant_scoped": true},
+      {"table": "webhook_endpoints", "primary_key": ["tenant_id", "id"], "tenant_scoped": true},
+      {"table": "webhook_deliveries", "primary_key": ["tenant_id", "id"], "tenant_scoped": true},
+      {"table": "usage_reservations", "primary_key": ["tenant_id", "job_id"], "tenant_scoped": true},
+      {"table": "usage_entries", "primary_key": ["tenant_id", "id"], "unique_indexes": [["tenant_id", "job_id", "meter", "ledger_version"]], "immutable": true, "tenant_scoped": true}
+    ]
+  },
+  "error_taxonomy": {
+    "http_errors": [
+      {"http_status": 400, "code": "MALFORMED_JSON", "retryable": false},
+      {"http_status": 400, "code": "IDEMPOTENCY_KEY_REQUIRED", "retryable": false},
+      {"http_status": 400, "code": "INVALID_IDEMPOTENCY_KEY", "retryable": false},
+      {"http_status": 400, "code": "INVALID_CURSOR", "retryable": false},
+      {"http_status": 400, "code": "INVALID_QUERY_PARAM", "retryable": false},
+      {"http_status": 401, "code": "UNAUTHENTICATED", "retryable": false},
+      {"http_status": 403, "code": "INSUFFICIENT_SCOPE", "retryable": false},
+      {"http_status": 403, "code": "TENANT_SUSPENDED", "retryable": false},
+      {"http_status": 404, "code": "NOT_FOUND", "retryable": false, "note": "Used for missing or foreign-tenant resource IDs in URL path; never return 403 for foreign resource IDs"},
+      {"http_status": 409, "code": "REVISION_CONFLICT", "retryable": false},
+      {"http_status": 409, "code": "IDEMPOTENCY_CONFLICT", "retryable": false},
+      {"http_status": 409, "code": "IDEMPOTENCY_IN_PROGRESS", "retryable": true, "headers": ["Retry-After: 1"]},
+      {"http_status": 409, "code": "ASSET_NOT_READY", "retryable": true},
+      {"http_status": 409, "code": "JOB_TERMINAL", "retryable": false},
+      {"http_status": 409, "code": "WEBHOOK_NOT_VERIFIED", "retryable": false},
+      {"http_status": 410, "code": "ARTIFACT_EXPIRED", "retryable": false},
+      {"http_status": 410, "code": "INPUT_EXPIRED", "retryable": false},
+      {"http_status": 410, "code": "DELIVERY_EXPIRED", "retryable": false},
+      {"http_status": 410, "code": "ASSET_DELETED", "retryable": false},
+      {"http_status": 413, "code": "PAYLOAD_TOO_LARGE", "retryable": false},
+      {"http_status": 422, "code": "VALIDATION_FAILED", "retryable": false},
+      {"http_status": 422, "code": "UNSUPPORTED_CAPABILITY", "retryable": false},
+      {"http_status": 422, "code": "ASSET_POLICY_REJECTED", "retryable": false},
+      {"http_status": 429, "code": "RATE_LIMITED", "retryable": true, "headers": ["Retry-After"]},
+      {"http_status": 429, "code": "QUOTA_EXCEEDED", "retryable": true, "headers": ["Retry-After"]},
+      {"http_status": 503, "code": "SERVICE_UNAVAILABLE", "retryable": true, "headers": ["Retry-After"]}
+    ],
+    "validation_detail_codes": [
+      {"code": "OUT_OF_RANGE", "stage": "schema"},
+      {"code": "TYPE_MISMATCH", "stage": "schema"},
+      {"code": "UNKNOWN_FIELD", "stage": "schema"},
+      {"code": "MISSING_REQUIRED_FIELD", "stage": "schema"},
+      {"code": "TIMELINE_BOUNDS", "stage": "semantic"},
+      {"code": "DUPLICATE_ID", "stage": "semantic"},
+      {"code": "UNKNOWN_FONT", "stage": "semantic"},
+      {"code": "ASSET_NOT_FOUND", "stage": "semantic"},
+      {"code": "INVALID_ASSET_REF", "stage": "semantic"},
+      {"code": "ANIMATION_CONFLICT", "stage": "semantic"},
+      {"code": "SOURCE_RANGE_INVALID", "stage": "semantic"},
+      {"code": "VARIABLE_BINDING_INVALID", "stage": "semantic"},
+      {"code": "TEXT_OVERFLOW", "stage": "preflight"},
+      {"code": "MISSING_GLYPH", "stage": "preflight"},
+      {"code": "UNSUPPORTED_CAPABILITY", "stage": "policy"},
+      {"code": "PROFILE_CONSTRAINT_VIOLATED", "stage": "policy"},
+      {"code": "CAPABILITY_DISABLED", "stage": "policy"}
+    ],
+    "async_job_error_codes": [
+      {"code": "RENDER_TIMEOUT", "retryable_until_max_attempts": true},
+      {"code": "FRAME_READINESS_TIMEOUT", "retryable_until_max_attempts": true},
+      {"code": "WORKER_LOST", "retryable_until_max_attempts": true},
+      {"code": "STORAGE_TRANSIENT_ERROR", "retryable_until_max_attempts": true},
+      {"code": "INTERNAL_WORKER_ERROR", "retryable_until_max_attempts": true},
+      {"code": "SANDBOX_RESOURCE_LIMIT", "retryable_until_max_attempts": false},
+      {"code": "SANDBOX_SECURITY_VIOLATION", "retryable_until_max_attempts": false},
+      {"code": "MEDIA_DECODE_FAILED", "retryable_until_max_attempts": false},
+      {"code": "ENCODE_VERIFICATION_FAILED", "retryable_until_max_attempts": false},
+      {"code": "TEXT_OVERFLOW", "retryable_until_max_attempts": false},
+      {"code": "MISSING_GLYPH", "retryable_until_max_attempts": false},
+      {"code": "ASSET_REVOKED", "retryable_until_max_attempts": false},
+      {"code": "JOB_DEADLINE_EXCEEDED", "retryable_until_max_attempts": false}
+    ]
+  },
+  "lease_cancel_idempotency": {
+    "render_job_lease": {
+      "lease_seconds": 60,
+      "heartbeat_seconds": 15,
+      "clock_authority": "PostgreSQL server now()",
+      "fencing_token": ["job_id", "attempt_id", "lease_epoch"],
+      "stale_worker_behavior": "Zero rows updated on heartbeat or publication immediately aborts worker and kills process group within 10s."
+    },
+    "coding_task_lease": {
+      "lease_seconds": 600,
+      "heartbeat_seconds": 30,
+      "reclaim_grace_seconds": 120,
+      "store": ".agy/state.sqlite (implemented in P0-05)"
+    },
+    "cancel_protocol": {
+      "queued_or_retry_wait": "Immediate transition to canceled in DB transaction; returns 202 Accepted.",
+      "active_attempt": "Transition to cancel_requested in DB transaction; returns 202 Accepted; worker kills process group <=10s and transitions to canceled.",
+      "already_canceled_new_key": "Returns 200 OK.",
+      "already_cancel_requested_new_key": "Returns 202 Accepted.",
+      "already_succeeded_or_failed_new_key": "Returns 409 JOB_TERMINAL.",
+      "publish_vs_cancel_race": "Serialized via SELECT ... FOR UPDATE on jobs row; first transaction to commit wins."
+    },
+    "idempotency_protocol": {
+      "header": "Idempotency-Key",
+      "pattern": "^[A-Za-z0-9._:-]{1,128}$",
+      "scope": ["tenant_id", "method", "normalized_path", "key"],
+      "hash_algorithm": "SHA-256 of RFC 8785 (JCS) canonical UTF-8 JSON (NFC normalized; empty body = empty string)",
+      "retention_days": 7,
+      "replay_header": "Idempotency-Replayed: true",
+      "non_cached_statuses": [400, 401, 403, 404, 409, 413, 422, 429, 503],
+      "secret_redaction_on_replay": "Webhook endpoint create/rotate sets secret_redacted=true on replay and never stores plaintext signing secret in idempotency_records."
+    }
+  },
+  "resolved_ambiguity_issues": [
+    {
+      "issue_id": "AMB-001",
+      "title": "JSON Schema structural bounds vs starter-v1 profile admission limits",
+      "affected_docs": ["docs/PRD.md", "docs/SCENE-SPEC.md", "docs/API.md"],
+      "resolution": "Separated 3 validation layers: Layer 1 (JSON Schema 2020-12: canvas <=3840, duration_frames 1..10800 -> 422 VALIDATION_FAILED), Layer 2 (Semantic timeline/references -> 422 VALIDATION_FAILED), Layer 3 (Profile & capability policy: mp4-720p-v1 720x1280|1280x720, 30/1 fps, 1..1800 frames; preview-360p-v1 1..300 frames -> 422 UNSUPPORTED_CAPABILITY with detail PROFILE_CONSTRAINT_VIOLATED or CAPABILITY_DISABLED)."
+    },
+    {
+      "issue_id": "AMB-002",
+      "title": "Scene transition_out duration bounds and final-scene applicability",
+      "affected_docs": ["docs/SCENE-SPEC.md"],
+      "resolution": "Locked schema oneOf: cut requires duration_frames = 0; fade_to_background requires integer 2 <= F <= min(300, scene.duration_frames) (F > scene.duration_frames yields TIMELINE_BOUNDS), is valid on all scenes including the final scene, and multiplies scene_alpha(k) = (end-1-k)/(F-1) with layer_alpha(k)."
+    },
+    {
+      "issue_id": "AMB-003",
+      "title": "Missing state machine edges for queued/retry_wait failure, cancel_requested convergence, and asset revocation",
+      "affected_docs": ["docs/ARCHITECTURE.md", "docs/SECURITY.md"],
+      "resolution": "Added queued -> failed and retry_wait -> failed transitions for JOB_DEADLINE_EXCEEDED and ASSET_REVOKED; locked cancel_requested -> canceled as the sole terminal path after customer cancel wins row lock; distinguished customer cancel (canceled) from DELETE /assets/{id} revocation (failed with error.code = ASSET_REVOKED)."
+    },
+    {
+      "issue_id": "AMB-004",
+      "title": "Pending vs active slot accounting when active jobs enter retry_wait or cancel_requested",
+      "affected_docs": ["docs/PRD.md", "docs/API.md", "docs/ARCHITECTURE.md"],
+      "resolution": "Defined admission check as count(queued + retry_wait) < 20 AND count(non_terminal) < 22, with 2 active slots covering preparing/rendering/encoding/verifying/cancel_requested. Already-admitted jobs transitioning from active to retry_wait retain their admitted slot reservation."
+    },
+    {
+      "issue_id": "AMB-005",
+      "title": "Idempotency-Key hash canonicalization and non-caching of 429/503/validation errors",
+      "affected_docs": ["docs/API.md", "docs/ARCHITECTURE.md"],
+      "resolution": "Specified RFC 8785 (JCS) SHA-256 request_hash on normalized_path (/v1/... without trailing slash), and mandated that 400/401/403/404/409/413/422/429/503 responses roll back or release the idempotency claim so clients can retry 429/503 with the same Idempotency-Key."
+    },
+    {
+      "issue_id": "AMB-006",
+      "title": "Representation of global curated templates/fonts under composite tenant_id foreign keys and RLS",
+      "affected_docs": ["docs/ARCHITECTURE.md"],
+      "resolution": "Defined sentinel system_catalog tenant UUID 00000000-0000-0000-0000-000000000000 with visibility = curated_public (read-only for cve_api under RLS, writable only by cve_migrator) and enumerated all 21 PostgreSQL tables and 5 DB roles for P3-01."
+    },
+    {
+      "issue_id": "AMB-007",
+      "title": "HTTP 404 vs HTTP 422 for missing/foreign resource references in URL path vs JSON body",
+      "affected_docs": ["docs/API.md", "docs/SCENE-SPEC.md"],
+      "resolution": "Path resource IDs (/v1/assets/{id}, /v1/jobs/{id}) that do not exist or belong to another tenant always return HTTP 404 NOT_FOUND; asset_id/font_id references inside a JSON body return HTTP 422 VALIDATION_FAILED with detail code ASSET_NOT_FOUND or UNKNOWN_FONT."
+    },
+    {
+      "issue_id": "AMB-008",
+      "title": "Enumeration of asynchronous job.error.code values and retryability",
+      "affected_docs": ["docs/API.md"],
+      "resolution": "Enumerated 13 canonical job.error.code values partitioned into retryable-until-max-attempts (RENDER_TIMEOUT, FRAME_READINESS_TIMEOUT, WORKER_LOST, STORAGE_TRANSIENT_ERROR, INTERNAL_WORKER_ERROR) and non-retryable deterministic failures (SANDBOX_RESOURCE_LIMIT, SANDBOX_SECURITY_VIOLATION, MEDIA_DECODE_FAILED, ENCODE_VERIFICATION_FAILED, TEXT_OVERFLOW, MISSING_GLYPH, ASSET_REVOKED, JOB_DEADLINE_EXCEEDED)."
+    },
+    {
+      "issue_id": "AMB-009",
+      "title": "Clock skew risk on render job lease renewal and separation from AGY coding task lease",
+      "affected_docs": ["docs/ARCHITECTURE.md"],
+      "resolution": "Mandated PostgreSQL server clock (now()) as the sole authority for render job lease_expires_at (60s) and heartbeat_at (15s) fenced by (job_id, attempt_id, lease_epoch), distinct from the 600s/30s AGY coding task lease in .agy/state.sqlite."
+    },
+    {
+      "issue_id": "AMB-010",
+      "title": "SVG ingest sanitization thresholds and P0-02 artifact blocklist alignment in Security spec",
+      "affected_docs": ["docs/SECURITY.md", "docs/SCENE-SPEC.md", "docs/PRD.md"],
+      "resolution": "Locked SVG ingest limits (<=5 MiB, <=5000 DOM nodes, depth <=16, no DOCTYPE/ENTITY XXE, script, foreignObject, on* attributes, or external URLs) and codified P0-02 blocklist (hyperframes CLI, @hyperframes/engine, full puppeteer, --no-sandbox, FFmpeg --enable-nonfree) in docs/SECURITY.md."
+    }
+  ]
+}

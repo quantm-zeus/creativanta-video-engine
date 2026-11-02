@@ -39,19 +39,19 @@ Flow MVP: upload/import asset → `ready` → chọn exact template revision →
 
 | Thuộc tính | Default/mục tiêu |
 | --- | --- |
-| MVP | 720×1280 hoặc 1280×720, 30/1 fps, ≤60s; MP4 yuv420p, audio 48kHz |
+| MVP (`mp4-720p-v1`) | 720×1280 hoặc 1280×720, 30/1 fps, ≤60s (1..1800 frames); preview (`preview-360p-v1`) 360×640 hoặc 640×360, 30/1 fps, ≤10s (1..300 frames); MP4 yuv420p, audio 48kHz |
 | Sau benchmark | ≤1920×1080 hoặc 1080×1920, ≤60/1 fps, ≤180s; chỉ capability đã đo |
-| Payload | JSON ≤1 MiB, ≤50 scenes, ≤500 layers/composition, ≤50 assets/job |
-| Tenant | 2 running, 20 queued, 60 requests/minute, burst 20; preview chung quota |
-| Media | ≤100 MiB/file, ≤500 MiB input/job, ≤600s/media ingest; không archive tùy ý |
+| Payload | HTTP body ≤1 MiB (1,048,576 bytes), ≤50 scenes, ≤100 layers/scene, ≤500 layers/composition, ≤50 assets/job, ≤16 fonts, ≤16 audio tracks, ≤8 subtitle tracks (≤500 cues/track) |
+| Tenant | 2 active (`preparing/rendering/encoding/verifying/cancel_requested`), 20 pending admission (`queued + retry_wait`, tổng ≤22 non-terminal jobs), 60 requests/minute (1 token/s, burst 20); preview chung quota |
+| Media | ≤100 MiB/file, ≤500 MiB input/job, ≤600s/media ingest, image ≤40 MP (≤8192 px/chiều), font ≤32 MiB, SVG ≤5 MiB (≤5000 DOM nodes, depth ≤16); không archive tùy ý |
 | API | p95 submit/status <500ms không tính upload/render, theo workload Testing |
 | Reliability | Không mất accepted job; at-least-once, single logical publication/usage |
 | Quality | 3 POC decode hết, đúng frame count; audio/caption anchor lệch ≤1 frame; đủ dấu Việt |
 | Cost | CPU-seconds, wall time, peak RSS, storage/egress/TTS; POC compute target ≤0.05 USD/video-minute với giá giả định được ghi |
 | Isolation | Zero cross-tenant access trong suite; thiếu sandbox evidence thì custom off |
-| Retention | Inputs/artifacts 7 ngày; job metadata/usage 90 ngày; security audit không content 180 ngày |
+| Retention | Inputs/artifacts/idempotency records 7 ngày; job metadata/usage 90 ngày; security audit không content 180 ngày |
 
-Giới hạn được giảm nếu host không đáp ứng; client chỉ đọc capabilities, không tự nâng quota. Cost target không phải giá bán/cloud quote. SLO/điều kiện đo ở [Operations](OPERATIONS.md), [Testing](TESTING.md); deletion ở [Security](SECURITY.md).
+Giới hạn được giảm nếu host không đáp ứng; client chỉ đọc capabilities, không tự nâng quota. Phân tách rõ giới hạn cấu trúc JSON Schema 2020-12 (`duration_frames` 1..10800, canvas ≤3840) với giới hạn admission của profile `starter-v1` (vi phạm cấu trúc trả `422 VALIDATION_FAILED`, vượt profile/capability trả `422 UNSUPPORTED_CAPABILITY` kèm detail `PROFILE_CONSTRAINT_VIOLATED`). Chi tiết các quyết định chốt hợp đồng và threat model của `P0-04` nằm tại [P0-04 report](../evidence/P0-04/report.md) và [contract-threat-review.json](../evidence/P0-04/contract-threat-review.json). Cost target không phải giá bán/cloud quote. SLO/điều kiện đo ở [Operations](OPERATIONS.md), [Testing](TESTING.md); deletion ở [Security](SECURITY.md).
 
 ## Non-goals và release
 
