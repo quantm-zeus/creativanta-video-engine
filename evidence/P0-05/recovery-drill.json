@@ -1,0 +1,161 @@
+{
+  "$schema": "creativanta.video-engine.p0-05-recovery-drill.v1",
+  "task_id": "P0-05",
+  "stream": "Supervisor",
+  "phase": "P0",
+  "executed_at": "2026-11-02T14:00:00Z",
+  "ledger_schema": {
+    "sqlite_path": ".agy/state.sqlite",
+    "status_export_path": ".agy/status.json",
+    "events_export_path": ".agy/events.jsonl",
+    "backup_directory": ".agy/backups/",
+    "journal_mode": "wal",
+    "integrity_check": "ok",
+    "required_tables": [
+      "tasks",
+      "dependencies",
+      "leases",
+      "file_claims",
+      "runs",
+      "evidence",
+      "reviews",
+      "events"
+    ],
+    "all_required_tables_present": true,
+    "task_states": [
+      "planned",
+      "ready",
+      "claimed",
+      "running",
+      "verifying",
+      "review",
+      "done",
+      "blocked",
+      "canceled"
+    ],
+    "timing_policy": {
+      "worker_heartbeat_seconds": 30,
+      "worker_heartbeat_warn_seconds": 90,
+      "task_lease_seconds": 600,
+      "task_lease_grace_seconds": 120,
+      "reclaim_threshold_seconds": 720,
+      "supervisor_heartbeat_seconds": 30,
+      "max_non_progress_attempts": 2
+    }
+  },
+  "bootstrap_materialization": {
+    "total_tasks_imported": 52,
+    "reconciled_done_tasks": [
+      "P0-01",
+      "P0-02",
+      "P0-04"
+    ],
+    "ready_tasks_after_bootstrap": [
+      "P0-03",
+      "P0-05"
+    ],
+    "counts_by_state": {
+      "planned": 47,
+      "ready": 2,
+      "claimed": 0,
+      "running": 0,
+      "verifying": 0,
+      "review": 0,
+      "done": 3,
+      "blocked": 0,
+      "canceled": 0
+    },
+    "backup_created": "state-p0-05-bootstrap-20261102T140000Z.sqlite"
+  },
+  "synthetic_recovery_drill": {
+    "pre_crash_state": {
+      "orphaned_task": {
+        "task_id": "P0-03",
+        "state": "running",
+        "run_id": "run-crash01",
+        "lease_epoch": 1,
+        "worktree": ".worktrees/p0-03-run-crash01"
+      },
+      "live_task": {
+        "task_id": "P0-05",
+        "state": "running",
+        "run_id": "run-live01",
+        "lease_epoch": 1,
+        "worktree": ".worktrees/p0-05-run-live01"
+      },
+      "heartbeat_health_diagnostics": [
+        {
+          "task_id": "P0-03",
+          "state": "running",
+          "run_id": "run-crash01",
+          "lease_epoch": 1,
+          "silence_seconds": 750,
+          "health_status": "RECLAIM_ELIGIBLE"
+        },
+        {
+          "task_id": "P0-05",
+          "state": "running",
+          "run_id": "run-live01",
+          "lease_epoch": 1,
+          "silence_seconds": 60,
+          "health_status": "HEALTHY"
+        }
+      ]
+    },
+    "recovery_execution": {
+      "recovery_timestamp": "2026-11-02T14:13:00Z",
+      "supervisor_boot_id": "boot-002-after-reboot",
+      "reattached_tasks": [
+        {
+          "task_id": "P0-05",
+          "run_id": "run-live01",
+          "lease_epoch": 1,
+          "state": "running"
+        }
+      ],
+      "reclaimed_to_ready": [
+        {
+          "task_id": "P0-03",
+          "previous_run_id": "run-crash01",
+          "old_lease_epoch": 1,
+          "new_lease_epoch": 2,
+          "worktree_preserved": true,
+          "preserved_files": [
+            "UNCOMMITTED_DRAFT.md"
+          ],
+          "in_flight_marked_not_run": true
+        }
+      ],
+      "reconciled_to_review": [],
+      "in_flight_marked_not_run": [
+        "P0-03"
+      ],
+      "promoted_to_ready": []
+    },
+    "post_recovery_verification": {
+      "overlapping_file_claim_blocked": true,
+      "orphaned_task_reclaimed_to_ready": true,
+      "orphaned_task_fenced_epoch": 2,
+      "uncommitted_worktree_edits_preserved": true,
+      "live_task_reattached_running": true,
+      "live_task_preserved_run_id": "run-live01",
+      "stale_worker_write_rejected": true,
+      "stale_worker_rejection_message": "Stale worker rejected for P0-03: presented (run_id=run-crash01, epoch=1) != active (run_id=None, epoch=2)",
+      "fresh_worker_reclaim_succeeded": true,
+      "fresh_worker_new_lease_epoch": 3
+    },
+    "backup_restore_and_event_replay": {
+      "restored_integrity_check": "ok",
+      "restored_p003_state": "claimed",
+      "restored_p003_lease_epoch": 3,
+      "restored_p005_state": "running",
+      "no_invented_done_states": true
+    }
+  },
+  "credential_redaction_audit": {
+    "files_scanned_count": 6,
+    "leaks_found_count": 0,
+    "leaks": [],
+    "zero_credential_leak_verified": true
+  }
+}

@@ -12,7 +12,7 @@ Bootstrap exception rõ ràng: runner/supervisor làm P0-01 tuần tự bằng e
 
 ## Durable queue và state files
 
-Đề xuất SQLite WAL tại `.agy/state.sqlite` là authoritative task store, single supervisor writer; workers gửi events qua local IPC, không tự sửa DB. Export `.agy/status.json` và `.agy/events.jsonl` phục vụ đọc/monitoring, không có secrets/raw prompts/private payload. State files runtime gitignored; compact sanitized evidence vào `evidence/<task-id>/report.md` sau task. Không dùng chat memory làm source of truth.
+Đề xuất SQLite WAL tại `.agy/state.sqlite` là authoritative task store, single supervisor writer; workers gửi events qua local IPC, không tự sửa DB. Export `.agy/status.json` và `.agy/events.jsonl` phục vụ đọc/monitoring, không có secrets/raw prompts/private payload. State files runtime gitignored; compact sanitized evidence vào `evidence/<task-id>/report.md` sau task theo [khuôn mẫu chuẩn P0-05](../evidence/P0-05/evidence-template.md). Không dùng chat memory làm source of truth. Implementation chuẩn của task ledger, worktree policy, credential redactor và crash recovery drill được xác thực tại [P0-05 report](../evidence/P0-05/report.md) và [task_ledger.py](../evidence/P0-05/task_ledger.py).
 
 Tables tối thiểu: `tasks`, `dependencies`, `leases`, `file_claims`, `runs`, `evidence`, `reviews`, `events`. Unique task ID; task state/revision update transaction; dependency DAG kiểm cycle; file claims ngăn overlapping writers. Fields bắt buộc:
 
