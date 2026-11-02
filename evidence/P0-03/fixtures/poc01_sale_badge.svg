@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" width="200" height="200">
+  <defs>
+    <linearGradient id="badgeGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#EF4444"/>
+      <stop offset="100%" stop-color="#DC2626"/>
+    </linearGradient>
+  </defs>
+  <circle cx="100" cy="100" r="90" fill="url(#badgeGrad)" stroke="#FFFFFF" stroke-width="4"/>
+  <circle cx="100" cy="100" r="78" fill="none" stroke="#FEE2E2" stroke-width="2" stroke-dasharray="6,4"/>
+  <text x="100" y="85" text-anchor="middle" fill="#FFFFFF" font-family="Inter, sans-serif" font-weight="900" font-size="28" letter-spacing="1">GIẢM</text>
+  <text x="100" y="130" text-anchor="middle" fill="#FEF08A" font-family="Inter, sans-serif" font-weight="900" font-size="44">50%</text>
+  <text x="100" y="155" text-anchor="middle" fill="#FFFFFF" font-family="Inter, sans-serif" font-weight="700" font-size="14">HÔM NAY</text>
+</svg>

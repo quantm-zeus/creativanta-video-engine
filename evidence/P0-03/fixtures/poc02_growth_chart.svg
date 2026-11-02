@@ -1,0 +1,37 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 450" width="800" height="450">
+  <defs>
+    <linearGradient id="areaGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#10B981" stop-opacity="0.4"/>
+      <stop offset="100%" stop-color="#10B981" stop-opacity="0.0"/>
+    </linearGradient>
+  </defs>
+  <!-- Background Card -->
+  <rect x="20" y="20" width="760" height="410" rx="16" fill="#1E293B" stroke="#334155" stroke-width="2"/>
+  <!-- Title -->
+  <text x="50" y="65" fill="#F8FAFC" font-family="Inter, sans-serif" font-weight="700" font-size="22">TĂNG TRƯỞNG HIỆU QUẢ SỐ HÓA VIDEO</text>
+  <text x="50" y="92" fill="#94A3B8" font-family="Inter, sans-serif" font-weight="400" font-size="14">Thống kê sản lượng render tự động qua 4 quý</text>
+  <!-- Grid Lines -->
+  <line x1="80" y1="360" x2="720" y2="360" stroke="#475569" stroke-width="1"/>
+  <line x1="80" y1="290" x2="720" y2="290" stroke="#334155" stroke-width="1" stroke-dasharray="4,4"/>
+  <line x1="80" y1="220" x2="720" y2="220" stroke="#334155" stroke-width="1" stroke-dasharray="4,4"/>
+  <line x1="80" y1="150" x2="720" y2="150" stroke="#334155" stroke-width="1" stroke-dasharray="4,4"/>
+  <!-- X Labels -->
+  <text x="130" y="385" text-anchor="middle" fill="#94A3B8" font-family="Inter, sans-serif" font-size="13">Quý 1</text>
+  <text x="310" y="385" text-anchor="middle" fill="#94A3B8" font-family="Inter, sans-serif" font-size="13">Quý 2</text>
+  <text x="490" y="385" text-anchor="middle" fill="#94A3B8" font-family="Inter, sans-serif" font-size="13">Quý 3</text>
+  <text x="670" y="385" text-anchor="middle" fill="#94A3B8" font-family="Inter, sans-serif" font-size="13">Quý 4</text>
+  <!-- Shaded Area Under Curve -->
+  <polygon points="130,320 310,260 490,190 670,120 670,360 130,360" fill="url(#areaGrad)"/>
+  <!-- Growth Line -->
+  <polyline points="130,320 310,260 490,190 670,120" fill="none" stroke="#10B981" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+  <!-- Data Points -->
+  <circle cx="130" cy="320" r="7" fill="#10B981" stroke="#FFFFFF" stroke-width="2"/>
+  <circle cx="310" cy="260" r="7" fill="#10B981" stroke="#FFFFFF" stroke-width="2"/>
+  <circle cx="490" cy="190" r="7" fill="#10B981" stroke="#FFFFFF" stroke-width="2"/>
+  <circle cx="670" cy="120" r="8" fill="#34D399" stroke="#FFFFFF" stroke-width="3"/>
+  <!-- Value Labels -->
+  <text x="130" y="305" text-anchor="middle" fill="#A7F3D0" font-family="Inter, sans-serif" font-weight="600" font-size="13">1.2K</text>
+  <text x="310" y="245" text-anchor="middle" fill="#A7F3D0" font-family="Inter, sans-serif" font-weight="600" font-size="13">3.8K</text>
+  <text x="490" y="175" text-anchor="middle" fill="#A7F3D0" font-family="Inter, sans-serif" font-weight="600" font-size="13">8.4K</text>
+  <text x="670" y="100" text-anchor="middle" fill="#34D399" font-family="Inter, sans-serif" font-weight="700" font-size="16">18.5K</text>
+</svg>

@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 120" width="120" height="120">
+  <defs>
+    <linearGradient id="iconGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#38BDF8"/>
+      <stop offset="100%" stop-color="#0284C7"/>
+    </linearGradient>
+  </defs>
+  <rect x="10" y="10" width="100" height="100" rx="24" fill="#0F172A" stroke="#0284C7" stroke-width="2"/>
+  <path d="M40 70 A15 15 0 0 1 50 48 A22 22 0 0 1 82 52 A14 14 0 0 1 80 70 Z" fill="url(#iconGrad)"/>
+  <polygon points="56,58 68,64 56,70" fill="#FFFFFF"/>
+</svg>
