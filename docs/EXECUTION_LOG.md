@@ -1,8 +1,10 @@
-# Execution log — DOC-001
+# Execution log — Creativanta Video Engine
+
+## DOC-001 — Thiết kế ban đầu
 
 Ngày: 2026-11-02 UTC. Scope: design/documentation trong `/home/whaleorcale/evergreen/projects/creativanta-video-engine`; chỉ đọc thêm `/tmp/video-engine-research.json`. Bootstrap base commit `616677f` trên `main`. Working tree ban đầu sạch, chỉ README bootstrap được liệt kê; không có AGENTS.md sẵn trong repo.
 
-## Việc đã thực hiện
+### Việc đã thực hiện
 
 - Đọc bootstrap README, git status/branch/base commit và research JSON phiên trước; không coi research JSON là chứng cứ adoption cuối cùng.
 - Viết bộ thiết kế tiếng Việt với identifiers/code examples tiếng Anh: README, root AGENTS và 13 tài liệu yêu cầu trong docs/ (bao gồm ADR, log này). Thêm [upstream verification](UPSTREAM_VERIFICATION.json) để lưu evidence rút gọn và báo cáo validation sau kiểm tra.
@@ -10,7 +12,7 @@ Ngày: 2026-11-02 UTC. Scope: design/documentation trong `/home/whaleorcale/ever
 - Đọc nguồn chính thức về [FFmpeg licensing](https://ffmpeg.org/legal.html), [Mozilla MPL](https://www.mozilla.org/en-US/MPL/2.0/FAQ/) và [gVisor](https://gvisor.dev/docs/) để qualify license/isolation notes. Hai lần mở supplemental Chromium sandbox/JSON Schema URLs qua web tool không thành công; không dùng hai lần fetch đó làm verified evidence. Core architecture/schema là design proposal, không claim đã kiểm thử theo các nguồn đó.
 - Chọn hướng có điều kiện: HyperFrames candidate đầu, independent Chromium/FFmpeg baseline, PostgreSQL durable queue/outbox, private object storage, structured frame timeline, explicit tenant scopes, custom code mặc định disabled đến security gate.
 
-## Phân biệt verification và design
+### Phân biệt verification và design
 
 | Hạng mục | Trạng thái thực trong phiên này |
 | --- | --- |
@@ -26,7 +28,7 @@ Ngày: 2026-11-02 UTC. Scope: design/documentation trong `/home/whaleorcale/ever
 | Documentation validation | PASS Python checker; xem thống kê bên dưới |
 | Local commit | Commit chứa log này dùng message được yêu cầu; SHA trong Git history/final handoff, không push |
 
-## Validation và commit
+### Validation và commit
 
 Đã chạy Python documentation checker, exit 0: 15/15 files yêu cầu có nội dung, 16 Markdown files có đúng một H1/fences balanced, 84 internal links resolve, 11 JSON snippets và 1 JSON evidence file parse, 52 task IDs unique/known với dependency graph acyclic; 3 Mermaid blocks chỉ đếm, chưa render. Lần check sơ bộ báo link VALIDATION.md thiếu trong lúc file chưa tạo; đã sửa và rerun pass. `git diff --check` trên tracked diff trước staging cũng exit 0. [Validation report](VALIDATION.md) chứa script có thể chạy lại và giới hạn; kiểm tra tài liệu không thay test app/renderer.
 
@@ -34,7 +36,7 @@ Manual consistency review sửa P2 engine gate để không phụ thuộc ngư�
 
 Commit local được yêu cầu dùng message `docs: design independent code-first video engine`; không push. Commit SHA cuối cùng báo trong handoff, không tự nhúng SHA của commit vào chính nó.
 
-## Quyết định mở và owner
+### Quyết định mở và owner
 
 | Câu hỏi | Default hiện tại / task giải quyết |
 | --- | --- |
@@ -50,6 +52,44 @@ Commit local được yêu cầu dùng message `docs: design independent code-fi
 
 Không cần giải hết câu hỏi mở để bắt đầu P0/P1; không bỏ release gate khi chưa có answer/evidence.
 
-## Handoff thực thi
+### Handoff thực thi
 
 Runner push commit docs theo quy trình ngoài phiên này, rồi start AGY riêng ở đúng repo. AGY đọc [root AGENTS](../AGENTS.md), [plan](IMPLEMENTATION_PLAN.md), [execution model](AGENTS.md), claim `P0-01` và dựng evidence/queue. Sau audit và scaffold, ưu tiên `P2-02`/`P2-03`: ba real MP4 và `P2-04` đo cost/quality. Tiếp đó async tenant API P3/P4, Creativanta harness P5, beta gates P6. Custom code/TTS/import/browser export không được tự bật để làm demo nếu gate chưa đạt. Không triển khai hoặc sửa VPS/Creativanta hiện hữu từ handoff này.
+
+---
+
+## P0-01 — Bootstrap verified implementation backlog
+
+Ngày: 2026-11-02 UTC. Scope: Bootstrap xác thực backlog và tài liệu trong `/home/whaleorcale/evergreen/projects/creativanta-video-engine`. Base commit nguồn: `aaac0a6ecd464bf3f4798e18c94a003fb6ef0487`.
+
+### Sự kiện audit handoff ngày 2026-11-02
+
+Một phiên AGY trước đó đã gặp lỗi `permission-denied` trong quá trình thực thi nhưng lệnh shell trả về exit code 0. Do vậy, tuyên bố hoàn thành trong nhật ký bàn giao (host handoff log) trước đây là **SAI THỰC TẾ (FALSE)**; không có bất kỳ code triển khai, script hay artifact nào được tạo ra tại thời điểm đó. Repository vẫn hoàn toàn ở trạng thái ban đầu của commit `aaac0a6` (chỉ có tài liệu thiết kế của DOC-001).
+
+Nguyên tắc bắt buộc:
+1. Không công nhận trạng thái hoàn thành chỉ dựa trên tự báo cáo của worker AGY.
+2. Ghi nhận trung thực trạng thái bootstrap: hiện tại chưa có hàng đợi bền vững an toàn (no safe durable queue until P0-05).
+3. Sau khi hoàn thành kiểm tra và tạo evidence, task P0-01 được đặt ở trạng thái `review` (local completion awaiting independent review/CI), không tự đánh dấu `done`.
+
+### Các công việc thực tế đã hoàn thành trong P0-01
+
+1. **Xác thực tài liệu thiết kế bắt buộc:**
+   - Kiểm tra 15 tài liệu cốt lõi từ DOC-001 và [Tiến độ](PROGRESS.md): tất cả tồn tại, kích thước hợp lệ, mỗi file có đúng một H1, các khối code fences cân bằng.
+2. **Kiểm tra liên kết nội bộ:**
+   - 84+ liên kết tài liệu markdown nội bộ được phân giải và xác nhận tồn tại.
+3. **Kiểm tra tính hợp lệ cú pháp JSON:**
+   - 11 khối mã JSON trong tài liệu markdown được parse cú pháp thành công.
+   - Tài liệu bằng chứng [UPSTREAM_VERIFICATION.json](UPSTREAM_VERIFICATION.json) và [P0-01 backlog.json](../evidence/P0-01/backlog.json) được xác thực cú pháp.
+4. **Ánh xạ commit nguồn aaac0a6:**
+   - Base commit được định danh chính xác: `aaac0a6ecd464bf3f4798e18c94a003fb6ef0487` ("docs: design independent code-first video engine").
+5. **Dựng snapshot backlog máy đọc được:**
+   - Tạo file [evidence/P0-01/backlog.json](../evidence/P0-01/backlog.json) chứa toàn bộ 52 task IDs theo schema của [AGY execution](AGENTS.md).
+   - Xác định trạng thái phụ thuộc:
+     - Task ban đầu sẵn sàng (initial ready): duy nhất `P0-01` (phụ thuộc `DOC-001` đã đạt).
+     - Task bị chặn (blocked by dependencies): 51 task (`P0-02` đến `P9-05`).
+     - Task mở khóa sau khi P0-01 đạt review/done: `P0-02`, `P0-03`, `P0-04`.
+     - Phân tích chu trình phụ thuộc: đồ thị 52 task hoàn toàn acyclic (không có chu trình).
+6. **Xây dựng công cụ kiểm tra nội bộ repository:**
+   - Tạo script chuẩn [scripts/validate_repo.py](../scripts/validate_repo.py) sử dụng Python standard library để kiểm tra định kỳ tính toàn vẹn của repo, tài liệu, liên kết và backlog.
+7. **Báo cáo bằng chứng chi tiết:**
+   - Xuất file [evidence/P0-01/report.md](../evidence/P0-01/report.md) ghi nhận đầy đủ lệnh kiểm tra, thông số môi trường, mã thoát, SHA artifacts và các rủi ro kỹ thuật còn mở.

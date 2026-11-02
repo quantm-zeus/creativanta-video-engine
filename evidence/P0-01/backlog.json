@@ -1,0 +1,1831 @@
+{
+  "$schema": "creativanta.video-engine.backlog.v1",
+  "generated_at": "2026-11-02T07:54:00Z",
+  "generator": "scripts/validate_repo.py (bootstrap)",
+  "base_commit": "aaac0a6ecd464bf3f4798e18c94a003fb6ef0487",
+  "source_commit_mapping": {
+    "commit": "aaac0a6ecd464bf3f4798e18c94a003fb6ef0487",
+    "author": "quantm-zeus <quantm-zeus@users.noreply.github.com>",
+    "date": "2026-11-02T06:01:19Z",
+    "message": "docs: design independent code-first video engine",
+    "task_ref": "DOC-001"
+  },
+  "durable_queue_status": "NO_SAFE_DURABLE_QUEUE",
+  "durable_queue_notes": "Until P0-05 establishes SQLite WAL state ledger (.agy/state.sqlite), no safe durable queue exists in repository. This static machine-readable backlog snapshot acts as the bootstrap task ledger.",
+  "summary": {
+    "total_tasks": 52,
+    "initial_ready_tasks_at_bootstrap": [
+      "P0-01"
+    ],
+    "initial_blocked_by_dependency_tasks": [
+      "P0-02",
+      "P0-03",
+      "P0-04",
+      "P0-05",
+      "P1-01",
+      "P1-02",
+      "P1-03",
+      "P1-04",
+      "P1-05",
+      "P2-01",
+      "P2-02",
+      "P2-03",
+      "P2-04",
+      "P2-05",
+      "P3-01",
+      "P3-02",
+      "P3-03",
+      "P3-04",
+      "P3-05",
+      "P4-01",
+      "P4-02",
+      "P4-03",
+      "P4-04",
+      "P4-05",
+      "P4-06",
+      "P4-07",
+      "P5-01",
+      "P5-02",
+      "P5-03",
+      "P5-04",
+      "P5-05",
+      "P6-01",
+      "P6-02",
+      "P6-03",
+      "P6-04",
+      "P6-05",
+      "P7-01",
+      "P7-02",
+      "P7-03",
+      "P7-04",
+      "P7-05",
+      "P7-06",
+      "P8-01",
+      "P8-02",
+      "P8-03",
+      "P8-04",
+      "P9-01",
+      "P9-02",
+      "P9-03",
+      "P9-04",
+      "P9-05"
+    ],
+    "current_task_in_progress_or_review": "P0-01",
+    "post_p0_01_ready_tasks": [
+      "P0-02",
+      "P0-03",
+      "P0-04"
+    ],
+    "states_count": {
+      "review": 1,
+      "planned": 51,
+      "ready": 0,
+      "claimed": 0,
+      "running": 0,
+      "verifying": 0,
+      "done": 0,
+      "blocked": 0,
+      "canceled": 0
+    }
+  },
+  "tasks": [
+    {
+      "task_id": "P0-01",
+      "stream": "Supervisor",
+      "phase": "P0",
+      "state": "review",
+      "state_version": 2,
+      "dependencies": [
+        "DOC-001"
+      ],
+      "dependency_status": "satisfied",
+      "blocked_by": [],
+      "owner": "agy-worker",
+      "run_id": "p0-01-bootstrap-20261102",
+      "lease_epoch": 1,
+      "lease_expires_at": null,
+      "base_commit": "aaac0a6ecd464bf3f4798e18c94a003fb6ef0487",
+      "branch": "main",
+      "worktree": null,
+      "allowed_paths": [
+        "evidence/P0-01/",
+        "scripts/",
+        "docs/PROGRESS.md",
+        "docs/EXECUTION_LOG.md"
+      ],
+      "acceptance_ref": "docs/IMPLEMENTATION_PLAN.md: P0-01",
+      "heartbeat_at": "2026-11-02T07:51:55Z",
+      "attempts": 1,
+      "evidence": [
+        "evidence/P0-01/report.md",
+        "evidence/P0-01/backlog.json"
+      ],
+      "blocker": null,
+      "description": "Đọc đủ docs, required-file/link check, ghi base commit, import backlog với status ready/blocked đúng dependencies; không tự tạo app trước scope review"
+    },
+    {
+      "task_id": "P0-02",
+      "stream": "C+B",
+      "phase": "P0",
+      "state": "planned",
+      "state_version": 1,
+      "dependencies": [
+        "P0-01"
+      ],
+      "dependency_status": "blocked",
+      "blocked_by": [
+        "P0-01"
+      ],
+      "owner": null,
+      "run_id": null,
+      "lease_epoch": 0,
+      "lease_expires_at": null,
+      "base_commit": "aaac0a6ecd464bf3f4798e18c94a003fb6ef0487",
+      "branch": "main",
+      "worktree": null,
+      "allowed_paths": [
+        "evidence/P0-02/",
+        "docs/"
+      ],
+      "acceptance_ref": "docs/IMPLEMENTATION_PLAN.md: P0-02",
+      "heartbeat_at": null,
+      "attempts": 0,
+      "evidence": [],
+      "blocker": "Blocked by dependencies: P0-01",
+      "description": "Review exact HyperFrames/Chromium automation/FFmpeg/font artifacts: commit/version/integrity, install scripts, SBOM/license/NOTICE, vulnerabilities. Ghi allowed/blocked usage; chưa source-reviewed không install/run"
+    },
+    {
+      "task_id": "P0-03",
+      "stream": "D",
+      "phase": "P0",
+      "state": "planned",
+      "state_version": 1,
+      "dependencies": [
+        "P0-01"
+      ],
+      "dependency_status": "blocked",
+      "blocked_by": [
+        "P0-01"
+      ],
+      "owner": null,
+      "run_id": null,
+      "lease_epoch": 0,
+      "lease_expires_at": null,
+      "base_commit": "aaac0a6ecd464bf3f4798e18c94a003fb6ef0487",
+      "branch": "main",
+      "worktree": null,
+      "allowed_paths": [
+        "evidence/P0-03/",
+        "docs/"
+      ],
+      "acceptance_ref": "docs/IMPLEMENTATION_PLAN.md: P0-03",
+      "heartbeat_at": null,
+      "attempts": 0,
+      "evidence": [],
+      "blocker": "Blocked by dependencies: P0-01",
+      "description": "Rights manifest cho assets/fonts/audio của 3 fixtures; tự tạo hoặc quyền thương mại rõ, hashes/source/license, không lấy demo upstream thiếu quyền"
+    },
+    {
+      "task_id": "P0-04",
+      "stream": "A+C",
+      "phase": "P0",
+      "state": "planned",
+      "state_version": 1,
+      "dependencies": [
+        "P0-01"
+      ],
+      "dependency_status": "blocked",
+      "blocked_by": [
+        "P0-01"
+      ],
+      "owner": null,
+      "run_id": null,
+      "lease_epoch": 0,
+      "lease_expires_at": null,
+      "base_commit": "aaac0a6ecd464bf3f4798e18c94a003fb6ef0487",
+      "branch": "main",
+      "worktree": null,
+      "allowed_paths": [
+        "evidence/P0-04/",
+        "docs/"
+      ],
+      "acceptance_ref": "docs/IMPLEMENTATION_PLAN.md: P0-04",
+      "heartbeat_at": null,
+      "attempts": 0,
+      "evidence": [],
+      "blocker": "Blocked by dependencies: P0-01",
+      "description": "Contract/threat-model review: chốt starter limits, transitions, tenant entities, errors, lease/cancel/idempotency; mở issues cụ thể cho ambiguity, sửa docs cùng quyết định"
+    },
+    {
+      "task_id": "P0-05",
+      "stream": "Supervisor",
+      "phase": "P0",
+      "state": "planned",
+      "state_version": 1,
+      "dependencies": [
+        "P0-04"
+      ],
+      "dependency_status": "blocked",
+      "blocked_by": [
+        "P0-04"
+      ],
+      "owner": null,
+      "run_id": null,
+      "lease_epoch": 0,
+      "lease_expires_at": null,
+      "base_commit": "aaac0a6ecd464bf3f4798e18c94a003fb6ef0487",
+      "branch": "main",
+      "worktree": null,
+      "allowed_paths": [
+        "evidence/P0-05/",
+        "docs/"
+      ],
+      "acceptance_ref": "docs/IMPLEMENTATION_PLAN.md: P0-05",
+      "heartbeat_at": null,
+      "attempts": 0,
+      "evidence": [],
+      "blocker": "Blocked by dependencies: P0-04",
+      "description": "Thiết lập task ledger/worktree policy/evidence template theo AGENTS, thử recovery bằng synthetic task state; credentials không vào queue/log"
+    },
+    {
+      "task_id": "P1-01",
+      "stream": "C",
+      "phase": "P1",
+      "state": "planned",
+      "state_version": 1,
+      "dependencies": [
+        "P0-02",
+        "P0-04",
+        "P0-05"
+      ],
+      "dependency_status": "blocked",
+      "blocked_by": [
+        "P0-02",
+        "P0-04",
+        "P0-05"
+      ],
+      "owner": null,
+      "run_id": null,
+      "lease_epoch": 0,
+      "lease_expires_at": null,
+      "base_commit": "aaac0a6ecd464bf3f4798e18c94a003fb6ef0487",
+      "branch": "main",
+      "worktree": null,
+      "allowed_paths": [
+        "evidence/P1-01/",
+        "packages/",
+        "docker/",
+        ".github/"
+      ],
+      "acceptance_ref": "docs/IMPLEMENTATION_PLAN.md: P1-01",
+      "heartbeat_at": null,
+      "attempts": 0,
+      "evidence": [],
+      "blocker": "Blocked by dependencies: P0-02, P0-04, P0-05",
+      "description": "TS workspace + pinned toolchain/lockfile + local Compose + env sample + ignore rules cho `.agy/`, `.worktrees/`, `.local/`. Reproducible install/build, health checks, README setup actual; không prod deploy"
+    },
+    {
+      "task_id": "P1-02",
+      "stream": "A",
+      "phase": "P1",
+      "state": "planned",
+      "state_version": 1,
+      "dependencies": [
+        "P0-04",
+        "P1-01"
+      ],
+      "dependency_status": "blocked",
+      "blocked_by": [
+        "P0-04",
+        "P1-01"
+      ],
+      "owner": null,
+      "run_id": null,
+      "lease_epoch": 0,
+      "lease_expires_at": null,
+      "base_commit": "aaac0a6ecd464bf3f4798e18c94a003fb6ef0487",
+      "branch": "main",
+      "worktree": null,
+      "allowed_paths": [
+        "evidence/P1-02/",
+        "packages/",
+        "docker/",
+        ".github/"
+      ],
+      "acceptance_ref": "docs/IMPLEMENTATION_PLAN.md: P1-02",
+      "heartbeat_at": null,
+      "attempts": 0,
+      "evidence": [],
+      "blocker": "Blocked by dependencies: P0-04, P1-01",
+      "description": "Full JSON Schema 2020-12 + OpenAPI 3.1 + generated types/examples, expand mọi `$defs` fragment; unknown fields/invalid timing examples fail, valid fixture parse pass"
+    },
+    {
+      "task_id": "P1-03",
+      "stream": "B",
+      "phase": "P1",
+      "state": "planned",
+      "state_version": 1,
+      "dependencies": [
+        "P1-02"
+      ],
+      "dependency_status": "blocked",
+      "blocked_by": [
+        "P1-02"
+      ],
+      "owner": null,
+      "run_id": null,
+      "lease_epoch": 0,
+      "lease_expires_at": null,
+      "base_commit": "aaac0a6ecd464bf3f4798e18c94a003fb6ef0487",
+      "branch": "main",
+      "worktree": null,
+      "allowed_paths": [
+        "evidence/P1-03/",
+        "packages/",
+        "docker/",
+        ".github/"
+      ],
+      "acceptance_ref": "docs/IMPLEMENTATION_PLAN.md: P1-03",
+      "heartbeat_at": null,
+      "attempts": 0,
+      "evidence": [],
+      "blocker": "Blocked by dependencies: P1-02",
+      "description": "Semantic validator/canonical compiler manifest: frames/rational time, scene references/hash/defaults/revisions, capability errors; boundary/property tests"
+    },
+    {
+      "task_id": "P1-04",
+      "stream": "C",
+      "phase": "P1",
+      "state": "planned",
+      "state_version": 1,
+      "dependencies": [
+        "P1-01",
+        "P0-02"
+      ],
+      "dependency_status": "blocked",
+      "blocked_by": [
+        "P1-01",
+        "P0-02"
+      ],
+      "owner": null,
+      "run_id": null,
+      "lease_epoch": 0,
+      "lease_expires_at": null,
+      "base_commit": "aaac0a6ecd464bf3f4798e18c94a003fb6ef0487",
+      "branch": "main",
+      "worktree": null,
+      "allowed_paths": [
+        "evidence/P1-04/",
+        "packages/",
+        "docker/",
+        ".github/"
+      ],
+      "acceptance_ref": "docs/IMPLEMENTATION_PLAN.md: P1-04",
+      "heartbeat_at": null,
+      "attempts": 0,
+      "evidence": [],
+      "blocker": "Blocked by dependencies: P1-01, P0-02",
+      "description": "Minimal trusted-template sandbox/launcher: nonroot, Chromium sandbox, no egress, read-only inputs, cgroup/time/disk/PID limits, no host socket; self-test pass, custom off"
+    },
+    {
+      "task_id": "P1-05",
+      "stream": "A+C",
+      "phase": "P1",
+      "state": "planned",
+      "state_version": 1,
+      "dependencies": [
+        "P1-02",
+        "P1-04"
+      ],
+      "dependency_status": "blocked",
+      "blocked_by": [
+        "P1-02",
+        "P1-04"
+      ],
+      "owner": null,
+      "run_id": null,
+      "lease_epoch": 0,
+      "lease_expires_at": null,
+      "base_commit": "aaac0a6ecd464bf3f4798e18c94a003fb6ef0487",
+      "branch": "main",
+      "worktree": null,
+      "allowed_paths": [
+        "evidence/P1-05/",
+        "packages/",
+        "docker/",
+        ".github/"
+      ],
+      "acceptance_ref": "docs/IMPLEMENTATION_PLAN.md: P1-05",
+      "heartbeat_at": null,
+      "attempts": 0,
+      "evidence": [],
+      "blocker": "Blocked by dependencies: P1-02, P1-04",
+      "description": "CI jobs docs/contracts/lint/typecheck/unit + migration smoke harness; secrets redacted, pinned runners/cache, evidence format standardized. No fake render pass"
+    },
+    {
+      "task_id": "P2-01",
+      "stream": "B",
+      "phase": "P2",
+      "state": "planned",
+      "state_version": 1,
+      "dependencies": [
+        "P1-03",
+        "P1-04",
+        "P0-03"
+      ],
+      "dependency_status": "blocked",
+      "blocked_by": [
+        "P1-03",
+        "P1-04",
+        "P0-03"
+      ],
+      "owner": null,
+      "run_id": null,
+      "lease_epoch": 0,
+      "lease_expires_at": null,
+      "base_commit": "aaac0a6ecd464bf3f4798e18c94a003fb6ef0487",
+      "branch": "main",
+      "worktree": null,
+      "allowed_paths": [
+        "evidence/P2-01/",
+        "packages/renderers/",
+        "fixtures/"
+      ],
+      "acceptance_ref": "docs/IMPLEMENTATION_PLAN.md: P2-01",
+      "heartbeat_at": null,
+      "attempts": 0,
+      "evidence": [],
+      "blocker": "Blocked by dependencies: P1-03, P1-04, P0-03",
+      "description": "HyperFrames adapter spike và minimal Chromium/FFmpeg baseline trên same manifest. Prepare/seek/dispose, pinned runtime/encoder, no egress; random seek/capture đúng. 2 ngày công HyperFrames rồi blocker review"
+    },
+    {
+      "task_id": "P2-02",
+      "stream": "B+D",
+      "phase": "P2",
+      "state": "planned",
+      "state_version": 1,
+      "dependencies": [
+        "P2-01"
+      ],
+      "dependency_status": "blocked",
+      "blocked_by": [
+        "P2-01"
+      ],
+      "owner": null,
+      "run_id": null,
+      "lease_epoch": 0,
+      "lease_expires_at": null,
+      "base_commit": "aaac0a6ecd464bf3f4798e18c94a003fb6ef0487",
+      "branch": "main",
+      "worktree": null,
+      "allowed_paths": [
+        "evidence/P2-02/",
+        "packages/renderers/",
+        "fixtures/"
+      ],
+      "acceptance_ref": "docs/IMPLEMENTATION_PLAN.md: P2-02",
+      "heartbeat_at": null,
+      "attempts": 0,
+      "evidence": [],
+      "blocker": "Blocked by dependencies: P2-01",
+      "description": "POC-01 promo 15s và POC-02 narrated explainer 30s; versioned editable template/scene JSON, font Việt, real frames/MP4; decode + expected counts + evidence"
+    },
+    {
+      "task_id": "P2-03",
+      "stream": "B",
+      "phase": "P2",
+      "state": "planned",
+      "state_version": 1,
+      "dependencies": [
+        "P2-01",
+        "P0-03"
+      ],
+      "dependency_status": "blocked",
+      "blocked_by": [
+        "P2-01",
+        "P0-03"
+      ],
+      "owner": null,
+      "run_id": null,
+      "lease_epoch": 0,
+      "lease_expires_at": null,
+      "base_commit": "aaac0a6ecd464bf3f4798e18c94a003fb6ef0487",
+      "branch": "main",
+      "worktree": null,
+      "allowed_paths": [
+        "evidence/P2-03/",
+        "packages/renderers/",
+        "fixtures/"
+      ],
+      "acceptance_ref": "docs/IMPLEMENTATION_PLAN.md: P2-03",
+      "heartbeat_at": null,
+      "attempts": 0,
+      "evidence": [],
+      "blocker": "Blocked by dependencies: P2-01, P0-03",
+      "description": "POC-03 captioned footage 45s, CFR trim/crop, explicit audio mix, SRT/VTT, source hashes; sync anchors ≤1 frame, no clipping"
+    },
+    {
+      "task_id": "P2-04",
+      "stream": "B+C",
+      "phase": "P2",
+      "state": "planned",
+      "state_version": 1,
+      "dependencies": [
+        "P2-02",
+        "P2-03"
+      ],
+      "dependency_status": "blocked",
+      "blocked_by": [
+        "P2-02",
+        "P2-03"
+      ],
+      "owner": null,
+      "run_id": null,
+      "lease_epoch": 0,
+      "lease_expires_at": null,
+      "base_commit": "aaac0a6ecd464bf3f4798e18c94a003fb6ef0487",
+      "branch": "main",
+      "worktree": null,
+      "allowed_paths": [
+        "evidence/P2-04/",
+        "packages/renderers/",
+        "fixtures/"
+      ],
+      "acceptance_ref": "docs/IMPLEMENTATION_PLAN.md: P2-04",
+      "heartbeat_at": null,
+      "attempts": 0,
+      "evidence": [],
+      "blocker": "Blocked by dependencies: P2-02, P2-03",
+      "description": "Benchmark both viable candidates theo Testing; 5 warm/3 cold runs, costs/utilization, RSS/RTF/quality; ADR E1–E6 evidence, chọn primary/fallback hoặc blocked có lý do"
+    },
+    {
+      "task_id": "P2-05",
+      "stream": "Reviewer",
+      "phase": "P2",
+      "state": "planned",
+      "state_version": 1,
+      "dependencies": [
+        "P2-04",
+        "P1-05"
+      ],
+      "dependency_status": "blocked",
+      "blocked_by": [
+        "P2-04",
+        "P1-05"
+      ],
+      "owner": null,
+      "run_id": null,
+      "lease_epoch": 0,
+      "lease_expires_at": null,
+      "base_commit": "aaac0a6ecd464bf3f4798e18c94a003fb6ef0487",
+      "branch": "main",
+      "worktree": null,
+      "allowed_paths": [
+        "evidence/P2-05/",
+        "packages/renderers/",
+        "fixtures/"
+      ],
+      "acceptance_ref": "docs/IMPLEMENTATION_PLAN.md: P2-05",
+      "heartbeat_at": null,
+      "attempts": 0,
+      "evidence": [],
+      "blocker": "Blocked by dependencies: P2-04, P1-05",
+      "description": "Human watch/listen cả 3 MP4, golden frames/quality report, editable revision rerender; G2 sign-off và README actual video artifact/checksum links. Không gọi P2 done khi target fail chưa có ADR amendment"
+    },
+    {
+      "task_id": "P3-01",
+      "stream": "A",
+      "phase": "P3",
+      "state": "planned",
+      "state_version": 1,
+      "dependencies": [
+        "P1-02",
+        "P0-04"
+      ],
+      "dependency_status": "blocked",
+      "blocked_by": [
+        "P1-02",
+        "P0-04"
+      ],
+      "owner": null,
+      "run_id": null,
+      "lease_epoch": 0,
+      "lease_expires_at": null,
+      "base_commit": "aaac0a6ecd464bf3f4798e18c94a003fb6ef0487",
+      "branch": "main",
+      "worktree": null,
+      "allowed_paths": [
+        "evidence/P3-01/",
+        "packages/api/",
+        "migrations/"
+      ],
+      "acceptance_ref": "docs/IMPLEMENTATION_PLAN.md: P3-01",
+      "heartbeat_at": null,
+      "attempts": 0,
+      "evidence": [],
+      "blocker": "Blocked by dependencies: P1-02, P0-04",
+      "description": "DB migrations entities/FKs/RLS/service roles/key hashes; tenant pool-context isolation và IDOR tests, rollback/recovery plan"
+    },
+    {
+      "task_id": "P3-02",
+      "stream": "C+A",
+      "phase": "P3",
+      "state": "planned",
+      "state_version": 1,
+      "dependencies": [
+        "P3-01",
+        "P1-04"
+      ],
+      "dependency_status": "blocked",
+      "blocked_by": [
+        "P3-01",
+        "P1-04"
+      ],
+      "owner": null,
+      "run_id": null,
+      "lease_epoch": 0,
+      "lease_expires_at": null,
+      "base_commit": "aaac0a6ecd464bf3f4798e18c94a003fb6ef0487",
+      "branch": "main",
+      "worktree": null,
+      "allowed_paths": [
+        "evidence/P3-02/",
+        "packages/api/",
+        "migrations/"
+      ],
+      "acceptance_ref": "docs/IMPLEMENTATION_PLAN.md: P3-02",
+      "heartbeat_at": null,
+      "attempts": 0,
+      "evidence": [],
+      "blocker": "Blocked by dependencies: P3-01, P1-04",
+      "description": "Signed upload/quarantine/complete/probe/normalize/ready pipeline, size/hash/rights/font/SVG guards; malformed media không thoát sandbox, foreign asset 404"
+    },
+    {
+      "task_id": "P3-03",
+      "stream": "A+D",
+      "phase": "P3",
+      "state": "planned",
+      "state_version": 1,
+      "dependencies": [
+        "P3-01",
+        "P1-03",
+        "P0-03"
+      ],
+      "dependency_status": "blocked",
+      "blocked_by": [
+        "P3-01",
+        "P1-03",
+        "P0-03"
+      ],
+      "owner": null,
+      "run_id": null,
+      "lease_epoch": 0,
+      "lease_expires_at": null,
+      "base_commit": "aaac0a6ecd464bf3f4798e18c94a003fb6ef0487",
+      "branch": "main",
+      "worktree": null,
+      "allowed_paths": [
+        "evidence/P3-03/",
+        "packages/api/",
+        "migrations/"
+      ],
+      "acceptance_ref": "docs/IMPLEMENTATION_PLAN.md: P3-03",
+      "heartbeat_at": null,
+      "attempts": 0,
+      "evidence": [],
+      "blocker": "Blocked by dependencies: P3-01, P1-03, P0-03",
+      "description": "Template catalog/variable schema/instantiate, composition revision/concurrency, immutable scene versions; stale base_revision 409, curated fork path"
+    },
+    {
+      "task_id": "P3-04",
+      "stream": "C",
+      "phase": "P3",
+      "state": "planned",
+      "state_version": 1,
+      "dependencies": [
+        "P3-02"
+      ],
+      "dependency_status": "blocked",
+      "blocked_by": [
+        "P3-02"
+      ],
+      "owner": null,
+      "run_id": null,
+      "lease_epoch": 0,
+      "lease_expires_at": null,
+      "base_commit": "aaac0a6ecd464bf3f4798e18c94a003fb6ef0487",
+      "branch": "main",
+      "worktree": null,
+      "allowed_paths": [
+        "evidence/P3-04/",
+        "packages/api/",
+        "migrations/"
+      ],
+      "acceptance_ref": "docs/IMPLEMENTATION_PLAN.md: P3-04",
+      "heartbeat_at": null,
+      "attempts": 0,
+      "evidence": [],
+      "blocker": "Blocked by dependencies: P3-02",
+      "description": "Optional import connector behind off flag: DNS/connect/redirect SSRF defenses, tenant allowlist, rights provenance; adversarial suite pass trước bật"
+    },
+    {
+      "task_id": "P3-05",
+      "stream": "C+A",
+      "phase": "P3",
+      "state": "planned",
+      "state_version": 1,
+      "dependencies": [
+        "P3-02",
+        "P3-03"
+      ],
+      "dependency_status": "blocked",
+      "blocked_by": [
+        "P3-02",
+        "P3-03"
+      ],
+      "owner": null,
+      "run_id": null,
+      "lease_epoch": 0,
+      "lease_expires_at": null,
+      "base_commit": "aaac0a6ecd464bf3f4798e18c94a003fb6ef0487",
+      "branch": "main",
+      "worktree": null,
+      "allowed_paths": [
+        "evidence/P3-05/",
+        "packages/api/",
+        "migrations/"
+      ],
+      "acceptance_ref": "docs/IMPLEMENTATION_PLAN.md: P3-05",
+      "heartbeat_at": null,
+      "attempts": 0,
+      "evidence": [],
+      "blocker": "Blocked by dependencies: P3-02, P3-03",
+      "description": "Storage grants/retention/revoke/delete cascade/temp sweeper, tombstones/reference safety; unauthorized/revoked references bị chặn, cross-tenant URL tests. Live-job cancellation/publication integration hoàn tất và test ở P4-03 sau khi jobs tồn tại"
+    },
+    {
+      "task_id": "P4-01",
+      "stream": "A",
+      "phase": "P4",
+      "state": "planned",
+      "state_version": 1,
+      "dependencies": [
+        "P3-01",
+        "P3-03"
+      ],
+      "dependency_status": "blocked",
+      "blocked_by": [
+        "P3-01",
+        "P3-03"
+      ],
+      "owner": null,
+      "run_id": null,
+      "lease_epoch": 0,
+      "lease_expires_at": null,
+      "base_commit": "aaac0a6ecd464bf3f4798e18c94a003fb6ef0487",
+      "branch": "main",
+      "worktree": null,
+      "allowed_paths": [
+        "evidence/P4-01/",
+        "packages/api/",
+        "packages/dispatcher/"
+      ],
+      "acceptance_ref": "docs/IMPLEMENTATION_PLAN.md: P4-01",
+      "heartbeat_at": null,
+      "attempts": 0,
+      "evidence": [],
+      "blocker": "Blocked by dependencies: P3-01, P3-03",
+      "description": "Admission transaction/idempotency/limits/reservations/capabilities; concurrent duplicate/key conflict/quota races pass, 202 only after durable commit"
+    },
+    {
+      "task_id": "P4-02",
+      "stream": "B+A",
+      "phase": "P4",
+      "state": "planned",
+      "state_version": 1,
+      "dependencies": [
+        "P4-01",
+        "P2-05",
+        "P3-02"
+      ],
+      "dependency_status": "blocked",
+      "blocked_by": [
+        "P4-01",
+        "P2-05",
+        "P3-02"
+      ],
+      "owner": null,
+      "run_id": null,
+      "lease_epoch": 0,
+      "lease_expires_at": null,
+      "base_commit": "aaac0a6ecd464bf3f4798e18c94a003fb6ef0487",
+      "branch": "main",
+      "worktree": null,
+      "allowed_paths": [
+        "evidence/P4-02/",
+        "packages/api/",
+        "packages/dispatcher/"
+      ],
+      "acceptance_ref": "docs/IMPLEMENTATION_PLAN.md: P4-02",
+      "heartbeat_at": null,
+      "attempts": 0,
+      "evidence": [],
+      "blocker": "Blocked by dependencies: P4-01, P2-05, P3-02",
+      "description": "Postgres dispatcher/lease/heartbeat/fencing/fair scheduling + real renderer; state machine/events/attempts; stale worker không publish"
+    },
+    {
+      "task_id": "P4-03",
+      "stream": "C+B",
+      "phase": "P4",
+      "state": "planned",
+      "state_version": 1,
+      "dependencies": [
+        "P4-02",
+        "P3-05"
+      ],
+      "dependency_status": "blocked",
+      "blocked_by": [
+        "P4-02",
+        "P3-05"
+      ],
+      "owner": null,
+      "run_id": null,
+      "lease_epoch": 0,
+      "lease_expires_at": null,
+      "base_commit": "aaac0a6ecd464bf3f4798e18c94a003fb6ef0487",
+      "branch": "main",
+      "worktree": null,
+      "allowed_paths": [
+        "evidence/P4-03/",
+        "packages/api/",
+        "packages/dispatcher/"
+      ],
+      "acceptance_ref": "docs/IMPLEMENTATION_PLAN.md: P4-03",
+      "heartbeat_at": null,
+      "attempts": 0,
+      "evidence": [],
+      "blocker": "Blocked by dependencies: P4-02, P3-05",
+      "description": "Cancel/timeout/retry/reaper, object temp verification/atomic publication; kill tests mọi stage, cancel-vs-success và asset-revoke-vs-publish races stable, no orphan leak"
+    },
+    {
+      "task_id": "P4-04",
+      "stream": "A+C",
+      "phase": "P4",
+      "state": "planned",
+      "state_version": 1,
+      "dependencies": [
+        "P4-01",
+        "P4-03"
+      ],
+      "dependency_status": "blocked",
+      "blocked_by": [
+        "P4-01",
+        "P4-03"
+      ],
+      "owner": null,
+      "run_id": null,
+      "lease_epoch": 0,
+      "lease_expires_at": null,
+      "base_commit": "aaac0a6ecd464bf3f4798e18c94a003fb6ef0487",
+      "branch": "main",
+      "worktree": null,
+      "allowed_paths": [
+        "evidence/P4-04/",
+        "packages/api/",
+        "packages/dispatcher/"
+      ],
+      "acceptance_ref": "docs/IMPLEMENTATION_PLAN.md: P4-04",
+      "heartbeat_at": null,
+      "attempts": 0,
+      "evidence": [],
+      "blocker": "Blocked by dependencies: P4-01, P4-03",
+      "description": "Signed webhook registration/challenge/rotation/outbox/delivery/replay, bounded SSRF-safe retries; outage không mất event/job, HMAC raw bytes + dedupe tests"
+    },
+    {
+      "task_id": "P4-05",
+      "stream": "A",
+      "phase": "P4",
+      "state": "planned",
+      "state_version": 1,
+      "dependencies": [
+        "P4-01",
+        "P4-03"
+      ],
+      "dependency_status": "blocked",
+      "blocked_by": [
+        "P4-01",
+        "P4-03"
+      ],
+      "owner": null,
+      "run_id": null,
+      "lease_epoch": 0,
+      "lease_expires_at": null,
+      "base_commit": "aaac0a6ecd464bf3f4798e18c94a003fb6ef0487",
+      "branch": "main",
+      "worktree": null,
+      "allowed_paths": [
+        "evidence/P4-05/",
+        "packages/api/",
+        "packages/dispatcher/"
+      ],
+      "acceptance_ref": "docs/IMPLEMENTATION_PLAN.md: P4-05",
+      "heartbeat_at": null,
+      "attempts": 0,
+      "evidence": [],
+      "blocker": "Blocked by dependencies: P4-01, P4-03",
+      "description": "Usage ledger/reserve/settle/release/operational vs billable reports; repeated completion không double debit, canceled/failed units tách rõ"
+    },
+    {
+      "task_id": "P4-06",
+      "stream": "B+D",
+      "phase": "P4",
+      "state": "planned",
+      "state_version": 1,
+      "dependencies": [
+        "P4-02",
+        "P4-03"
+      ],
+      "dependency_status": "blocked",
+      "blocked_by": [
+        "P4-02",
+        "P4-03"
+      ],
+      "owner": null,
+      "run_id": null,
+      "lease_epoch": 0,
+      "lease_expires_at": null,
+      "base_commit": "aaac0a6ecd464bf3f4798e18c94a003fb6ef0487",
+      "branch": "main",
+      "worktree": null,
+      "allowed_paths": [
+        "evidence/P4-06/",
+        "packages/api/",
+        "packages/dispatcher/"
+      ],
+      "acceptance_ref": "docs/IMPLEMENTATION_PLAN.md: P4-06",
+      "heartbeat_at": null,
+      "attempts": 0,
+      "evidence": [],
+      "blocker": "Blocked by dependencies: P4-02, P4-03",
+      "description": "Frame/clip previews cùng compiler/runtime + download grant/thumbnails/captions/manifest; no raw custom HTML origin, 360p/full parity"
+    },
+    {
+      "task_id": "P4-07",
+      "stream": "Reviewer",
+      "phase": "P4",
+      "state": "planned",
+      "state_version": 1,
+      "dependencies": [
+        "P4-04",
+        "P4-05",
+        "P4-06"
+      ],
+      "dependency_status": "blocked",
+      "blocked_by": [
+        "P4-04",
+        "P4-05",
+        "P4-06"
+      ],
+      "owner": null,
+      "run_id": null,
+      "lease_epoch": 0,
+      "lease_expires_at": null,
+      "base_commit": "aaac0a6ecd464bf3f4798e18c94a003fb6ef0487",
+      "branch": "main",
+      "worktree": null,
+      "allowed_paths": [
+        "evidence/P4-07/",
+        "packages/api/",
+        "packages/dispatcher/"
+      ],
+      "acceptance_ref": "docs/IMPLEMENTATION_PLAN.md: P4-07",
+      "heartbeat_at": null,
+      "attempts": 0,
+      "evidence": [],
+      "blocker": "Blocked by dependencies: P4-04, P4-05, P4-06",
+      "description": "G3 two-tenant E2E upload→template→preview→render→callback→download→decode và fault suite; artifacts thật cho same API path"
+    },
+    {
+      "task_id": "P5-01",
+      "stream": "D+B",
+      "phase": "P5",
+      "state": "planned",
+      "state_version": 1,
+      "dependencies": [
+        "P4-07"
+      ],
+      "dependency_status": "blocked",
+      "blocked_by": [
+        "P4-07"
+      ],
+      "owner": null,
+      "run_id": null,
+      "lease_epoch": 0,
+      "lease_expires_at": null,
+      "base_commit": "aaac0a6ecd464bf3f4798e18c94a003fb6ef0487",
+      "branch": "main",
+      "worktree": null,
+      "allowed_paths": [
+        "evidence/P5-01/",
+        "packages/templates/",
+        "packages/sdk/"
+      ],
+      "acceptance_ref": "docs/IMPLEMENTATION_PLAN.md: P5-01",
+      "heartbeat_at": null,
+      "attempts": 0,
+      "evidence": [],
+      "blocker": "Blocked by dependencies: P4-07",
+      "description": "Curated template pack 3 families với variable schema/locales/revisions/license evidence, safe brand tokens/overflow errors; user edits regenerate đúng"
+    },
+    {
+      "task_id": "P5-02",
+      "stream": "D+C",
+      "phase": "P5",
+      "state": "planned",
+      "state_version": 1,
+      "dependencies": [
+        "P3-02",
+        "P0-02"
+      ],
+      "dependency_status": "blocked",
+      "blocked_by": [
+        "P3-02",
+        "P0-02"
+      ],
+      "owner": null,
+      "run_id": null,
+      "lease_epoch": 0,
+      "lease_expires_at": null,
+      "base_commit": "aaac0a6ecd464bf3f4798e18c94a003fb6ef0487",
+      "branch": "main",
+      "worktree": null,
+      "allowed_paths": [
+        "evidence/P5-02/",
+        "packages/templates/",
+        "packages/sdk/"
+      ],
+      "acceptance_ref": "docs/IMPLEMENTATION_PLAN.md: P5-02",
+      "heartbeat_at": null,
+      "attempts": 0,
+      "evidence": [],
+      "blocker": "Blocked by dependencies: P3-02, P0-02",
+      "description": "TTS interface/cache/provenance, upload audio fallback; provider/voice/model terms reviewed trước adapter enabled; failure/budget timeout, vi-VN quality sample nếu TTS bật"
+    },
+    {
+      "task_id": "P5-03",
+      "stream": "D+A",
+      "phase": "P5",
+      "state": "planned",
+      "state_version": 1,
+      "dependencies": [
+        "P4-07"
+      ],
+      "dependency_status": "blocked",
+      "blocked_by": [
+        "P4-07"
+      ],
+      "owner": null,
+      "run_id": null,
+      "lease_epoch": 0,
+      "lease_expires_at": null,
+      "base_commit": "aaac0a6ecd464bf3f4798e18c94a003fb6ef0487",
+      "branch": "main",
+      "worktree": null,
+      "allowed_paths": [
+        "evidence/P5-03/",
+        "packages/templates/",
+        "packages/sdk/"
+      ],
+      "acceptance_ref": "docs/IMPLEMENTATION_PLAN.md: P5-03",
+      "heartbeat_at": null,
+      "attempts": 0,
+      "evidence": [],
+      "blocker": "Blocked by dependencies: P4-07",
+      "description": "Creativanta **mock/contract client trong repo này**: external_reference/idempotency, signed webhook receiver, polling reconciliation, cancel, download-expiry refresh; no shared DB assumptions"
+    },
+    {
+      "task_id": "P5-04",
+      "stream": "A+D",
+      "phase": "P5",
+      "state": "planned",
+      "state_version": 1,
+      "dependencies": [
+        "P5-03"
+      ],
+      "dependency_status": "blocked",
+      "blocked_by": [
+        "P5-03"
+      ],
+      "owner": null,
+      "run_id": null,
+      "lease_epoch": 0,
+      "lease_expires_at": null,
+      "base_commit": "aaac0a6ecd464bf3f4798e18c94a003fb6ef0487",
+      "branch": "main",
+      "worktree": null,
+      "allowed_paths": [
+        "evidence/P5-04/",
+        "packages/templates/",
+        "packages/sdk/"
+      ],
+      "acceptance_ref": "docs/IMPLEMENTATION_PLAN.md: P5-04",
+      "heartbeat_at": null,
+      "attempts": 0,
+      "evidence": [],
+      "blocker": "Blocked by dependencies: P5-03",
+      "description": "API integration guide và generated SDK hoặc typed client example, v1 compatibility tests, error/retry examples; credentials chỉ placeholders"
+    },
+    {
+      "task_id": "P5-05",
+      "stream": "D+C",
+      "phase": "P5",
+      "state": "planned",
+      "state_version": 1,
+      "dependencies": [
+        "P5-01",
+        "P5-02"
+      ],
+      "dependency_status": "blocked",
+      "blocked_by": [
+        "P5-01",
+        "P5-02"
+      ],
+      "owner": null,
+      "run_id": null,
+      "lease_epoch": 0,
+      "lease_expires_at": null,
+      "base_commit": "aaac0a6ecd464bf3f4798e18c94a003fb6ef0487",
+      "branch": "main",
+      "worktree": null,
+      "allowed_paths": [
+        "evidence/P5-05/",
+        "packages/templates/",
+        "packages/sdk/"
+      ],
+      "acceptance_ref": "docs/IMPLEMENTATION_PLAN.md: P5-05",
+      "heartbeat_at": null,
+      "attempts": 0,
+      "evidence": [],
+      "blocker": "Blocked by dependencies: P5-01, P5-02",
+      "description": "Locale/font/audio regression matrix, subtitle import/sidecar/burn-in workflow và content rights controls; native Vietnamese reviewer sign-off cho beta samples"
+    },
+    {
+      "task_id": "P6-01",
+      "stream": "C",
+      "phase": "P6",
+      "state": "planned",
+      "state_version": 1,
+      "dependencies": [
+        "P4-07"
+      ],
+      "dependency_status": "blocked",
+      "blocked_by": [
+        "P4-07"
+      ],
+      "owner": null,
+      "run_id": null,
+      "lease_epoch": 0,
+      "lease_expires_at": null,
+      "base_commit": "aaac0a6ecd464bf3f4798e18c94a003fb6ef0487",
+      "branch": "main",
+      "worktree": null,
+      "allowed_paths": [
+        "evidence/P6-01/",
+        "ops/",
+        "benchmarks/"
+      ],
+      "acceptance_ref": "docs/IMPLEMENTATION_PLAN.md: P6-01",
+      "heartbeat_at": null,
+      "attempts": 0,
+      "evidence": [],
+      "blocker": "Blocked by dependencies: P4-07",
+      "description": "Metrics/traces/redacted logs/alerts/dashboards + per-tenant cost reporting; runbooks tái hiện job/queue/artifact/webhook issues bằng synthetic IDs"
+    },
+    {
+      "task_id": "P6-02",
+      "stream": "C+A",
+      "phase": "P6",
+      "state": "planned",
+      "state_version": 1,
+      "dependencies": [
+        "P6-01",
+        "P3-05"
+      ],
+      "dependency_status": "blocked",
+      "blocked_by": [
+        "P6-01",
+        "P3-05"
+      ],
+      "owner": null,
+      "run_id": null,
+      "lease_epoch": 0,
+      "lease_expires_at": null,
+      "base_commit": "aaac0a6ecd464bf3f4798e18c94a003fb6ef0487",
+      "branch": "main",
+      "worktree": null,
+      "allowed_paths": [
+        "evidence/P6-02/",
+        "ops/",
+        "benchmarks/"
+      ],
+      "acceptance_ref": "docs/IMPLEMENTATION_PLAN.md: P6-02",
+      "heartbeat_at": null,
+      "attempts": 0,
+      "evidence": [],
+      "blocker": "Blocked by dependencies: P6-01, P3-05",
+      "description": "Backup/PITR + object consistency + restore drill vào isolated env, measured RPO≤15min/RTO≤4h; custom/import stay off sau restore đến revalidation"
+    },
+    {
+      "task_id": "P6-03",
+      "stream": "C+B",
+      "phase": "P6",
+      "state": "planned",
+      "state_version": 1,
+      "dependencies": [
+        "P6-01",
+        "P2-04"
+      ],
+      "dependency_status": "blocked",
+      "blocked_by": [
+        "P6-01",
+        "P2-04"
+      ],
+      "owner": null,
+      "run_id": null,
+      "lease_epoch": 0,
+      "lease_expires_at": null,
+      "base_commit": "aaac0a6ecd464bf3f4798e18c94a003fb6ef0487",
+      "branch": "main",
+      "worktree": null,
+      "allowed_paths": [
+        "evidence/P6-03/",
+        "ops/",
+        "benchmarks/"
+      ],
+      "acceptance_ref": "docs/IMPLEMENTATION_PLAN.md: P6-03",
+      "heartbeat_at": null,
+      "attempts": 0,
+      "evidence": [],
+      "blocker": "Blocked by dependencies: P6-01, P2-04",
+      "description": "Load/capacity/fairness/24h soak ≥1000 valid jobs, cost model at 10/50/80% utilization; document capacity envelope và autoscale budget"
+    },
+    {
+      "task_id": "P6-04",
+      "stream": "Security reviewer",
+      "phase": "P6",
+      "state": "planned",
+      "state_version": 1,
+      "dependencies": [
+        "P6-02",
+        "P6-03",
+        "P4-07"
+      ],
+      "dependency_status": "blocked",
+      "blocked_by": [
+        "P6-02",
+        "P6-03",
+        "P4-07"
+      ],
+      "owner": null,
+      "run_id": null,
+      "lease_epoch": 0,
+      "lease_expires_at": null,
+      "base_commit": "aaac0a6ecd464bf3f4798e18c94a003fb6ef0487",
+      "branch": "main",
+      "worktree": null,
+      "allowed_paths": [
+        "evidence/P6-04/",
+        "ops/",
+        "benchmarks/"
+      ],
+      "acceptance_ref": "docs/IMPLEMENTATION_PLAN.md: P6-04",
+      "heartbeat_at": null,
+      "attempts": 0,
+      "evidence": [],
+      "blocker": "Blocked by dependencies: P6-02, P6-03, P4-07",
+      "description": "Structured renderer security suite, SBOM/license/codec/asset review, secrets/IDOR/SSRF/abuse/deletion; critical findings resolved hoặc beta blocked"
+    },
+    {
+      "task_id": "P6-05",
+      "stream": "Supervisor",
+      "phase": "P6",
+      "state": "planned",
+      "state_version": 1,
+      "dependencies": [
+        "P6-04",
+        "P5-04",
+        "P5-05"
+      ],
+      "dependency_status": "blocked",
+      "blocked_by": [
+        "P6-04",
+        "P5-04",
+        "P5-05"
+      ],
+      "owner": null,
+      "run_id": null,
+      "lease_epoch": 0,
+      "lease_expires_at": null,
+      "base_commit": "aaac0a6ecd464bf3f4798e18c94a003fb6ef0487",
+      "branch": "main",
+      "worktree": null,
+      "allowed_paths": [
+        "evidence/P6-05/",
+        "ops/",
+        "benchmarks/"
+      ],
+      "acceptance_ref": "docs/IMPLEMENTATION_PLAN.md: P6-05",
+      "heartbeat_at": null,
+      "attempts": 0,
+      "evidence": [],
+      "blocker": "Blocked by dependencies: P6-04, P5-04, P5-05",
+      "description": "G4 go/no-go report, immutable release/migration/rollback artifacts, SLO/error budget and support owner, exact staging smoke. Production deploy không tự được cấp bởi task này"
+    },
+    {
+      "task_id": "P7-01",
+      "stream": "C+Security reviewer",
+      "phase": "P7",
+      "state": "planned",
+      "state_version": 1,
+      "dependencies": [
+        "P6-04"
+      ],
+      "dependency_status": "blocked",
+      "blocked_by": [
+        "P6-04"
+      ],
+      "owner": null,
+      "run_id": null,
+      "lease_epoch": 0,
+      "lease_expires_at": null,
+      "base_commit": "aaac0a6ecd464bf3f4798e18c94a003fb6ef0487",
+      "branch": "main",
+      "worktree": null,
+      "allowed_paths": [
+        "evidence/P7-01/",
+        "packages/custom-runtime/"
+      ],
+      "acceptance_ref": "docs/IMPLEMENTATION_PLAN.md: P7-01",
+      "heartbeat_at": null,
+      "attempts": 0,
+      "evidence": [],
+      "blocker": "Blocked by dependencies: P6-04",
+      "description": "Custom runtime ADR + disposable microVM isolated build/render, no egress/secrets/host FS, bounds; gVisor alternative cần explicit review, không downgrade"
+    },
+    {
+      "task_id": "P7-02",
+      "stream": "A+D",
+      "phase": "P7",
+      "state": "planned",
+      "state_version": 1,
+      "dependencies": [
+        "P7-01",
+        "P1-02"
+      ],
+      "dependency_status": "blocked",
+      "blocked_by": [
+        "P7-01",
+        "P1-02"
+      ],
+      "owner": null,
+      "run_id": null,
+      "lease_epoch": 0,
+      "lease_expires_at": null,
+      "base_commit": "aaac0a6ecd464bf3f4798e18c94a003fb6ef0487",
+      "branch": "main",
+      "worktree": null,
+      "allowed_paths": [
+        "evidence/P7-02/",
+        "packages/custom-runtime/"
+      ],
+      "acceptance_ref": "docs/IMPLEMENTATION_PLAN.md: P7-02",
+      "heartbeat_at": null,
+      "attempts": 0,
+      "evidence": [],
+      "blocker": "Blocked by dependencies: P7-01, P1-02",
+      "description": "Versioned scene-bundle registry/source/build digests/parameter schema/provenance, full OpenAPI extension, editable revisions/download access; feature still off"
+    },
+    {
+      "task_id": "P7-03",
+      "stream": "D+C",
+      "phase": "P7",
+      "state": "planned",
+      "state_version": 1,
+      "dependencies": [
+        "P7-02"
+      ],
+      "dependency_status": "blocked",
+      "blocked_by": [
+        "P7-02"
+      ],
+      "owner": null,
+      "run_id": null,
+      "lease_epoch": 0,
+      "lease_expires_at": null,
+      "base_commit": "aaac0a6ecd464bf3f4798e18c94a003fb6ef0487",
+      "branch": "main",
+      "worktree": null,
+      "allowed_paths": [
+        "evidence/P7-03/",
+        "packages/custom-runtime/"
+      ],
+      "acceptance_ref": "docs/IMPLEMENTATION_PLAN.md: P7-03",
+      "heartbeat_at": null,
+      "attempts": 0,
+      "evidence": [],
+      "blocker": "Blocked by dependencies: P7-02",
+      "description": "Provider-neutral authoring adapter contract và ít nhất một non-premium-required route + deterministic mock; token/time/cost budgets, cancellation, source-only output. Codex/AGY/OpenCode/DeepSeek là tùy chọn, không bắt buộc subscription"
+    },
+    {
+      "task_id": "P7-04",
+      "stream": "C+B",
+      "phase": "P7",
+      "state": "planned",
+      "state_version": 1,
+      "dependencies": [
+        "P7-01",
+        "P7-02",
+        "P7-03"
+      ],
+      "dependency_status": "blocked",
+      "blocked_by": [
+        "P7-01",
+        "P7-02",
+        "P7-03"
+      ],
+      "owner": null,
+      "run_id": null,
+      "lease_epoch": 0,
+      "lease_expires_at": null,
+      "base_commit": "aaac0a6ecd464bf3f4798e18c94a003fb6ef0487",
+      "branch": "main",
+      "worktree": null,
+      "allowed_paths": [
+        "evidence/P7-04/",
+        "packages/custom-runtime/"
+      ],
+      "acceptance_ref": "docs/IMPLEMENTATION_PLAN.md: P7-04",
+      "heartbeat_at": null,
+      "attempts": 0,
+      "evidence": [],
+      "blocker": "Blocked by dependencies: P7-01, P7-02, P7-03",
+      "description": "Isolated build with approved imports, static scan + preview + malicious payload suite, no trusted API execution; source injection không đọc canary secrets"
+    },
+    {
+      "task_id": "P7-05",
+      "stream": "Security reviewer",
+      "phase": "P7",
+      "state": "planned",
+      "state_version": 1,
+      "dependencies": [
+        "P7-04"
+      ],
+      "dependency_status": "blocked",
+      "blocked_by": [
+        "P7-04"
+      ],
+      "owner": null,
+      "run_id": null,
+      "lease_epoch": 0,
+      "lease_expires_at": null,
+      "base_commit": "aaac0a6ecd464bf3f4798e18c94a003fb6ef0487",
+      "branch": "main",
+      "worktree": null,
+      "allowed_paths": [
+        "evidence/P7-05/",
+        "packages/custom-runtime/"
+      ],
+      "acceptance_ref": "docs/IMPLEMENTATION_PLAN.md: P7-05",
+      "heartbeat_at": null,
+      "attempts": 0,
+      "evidence": [],
+      "blocker": "Blocked by dependencies: P7-04",
+      "description": "C1–C6 signed review cho exact runtime digest, kill switch/canary/allowlist evidence; off-by-default regression và rollback test"
+    },
+    {
+      "task_id": "P7-06",
+      "stream": "D+B",
+      "phase": "P7",
+      "state": "planned",
+      "state_version": 1,
+      "dependencies": [
+        "P7-05",
+        "P5-01"
+      ],
+      "dependency_status": "blocked",
+      "blocked_by": [
+        "P7-05",
+        "P5-01"
+      ],
+      "owner": null,
+      "run_id": null,
+      "lease_epoch": 0,
+      "lease_expires_at": null,
+      "base_commit": "aaac0a6ecd464bf3f4798e18c94a003fb6ef0487",
+      "branch": "main",
+      "worktree": null,
+      "allowed_paths": [
+        "evidence/P7-06/",
+        "packages/custom-runtime/"
+      ],
+      "acceptance_ref": "docs/IMPLEMENTATION_PLAN.md: P7-06",
+      "heartbeat_at": null,
+      "attempts": 0,
+      "evidence": [],
+      "blocker": "Blocked by dependencies: P7-05, P5-01",
+      "description": "3 custom scene variants từ same brief, editable versions và manifest, measured authoring/render cost, user preview/approval flow; enable chỉ tenant pilot đã được cấp"
+    },
+    {
+      "task_id": "P8-01",
+      "stream": "D+C",
+      "phase": "P8",
+      "state": "planned",
+      "state_version": 1,
+      "dependencies": [
+        "P6-05",
+        "P0-02"
+      ],
+      "dependency_status": "blocked",
+      "blocked_by": [
+        "P6-05",
+        "P0-02"
+      ],
+      "owner": null,
+      "run_id": null,
+      "lease_epoch": 0,
+      "lease_expires_at": null,
+      "base_commit": "aaac0a6ecd464bf3f4798e18c94a003fb6ef0487",
+      "branch": "main",
+      "worktree": null,
+      "allowed_paths": [
+        "evidence/P8-01/",
+        "packages/browser-export/"
+      ],
+      "acceptance_ref": "docs/IMPLEMENTATION_PLAN.md: P8-01",
+      "heartbeat_at": null,
+      "attempts": 0,
+      "evidence": [],
+      "blocker": "Blocked by dependencies: P6-05, P0-02",
+      "description": "WebAV/Mediabunny exact version/legal/browser-distribution review, capability matrix desktop/mobile/browser codec/security. No code shipping trước review"
+    },
+    {
+      "task_id": "P8-02",
+      "stream": "B+D",
+      "phase": "P8",
+      "state": "planned",
+      "state_version": 1,
+      "dependencies": [
+        "P8-01"
+      ],
+      "dependency_status": "blocked",
+      "blocked_by": [
+        "P8-01"
+      ],
+      "owner": null,
+      "run_id": null,
+      "lease_epoch": 0,
+      "lease_expires_at": null,
+      "base_commit": "aaac0a6ecd464bf3f4798e18c94a003fb6ef0487",
+      "branch": "main",
+      "worktree": null,
+      "allowed_paths": [
+        "evidence/P8-02/",
+        "packages/browser-export/"
+      ],
+      "acceptance_ref": "docs/IMPLEMENTATION_PLAN.md: P8-02",
+      "heartbeat_at": null,
+      "attempts": 0,
+      "evidence": [],
+      "blocker": "Blocked by dependencies: P8-01",
+      "description": "Browser export spike theo scene subset, unsupported feature fallback **server job mới**, memory/cancel/download/quality parity tests; offline assets chỉ scoped grants"
+    },
+    {
+      "task_id": "P8-03",
+      "stream": "B",
+      "phase": "P8",
+      "state": "planned",
+      "state_version": 1,
+      "dependencies": [
+        "P6-05"
+      ],
+      "dependency_status": "blocked",
+      "blocked_by": [
+        "P6-05"
+      ],
+      "owner": null,
+      "run_id": null,
+      "lease_epoch": 0,
+      "lease_expires_at": null,
+      "base_commit": "aaac0a6ecd464bf3f4798e18c94a003fb6ef0487",
+      "branch": "main",
+      "worktree": null,
+      "allowed_paths": [
+        "evidence/P8-03/",
+        "packages/browser-export/"
+      ],
+      "acceptance_ref": "docs/IMPLEMENTATION_PLAN.md: P8-03",
+      "heartbeat_at": null,
+      "attempts": 0,
+      "evidence": [],
+      "blocker": "Blocked by dependencies: P6-05",
+      "description": "Bounded VideoFlow/Revideo/Motion Canvas/PixiJS scene-engine spikes theo nhu cầu, CPU/license/security report; chọn tối đa một initial optional adapter bằng ADR"
+    },
+    {
+      "task_id": "P8-04",
+      "stream": "Reviewer",
+      "phase": "P8",
+      "state": "planned",
+      "state_version": 1,
+      "dependencies": [
+        "P8-02",
+        "P8-03"
+      ],
+      "dependency_status": "blocked",
+      "blocked_by": [
+        "P8-02",
+        "P8-03"
+      ],
+      "owner": null,
+      "run_id": null,
+      "lease_epoch": 0,
+      "lease_expires_at": null,
+      "base_commit": "aaac0a6ecd464bf3f4798e18c94a003fb6ef0487",
+      "branch": "main",
+      "worktree": null,
+      "allowed_paths": [
+        "evidence/P8-04/",
+        "packages/browser-export/"
+      ],
+      "acceptance_ref": "docs/IMPLEMENTATION_PLAN.md: P8-04",
+      "heartbeat_at": null,
+      "attempts": 0,
+      "evidence": [],
+      "blocker": "Blocked by dependencies: P8-02, P8-03",
+      "description": "Browser/specialized capability docs và acceptance matrix; refuse unsupported instead of silently degrade. Có thể conclude no-adoption với evidence, không fake support"
+    },
+    {
+      "task_id": "P9-01",
+      "stream": "C+A",
+      "phase": "P9",
+      "state": "planned",
+      "state_version": 1,
+      "dependencies": [
+        "P6-05"
+      ],
+      "dependency_status": "blocked",
+      "blocked_by": [
+        "P6-05"
+      ],
+      "owner": null,
+      "run_id": null,
+      "lease_epoch": 0,
+      "lease_expires_at": null,
+      "base_commit": "aaac0a6ecd464bf3f4798e18c94a003fb6ef0487",
+      "branch": "main",
+      "worktree": null,
+      "allowed_paths": [
+        "evidence/P9-01/",
+        "ops/scaling/"
+      ],
+      "acceptance_ref": "docs/IMPLEMENTATION_PLAN.md: P9-01",
+      "heartbeat_at": null,
+      "attempts": 0,
+      "evidence": [],
+      "blocker": "Blocked by dependencies: P6-05",
+      "description": "Autoscaling implementation nếu queue metrics đòi hỏi, cooldown/drain/budget clamp; scale/load chaos test không double leases"
+    },
+    {
+      "task_id": "P9-02",
+      "stream": "A",
+      "phase": "P9",
+      "state": "planned",
+      "state_version": 1,
+      "dependencies": [
+        "P4-05",
+        "P6-05"
+      ],
+      "dependency_status": "blocked",
+      "blocked_by": [
+        "P4-05",
+        "P6-05"
+      ],
+      "owner": null,
+      "run_id": null,
+      "lease_epoch": 0,
+      "lease_expires_at": null,
+      "base_commit": "aaac0a6ecd464bf3f4798e18c94a003fb6ef0487",
+      "branch": "main",
+      "worktree": null,
+      "allowed_paths": [
+        "evidence/P9-02/",
+        "ops/scaling/"
+      ],
+      "acceptance_ref": "docs/IMPLEMENTATION_PLAN.md: P9-02",
+      "heartbeat_at": null,
+      "attempts": 0,
+      "evidence": [],
+      "blocker": "Blocked by dependencies: P4-05, P6-05",
+      "description": "Usage export/quota plans/retention tiers, pricing simulation và reconciliation; billing processor riêng chỉ khi scope được cấp, không charging thật ở task này"
+    },
+    {
+      "task_id": "P9-03",
+      "stream": "A+C",
+      "phase": "P9",
+      "state": "planned",
+      "state_version": 1,
+      "dependencies": [
+        "P9-01"
+      ],
+      "dependency_status": "blocked",
+      "blocked_by": [
+        "P9-01"
+      ],
+      "owner": null,
+      "run_id": null,
+      "lease_epoch": 0,
+      "lease_expires_at": null,
+      "base_commit": "aaac0a6ecd464bf3f4798e18c94a003fb6ef0487",
+      "branch": "main",
+      "worktree": null,
+      "allowed_paths": [
+        "evidence/P9-03/",
+        "ops/scaling/"
+      ],
+      "acceptance_ref": "docs/IMPLEMENTATION_PLAN.md: P9-03",
+      "heartbeat_at": null,
+      "attempts": 0,
+      "evidence": [],
+      "blocker": "Blocked by dependencies: P9-01",
+      "description": "DB/queue profiling; chỉ thêm broker khi evidence bottleneck, transactional outbox/fencing giữ nguyên; ADR và recovery tests"
+    },
+    {
+      "task_id": "P9-04",
+      "stream": "D+Supervisor",
+      "phase": "P9",
+      "state": "planned",
+      "state_version": 1,
+      "dependencies": [
+        "P5-04",
+        "P6-05"
+      ],
+      "dependency_status": "blocked",
+      "blocked_by": [
+        "P5-04",
+        "P6-05"
+      ],
+      "owner": null,
+      "run_id": null,
+      "lease_epoch": 0,
+      "lease_expires_at": null,
+      "base_commit": "aaac0a6ecd464bf3f4798e18c94a003fb6ef0487",
+      "branch": "main",
+      "worktree": null,
+      "allowed_paths": [
+        "evidence/P9-04/",
+        "ops/scaling/"
+      ],
+      "acceptance_ref": "docs/IMPLEMENTATION_PLAN.md: P9-04",
+      "heartbeat_at": null,
+      "attempts": 0,
+      "evidence": [],
+      "blocker": "Blocked by dependencies: P5-04, P6-05",
+      "description": "External Creativanta handoff packet: base URL/env/scopes/fixtures/mapping/runbook; phối hợp integration task ngoài repo **chỉ sau quyền riêng**, ghi status harness vs live rõ ràng"
+    },
+    {
+      "task_id": "P9-05",
+      "stream": "Supervisor+Reviewer",
+      "phase": "P9",
+      "state": "planned",
+      "state_version": 1,
+      "dependencies": [
+        "P9-01",
+        "P9-02",
+        "P9-03",
+        "P9-04"
+      ],
+      "dependency_status": "blocked",
+      "blocked_by": [
+        "P9-01",
+        "P9-02",
+        "P9-03",
+        "P9-04"
+      ],
+      "owner": null,
+      "run_id": null,
+      "lease_epoch": 0,
+      "lease_expires_at": null,
+      "base_commit": "aaac0a6ecd464bf3f4798e18c94a003fb6ef0487",
+      "branch": "main",
+      "worktree": null,
+      "allowed_paths": [
+        "evidence/P9-05/",
+        "ops/scaling/"
+      ],
+      "acceptance_ref": "docs/IMPLEMENTATION_PLAN.md: P9-05",
+      "heartbeat_at": null,
+      "attempts": 0,
+      "evidence": [],
+      "blocker": "Blocked by dependencies: P9-01, P9-02, P9-03, P9-04",
+      "description": "GA decision packet: capacity/cost/security/SLO/support/commercial legal/data residency, release/rollback. Optional P7/P8 không quảng cáo nếu chưa qua gate"
+    }
+  ]
+}
