@@ -33,7 +33,7 @@ Trong giai đoạn bootstrap:
 | P0 | P0-03 | D | planned | P0-01 | Rights manifest cho assets/fonts/audio của 3 fixtures |
 | P0 | P0-04 | A+C | review | P0-01 | Contract/threat-model review: starter limits, transitions, entities, errors, lease/cancel/idempotency; [P0-04 report](../evidence/P0-04/report.md) |
 | P0 | P0-05 | Supervisor | review | P0-04 | Khởi tạo SQLite WAL state ledger `.agy/state.sqlite`, worktree policy, evidence template, synthetic recovery drill & credential redaction; [P0-05 report](../evidence/P0-05/report.md) |
-| P1 | P1-01 | C | planned | P0-02, P0-04, P0-05 | TS workspace, toolchain pin, Compose, local environment |
+| P1 | P1-01 | C | review | P0-02, P0-04, P0-05 | TS workspace, pinned toolchain/lockfile, local Compose, env sample, health checks; [P1-01 report](../evidence/P1-01/report.md) |
 | P1 | P1-02 | A | planned | P0-04, P1-01 | JSON Schema 2020-12, OpenAPI 3.1, generated types |
 | P1 | P1-03 | B | planned | P1-02 | Semantic validator, canonical compiler manifest |
 | P1 | P1-04 | C | planned | P1-01, P0-02 | Trusted-template sandbox launcher, non-root, limits |

@@ -1,0 +1,46 @@
+# ==============================================================================
+# Creativanta Video Engine - Ingest Container
+# ==============================================================================
+FROM node:24-alpine AS builder
+
+WORKDIR /app
+
+RUN corepack enable && corepack prepare pnpm@12.16.1 --activate
+
+COPY package.json pnpm-lock.yaml pnpm-workspace.yaml tsconfig.base.json tsconfig.json ./
+COPY packages/contracts/package.json packages/contracts/tsconfig*.json ./packages/contracts/
+COPY packages/contracts/src ./packages/contracts/src
+COPY packages/ingest/package.json packages/ingest/tsconfig*.json ./packages/ingest/
+COPY packages/ingest/src ./packages/ingest/src
+COPY packages/api/package.json packages/api/tsconfig*.json ./packages/api/
+COPY packages/api/src ./packages/api/src
+COPY packages/controller/package.json packages/controller/tsconfig*.json ./packages/controller/
+COPY packages/controller/src ./packages/controller/src
+
+RUN pnpm install --frozen-lockfile
+RUN pnpm build
+
+FROM node:24-alpine AS runner
+
+WORKDIR /app
+ENV NODE_ENV=production
+ENV CVE_ENV=development
+
+RUN corepack enable && corepack prepare pnpm@12.16.1 --activate
+
+COPY --from=builder /app/package.json /app/pnpm-lock.yaml /app/pnpm-workspace.yaml ./
+COPY --from=builder /app/packages/contracts/package.json ./packages/contracts/
+COPY --from=builder /app/packages/contracts/dist ./packages/contracts/dist
+COPY --from=builder /app/packages/ingest/package.json ./packages/ingest/
+COPY --from=builder /app/packages/ingest/dist ./packages/ingest/dist
+
+RUN pnpm install --frozen-lockfile --prod
+
+USER node
+
+EXPOSE 8082
+
+HEALTHCHECK --interval=10s --timeout=5s --retries=3 \
+  CMD node -e "fetch('http://127.0.0.1:8082/healthz').then(r => r.ok ? process.exit(0) : process.exit(1)).catch(() => process.exit(1))"
+
+CMD ["node", "packages/ingest/dist/index.js"]

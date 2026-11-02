@@ -1,0 +1,141 @@
+# ==============================================================================
+# Creativanta Video Engine - Local Development Compose
+# Canonical specification: docs/DEPLOYMENT.md (lines 18-49)
+#
+# IMPORTANT:
+# - Designed for local CPU development and contract testing only.
+# - NOT a production deployment descriptor.
+# ==============================================================================
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: cve-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: creativanta_video_engine
+      POSTGRES_USER: cve_migrator
+      POSTGRES_PASSWORD: cve_dev_migrator_secret
+    ports:
+      - "127.0.0.1:5432:5432"
+    volumes:
+      - ./docker/init-db:/docker-entrypoint-initdb.d:ro
+      - ./.local/postgres:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U cve_migrator -d creativanta_video_engine"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    networks:
+      - control
+
+  object-store:
+    image: minio/minio:RELEASE.2024-11-07T00-52-12Z
+    container_name: cve-object-store
+    restart: unless-stopped
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: minioadmin
+      MINIO_ROOT_PASSWORD: minioadmin
+    ports:
+      - "127.0.0.1:9000:9000"
+      - "127.0.0.1:9001:9001"
+    volumes:
+      - ./.local/objects:/data
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://127.0.0.1:9000/minio/health/live || exit 1"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    networks:
+      - control
+
+  api:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.api
+    container_name: cve-api
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:8080:8080"
+    environment:
+      CVE_ENV: development
+      CVE_PUBLIC_BASE_URL: http://127.0.0.1:8080/v1
+      CVE_DATABASE_URL: postgresql://cve_api:cve_dev_api_secret@postgres:5432/creativanta_video_engine
+      CVE_MIGRATION_DATABASE_URL: postgresql://cve_migrator:cve_dev_migrator_secret@postgres:5432/creativanta_video_engine
+      CVE_STORAGE_ENDPOINT: http://object-store:9000
+      CVE_STORAGE_REGION: us-east-1
+      CVE_STORAGE_ACCESS_KEY_ID: minioadmin
+      CVE_STORAGE_SECRET_ACCESS_KEY: minioadmin
+      CVE_QUARANTINE_BUCKET: cve-quarantine-dev
+      CVE_ASSET_BUCKET: cve-assets-dev
+      CVE_ARTIFACT_BUCKET: cve-artifacts-dev
+      CVE_API_KEY_PEPPER: dev_pepper_0123456789abcdef0123456789abcdef
+      CVE_SECRET_ENCRYPTION_KEY_ID: dev-kms-local-key-1
+      CVE_RENDERER_ADAPTER: chromium-frame-v1
+      CVE_RENDER_IMAGE_DIGEST: sha256:0000000000000000000000000000000000000000000000000000000000000000
+      CVE_LOG_LEVEL: info
+    depends_on:
+      postgres:
+        condition: service_healthy
+      object-store:
+        condition: service_healthy
+    networks:
+      - control
+
+  controller:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.controller
+    container_name: cve-controller
+    restart: unless-stopped
+    environment:
+      CVE_ENV: development
+      CVE_DATABASE_URL: postgresql://cve_dispatcher:cve_dev_dispatcher_secret@postgres:5432/creativanta_video_engine
+      CVE_STORAGE_ENDPOINT: http://object-store:9000
+      CVE_RENDERER_ADAPTER: chromium-frame-v1
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - control
+
+  ingest:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.ingest
+    container_name: cve-ingest
+    restart: unless-stopped
+    environment:
+      CVE_ENV: development
+      CVE_DATABASE_URL: postgresql://cve_ingest:cve_dev_ingest_secret@postgres:5432/creativanta_video_engine
+      CVE_STORAGE_ENDPOINT: http://object-store:9000
+    depends_on:
+      postgres:
+        condition: service_healthy
+      object-store:
+        condition: service_healthy
+    networks:
+      - control
+      - restricted-egress
+
+  webhook-sender:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.sender
+    container_name: cve-sender
+    restart: unless-stopped
+    environment:
+      CVE_ENV: development
+      CVE_DATABASE_URL: postgresql://cve_sender:cve_dev_sender_secret@postgres:5432/creativanta_video_engine
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - control
+      - restricted-egress
+
+networks:
+  control:
+    internal: true
+  restricted-egress: {}

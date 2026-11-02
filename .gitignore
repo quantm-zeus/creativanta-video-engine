@@ -1,10 +1,37 @@
-.worktrees/
+# Supervisor, worker worktrees, and local state
 .agy/
+.worktrees/
 .local/
-__pycache__/
-*.pyc
-tooling/agent_harness/data/
-*.log
+
+# Environment files
 .env
 .env.*
 !.env.example
+
+# Node / TypeScript monorepo build outputs and caches
+node_modules/
+dist/
+*.tsbuildinfo
+.pnpm-store/
+.npm/
+.turbo/
+
+# Logs and runtime data
+*.log
+npm-debug.log*
+pnpm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+tooling/agent_harness/data/
+
+# Python caches
+__pycache__/
+*.pyc
+
+# Test coverage
+coverage/
+.nyc_output/
+
+# OS metadata
+.DS_Store
+Thumbs.db

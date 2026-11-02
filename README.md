@@ -2,7 +2,7 @@
 
 Nền tảng Video-as-a-Service độc lập, API-first, tạo video bằng code trên CPU. Creativanta là một client của API; khách hàng khác dùng cùng hợp đồng multi-tenant. Video được dựng từ HTML/CSS/WAAPI/SVG/Canvas/TypeScript, media có quyền sử dụng, phụ đề, âm thanh và FFmpeg. Không dùng mô hình sinh video GPU tự host hay API sinh video đắt tiền.
 
-**Trạng thái ngày 2026-11-02: chỉ có thiết kế và tài liệu.** Chưa có ứng dụng, Docker Compose, API đang chạy, benchmark, test kiến trúc hay video đã render. Endpoint, cấu hình và mục tiêu hiệu năng trong docs là hợp đồng dự kiến cho agent triển khai.
+**Trạng thái triển khai:** Đã hoàn thành scaffold `P1-01` (TS workspace, pinned pnpm lockfile, local Docker Compose, health checks và env sample). Các giai đoạn tiếp theo triển khai JSON Schema / OpenAPI (`P1-02`), validator (`P1-03`), sandbox launcher (`P1-04`), và ba MP4 video POC thực tế (`P2`). Không production deployment từ repository này.
 
 ## Luồng sản phẩm
 
@@ -31,10 +31,72 @@ HyperFrames là ứng viên ưu tiên, phải qua license/security review và be
 
 Đọc theo thứ tự AGENTS → PRD → architecture/API/scene → security → plan → AGY execution. Khi mâu thuẫn: yêu cầu người dùng/ràng buộc an toàn ưu tiên; timing theo scene spec, HTTP theo API, trạng thái job theo architecture, completion theo plan. Sửa tài liệu liên quan cùng PR trước khi đổi hợp đồng.
 
-## Setup khi code tồn tại
+## Setup và phát triển cục bộ
 
-Hiện chỉ cần Git và trình đọc Markdown; **chưa có lệnh khởi động app hợp lệ**. Không chạy installer upstream để thử nền tảng.
+Hệ thống sử dụng Node.js v24+, pnpm pinned qua Corepack, TypeScript 5.7, và Docker Compose cho các dịch vụ phụ trợ cục bộ (PostgreSQL 16, MinIO S3 dev store).
 
-`P1-01` phải bổ sung manifest/lockfile, Node LTS/package manager đã pin, `.env.example` không secrets, Compose local và hướng dẫn đã kiểm chứng. Flow setup dự kiến: dependency review/install → sinh secret local → khởi động DB/object store/API/worker → migrate → seed fixture → submit job → kiểm MP4 bằng ffprobe. Chỉ ghi tên script là hoạt động sau khi thực sự chạy. Xem [Deployment](docs/DEPLOYMENT.md).
+### 1. Yêu cầu môi trường
 
-Mốc hữu ích đầu tiên `P2` phải có **ba MP4 thật**, manifest, quality/cost report. Scaffold hay preview HTML không đáp ứng. Handoff runner push và khởi động AGY riêng; phiên thiết kế không thực hiện hai việc này.
+- **Node.js**: `>= 24.0.0`
+- **Corepack**: Đã tích hợp sẵn trong Node.js để quản lý `pnpm` đã pin (`pnpm@12.16.1`)
+- **Docker & Docker Compose**: Cho môi trường phụ trợ cục bộ (PostgreSQL 16, MinIO)
+- **Python 3**: `>= 3.10` cho các script kiểm tra và supervisor harness
+
+### 2. Cài đặt và build workspace
+
+Kích hoạt pnpm, cài đặt dependencies với lockfile đã pin, biên dịch và chạy kiểm thử:
+
+```bash
+corepack enable
+pnpm install --frozen-lockfile
+pnpm build
+pnpm typecheck
+pnpm lint
+pnpm test
+```
+
+### 3. Cấu hình môi trường
+
+Sao chép file mẫu `.env.example` sang `.env` để chạy môi trường development:
+
+```bash
+cp .env.example .env
+```
+
+Toàn bộ thông số cấu hình và biến môi trường được chuẩn hóa tại [Deployment](docs/DEPLOYMENT.md).
+
+### 4. Khởi động dịch vụ phụ trợ với Docker Compose
+
+Khởi động PostgreSQL 16 và MinIO S3 dev store:
+
+```bash
+docker compose up -d postgres object-store
+```
+
+Hoặc khởi động toàn bộ cụm dịch vụ phát triển:
+
+```bash
+docker compose up -d
+```
+
+### 5. Kiểm tra sức khỏe hệ thống (Health Check)
+
+Kiểm tra trạng thái cấu hình và endpoints liveness / readiness:
+
+```bash
+node scripts/health-check.mjs
+```
+
+Khi API server đang chạy:
+
+```bash
+curl -s http://127.0.0.1:8080/healthz
+curl -s http://127.0.0.1:8080/readyz
+curl -s http://127.0.0.1:8080/v1/capabilities
+```
+
+### 6. Kiểm định toàn vẹn repository
+
+```bash
+python3 scripts/validate_repo.py
+```

@@ -133,3 +133,32 @@ Ngày: 2026-11-02 UTC. Scope: `P0-05 / Supervisor / P0`. Base commit: `704e03ef5
 3. **Diễn tập phục hồi sau crash/reboot bằng trạng thái giả lập và kiểm toán chống rò rỉ credentials:**
    - Thực thi diễn tập phục hồi tự động và xuất tạo phẩm [recovery-drill.json](../evidence/P0-05/recovery-drill.json) cùng bộ kiểm thử 13 test cases tại [test_task_ledger.py](../evidence/P0-05/test_task_ledger.py) và báo cáo [P0-05 report](../evidence/P0-05/report.md).
    - Xác nhận bảo toàn tệp chưa commit trong worktree khi crash, reattach worker còn sống đúng `(boot_id, pid, process_start_time, run_id)`, thu hồi lease hết hạn kèm tăng `lease_epoch` fence (`1 -> 2 -> 3`), từ chối zombie worker ghi đè, đánh dấu lệnh dở dang là `NOT_RUN`, ngắt mạch sau 2 lần lỗi lặp lại cùng nguyên nhân, khôi phục từ SQLite backup + replay `events.jsonl`, và quét byte thô xác nhận 0 rò rỉ credentials.
+
+---
+
+## P1-01 — TS workspace, pinned toolchain/lockfile, local Compose, env sample, and health checks
+
+Ngày: 2026-11-02 UTC. Scope: `P1-01 / C / P1`. Base commit: `d2c989e4687dfc1571de290ef8cc761deb3833b2`.
+
+### Các công việc thực tế đã hoàn thành trong P1-01
+
+1. **Khởi tạo TypeScript Monorepo Workspace:**
+   - Cấu hình workspace qua `pnpm` (`package.json`, `pnpm-workspace.yaml`, `tsconfig.base.json`, `tsconfig.json`) với 4 packages:
+     - `@creativanta/contracts` (`packages/contracts`): Types chuẩn tắc cho Scene, Job, Capabilities và bộ phân tích, kiểm định cấu hình môi trường type-safe (`loadEnvConfig`, `redactEnvConfig`).
+     - `@creativanta/api` (`packages/api`): REST API service với `/healthz`, `/readyz`, `/v1/capabilities` và tắt máy mềm.
+     - `@creativanta/controller` (`packages/controller`): Dispatcher & lease manager skeleton với kiểm tra fencing token `(job_id, attempt_id, lease_epoch)`.
+     - `@creativanta/ingest` (`packages/ingest`): Quản lý kích thước media và bộ lọc an toàn SVG nghiêm ngặt (chặn XXE, scripts, external hrefs).
+2. **Khóa cứng công cụ và tệp khóa bất biến (Pinned Toolchain & Lockfile):**
+   - Pin `pnpm@12.16.1` qua Corepack, `node >= 24.0.0`, `typescript@5.7.3`, `@types/node@22.10.5`.
+   - Sinh tệp khóa `pnpm-lock.yaml`, xác thực thành công `pnpm install --frozen-lockfile`.
+3. **Cấu hình Local Docker Compose và Dockerfiles:**
+   - Tạo [docker-compose.yml](../docker-compose.yml) và mirror [docker/docker-compose.yml](../docker/docker-compose.yml) với PostgreSQL 16 (healthcheck `pg_isready`), MinIO S3 dev store, và phân tách mạng `control` (`internal: true`) và `restricted-egress`.
+   - Viết [docker/init-db/01-init.sql](../docker/init-db/01-init.sql) khởi tạo 5 database roles theo kiến trúc: `cve_migrator`, `cve_api`, `cve_dispatcher`, `cve_ingest`, `cve_sender`.
+   - Cung cấp Dockerfile multi-stage không quyền root (`USER node`) cho `api`, `controller`, `ingest`, `sender`.
+4. **Mẫu biến môi trường và quy tắc ignore bảo mật:**
+   - Cung cấp [.env.example](../.env.example) đầy đủ 38 biến môi trường theo chuẩn `DEPLOYMENT.md` không chứa bí mật thật.
+   - Cập nhật [.gitignore](../.gitignore) bao phủ `.agy/`, `.worktrees/`, `.local/`, `.env`, `node_modules/`, `dist/`, logs.
+5. **Bộ kiểm tra sức khỏe và nghiệm thu thực tế:**
+   - Triển khai [health-check.mjs](../scripts/health-check.mjs) kiểm tra toàn vẹn cấu hình và endpoints API.
+   - Cập nhật hướng dẫn cài đặt và phát triển thực tế tại [README.md](../README.md).
+   - Xuất báo cáo bằng chứng [P1-01 report](../evidence/P1-01/report.md) đạt chuẩn `EvidenceValidator`.
