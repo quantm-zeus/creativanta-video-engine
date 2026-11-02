@@ -29,7 +29,7 @@ Trong giai đoạn bootstrap:
 | Milestone | Task ID | Stream | Trạng thái | Dependencies | Ghi chú & deliverables |
 | --- | --- | --- | --- | --- | --- |
 | P0 | P0-01 | Supervisor | review | DOC-001 | Bootstrap backlog snapshot, validate docs & links, script [validate_repo.py](../scripts/validate_repo.py) |
-| P0 | P0-02 | C+B | planned | P0-01 | Audit HyperFrames, Chromium, FFmpeg, fonts, SBOM và licenses |
+| P0 | P0-02 | C+B | review | P0-01 | Audit HyperFrames, Chromium, FFmpeg, fonts, SBOM và licenses; [P0-02 report](../evidence/P0-02/report.md) |
 | P0 | P0-03 | D | planned | P0-01 | Rights manifest cho assets/fonts/audio của 3 fixtures |
 | P0 | P0-04 | A+C | planned | P0-01 | Contract/threat-model review: starter limits, entities, idempotency |
 | P0 | P0-05 | Supervisor | planned | P0-04 | Khởi tạo SQLite WAL state ledger `.agy/state.sqlite`, worktree policy |
