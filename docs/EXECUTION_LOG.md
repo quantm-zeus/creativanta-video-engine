@@ -93,3 +93,25 @@ Nguyên tắc bắt buộc:
    - Tạo script chuẩn [scripts/validate_repo.py](../scripts/validate_repo.py) sử dụng Python standard library để kiểm tra định kỳ tính toàn vẹn của repo, tài liệu, liên kết và backlog.
 7. **Báo cáo bằng chứng chi tiết:**
    - Xuất file [evidence/P0-01/report.md](../evidence/P0-01/report.md) ghi nhận đầy đủ lệnh kiểm tra, thông số môi trường, mã thoát, SHA artifacts và các rủi ro kỹ thuật còn mở.
+
+---
+
+## P0-04 — Contract and threat-model review
+
+Ngày: 2026-11-02 UTC. Scope: `P0-04 / A+C / P0`. Base commit: `c3ff673791ac383c003bdbe6490e6ac4b007f066`.
+
+### Các công việc thực tế đã hoàn thành trong P0-04
+
+1. **Chốt starter limits (`starter-v1`):**
+   - Phân định rõ giới hạn cấu trúc JSON Schema 2020-12 (`duration_frames` 1..10800, canvas ≤3840) với giới hạn admission của profile `mp4-720p-v1` (720×1280 hoặc 1280×720, 30/1 fps, 1..1800 frames = ≤60s) và `preview-360p-v1` (360×640 hoặc 640×360, 30/1 fps, 1..300 frames = ≤10s).
+   - Chốt ngưỡng payload, media, SVG (`≤5 MiB`, `≤5000` DOM nodes, depth `≤16`), font (`≤32 MiB`), image (`≤40 MP`, `≤8192` px/chiều) và quota tenant (`2` active slots + `20` pending admission slots = tổng tối đa `22` non-terminal jobs/tenant).
+2. **Chốt transitions (Scene transitions & State machines):**
+   - Scene transition v1: `cut` bắt buộc `duration_frames = 0`; `fade_to_background` bắt buộc `2 <= F <= min(300, scene.duration_frames)`, hợp lệ trên mọi scene kể cả scene cuối cùng, công thức opacity `scene_alpha(k) = (end-1-k)/(F-1)` nhân với `layer_alpha(k)`.
+   - Job state machine: bổ sung chuyển trạng thái `queued/retry_wait -> failed` khi quá hạn (`JOB_DEADLINE_EXCEEDED`) hoặc khi asset bị thu hồi (`ASSET_REVOKED`); khóa quy tắc một khi job đã vào `cancel_requested` (do `POST /jobs/{id}/cancel` thắng khóa dòng trước publication) thì trạng thái terminal duy nhất của nó là `canceled`.
+3. **Chốt tenant entities & DB security roles:**
+   - Chuẩn hóa 21 bảng thuộc 10 nhóm thực thể cho `P3-01` với composite foreign keys chứa `tenant_id`, RLS `SET LOCAL app.current_tenant_id`, sentinel tenant `00000000-0000-0000-0000-000000000000` (`system_catalog`, `visibility='curated_public'`) chỉ đọc cho catalog mẫu, và 5 DB roles tách biệt (`cve_migrator`, `cve_api`, `cve_dispatcher`, `cve_ingest`, `cve_sender`).
+4. **Chốt errors, lease, cancel và idempotency:**
+   - Phân định HTTP `404 NOT_FOUND` cho ID tài nguyên trên URL path với HTTP `422 VALIDATION_FAILED` (`ASSET_NOT_FOUND` / `UNKNOWN_FONT`) cho tham chiếu bên trong JSON body, và `422 UNSUPPORTED_CAPABILITY` (`PROFILE_CONSTRAINT_VIOLATED` / `CAPABILITY_DISABLED`) cho giới hạn profile/engine.
+   - Chuẩn hóa danh mục `job.error.code` cho job thất bại bất đồng bộ, đồng hồ lease chuẩn tắc trên PostgreSQL (`now()`, 60s lease / 15s heartbeat, fence `attempt_id` + `lease_epoch`), và quy tắc `Idempotency-Key` (RFC 8785 JCS SHA-256, không lưu cứng các lỗi `429`/`503`/validation để cho phép retry cùng key).
+5. **Mở và giải quyết 10 ambiguity issues (`AMB-001`..`AMB-010`) kèm cập nhật đồng bộ tài liệu:**
+   - Cập nhật [PRD](PRD.md), [API](API.md), [Scene spec](SCENE-SPEC.md), [Architecture](ARCHITECTURE.md), [Security](SECURITY.md), [Progress](PROGRESS.md) và xuất báo cáo [P0-04 report](../evidence/P0-04/report.md) cùng [contract-threat-review.json](../evidence/P0-04/contract-threat-review.json).
