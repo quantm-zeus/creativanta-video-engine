@@ -1,0 +1,243 @@
+{
+  "task_id": "DOC-001",
+  "checked_on": "2026-11-02",
+  "method": "Read-only GitHub connector: repository metadata, default-branch root LICENSE and README.md. No clone, install, execution or legal approval.",
+  "scope_limits": [
+    "Mutable branch reads are not an atomic commit snapshot.",
+    "Root license does not cover all dependencies, assets, fonts, model weights or commercial service terms.",
+    "Freshness means pushed_at, not release quality or ongoing support.",
+    "Prior /tmp research commit and release claims were not independently verified."
+  ],
+  "repositories": [
+    {
+      "repo": "heygen-com/hyperframes",
+      "url": "https://github.com/heygen-com/hyperframes",
+      "branch": "main",
+      "archived": false,
+      "pushed_at": "2026-11-02T05:27:13Z",
+      "license": "Apache-2.0",
+      "description": "Write HTML. Render video. Built for agents.",
+      "files": [
+        {
+          "file": "LICENSE",
+          "url": "https://github.com/heygen-com/hyperframes/blob/main/LICENSE",
+          "characters": 10763,
+          "verified": "read_successfully"
+        },
+        {
+          "file": "README.md",
+          "url": "https://github.com/heygen-com/hyperframes/blob/main/README.md",
+          "characters": 23399,
+          "verified": "read_successfully"
+        }
+      ]
+    },
+    {
+      "repo": "nexu-io/html-video",
+      "url": "https://github.com/nexu-io/html-video",
+      "branch": "main",
+      "archived": false,
+      "pushed_at": "2026-06-21T16:18:31Z",
+      "license": "Apache-2.0",
+      "description": "Programmatic video for coding agents — HTML to video on your laptop. Turn HTML, CSS & data into real MP4s with pluggable render engines, 21 templates, AI soundtrack. Apache-2.0, no per-render fees. An official project by the Open Design team.",
+      "files": [
+        {
+          "file": "LICENSE",
+          "url": "https://github.com/nexu-io/html-video/blob/main/LICENSE",
+          "characters": 11358,
+          "verified": "read_successfully"
+        },
+        {
+          "file": "README.md",
+          "url": "https://github.com/nexu-io/html-video/blob/main/README.md",
+          "characters": 17889,
+          "verified": "read_successfully"
+        }
+      ]
+    },
+    {
+      "repo": "WebAV-Tech/WebAV",
+      "url": "https://github.com/WebAV-Tech/WebAV",
+      "branch": "main",
+      "archived": false,
+      "pushed_at": "2026-01-10T09:53:51Z",
+      "license": "MIT",
+      "description": "A web-based Video Editing SDK built on WebCodecs. 基于 WebCodecs 构建的网页视频编辑 SDK。",
+      "files": [
+        {
+          "file": "LICENSE",
+          "url": "https://github.com/WebAV-Tech/WebAV/blob/main/LICENSE",
+          "characters": 1059,
+          "verified": "read_successfully"
+        },
+        {
+          "file": "README.md",
+          "url": "https://github.com/WebAV-Tech/WebAV/blob/main/README.md",
+          "characters": 7748,
+          "verified": "read_successfully"
+        }
+      ]
+    },
+    {
+      "repo": "Vanilagy/mediabunny",
+      "url": "https://github.com/Vanilagy/mediabunny",
+      "branch": "main",
+      "archived": false,
+      "pushed_at": "2026-10-30T17:27:03Z",
+      "license": "MPL-2.0",
+      "description": "Pure TypeScript media toolkit for reading, writing, and converting video and audio files, directly in the browser.",
+      "files": [
+        {
+          "file": "LICENSE",
+          "url": "https://github.com/Vanilagy/mediabunny/blob/main/LICENSE",
+          "characters": 16726,
+          "verified": "read_successfully"
+        },
+        {
+          "file": "README.md",
+          "url": "https://github.com/Vanilagy/mediabunny/blob/main/README.md",
+          "characters": 10188,
+          "verified": "read_successfully"
+        }
+      ]
+    },
+    {
+      "repo": "ybouane/VideoFlow",
+      "url": "https://github.com/ybouane/VideoFlow",
+      "branch": "main",
+      "archived": false,
+      "pushed_at": "2026-09-16T06:36:48Z",
+      "license": "Apache-2.0",
+      "description": "Programmatic video for the web. Define videos with a fluent TypeScript API, compile them to a portable JSON format, and render to MP4 — in the browser, on the server, or play them back live with full scrubbing controls.",
+      "files": [
+        {
+          "file": "LICENSE",
+          "url": "https://github.com/ybouane/VideoFlow/blob/main/LICENSE",
+          "characters": 11357,
+          "verified": "read_successfully"
+        },
+        {
+          "file": "README.md",
+          "url": "https://github.com/ybouane/VideoFlow/blob/main/README.md",
+          "characters": 9491,
+          "verified": "read_successfully"
+        }
+      ]
+    },
+    {
+      "repo": "vincentsch/explainroo",
+      "url": "https://github.com/vincentsch/explainroo",
+      "branch": "main",
+      "archived": false,
+      "pushed_at": "2026-10-20T07:47:04Z",
+      "license": "MIT",
+      "description": "Explainer videos and product demos made by your AI agent. Free and open source: a local voice (Kokoro), word timing (Whisper) and a canvas renderer turn a script into a narrated MP4.",
+      "files": [
+        {
+          "file": "LICENSE",
+          "url": "https://github.com/vincentsch/explainroo/blob/main/LICENSE",
+          "characters": 1075,
+          "verified": "read_successfully"
+        },
+        {
+          "file": "README.md",
+          "url": "https://github.com/vincentsch/explainroo/blob/main/README.md",
+          "characters": 10322,
+          "verified": "read_successfully"
+        }
+      ]
+    },
+    {
+      "repo": "motion-canvas/motion-canvas",
+      "url": "https://github.com/motion-canvas/motion-canvas",
+      "branch": "main",
+      "archived": false,
+      "pushed_at": "2026-07-02T20:01:32Z",
+      "license": "MIT",
+      "description": "Visualize Your Ideas With Code",
+      "files": [
+        {
+          "file": "LICENSE",
+          "url": "https://github.com/motion-canvas/motion-canvas/blob/main/LICENSE",
+          "characters": 1070,
+          "verified": "read_successfully"
+        },
+        {
+          "file": "README.md",
+          "url": "https://github.com/motion-canvas/motion-canvas/blob/main/README.md",
+          "characters": 5248,
+          "verified": "read_successfully"
+        }
+      ]
+    },
+    {
+      "repo": "pixijs/pixijs",
+      "url": "https://github.com/pixijs/pixijs",
+      "branch": "dev",
+      "archived": false,
+      "pushed_at": "2026-10-30T22:31:56Z",
+      "license": "MIT",
+      "description": "The HTML5 Creation Engine: Create beautiful digital content with the fastest, most flexible 2D WebGL renderer.",
+      "files": [
+        {
+          "file": "LICENSE",
+          "url": "https://github.com/pixijs/pixijs/blob/dev/LICENSE",
+          "characters": 1092,
+          "verified": "read_successfully"
+        },
+        {
+          "file": "README.md",
+          "url": "https://github.com/pixijs/pixijs/blob/dev/README.md",
+          "characters": 4974,
+          "verified": "read_successfully"
+        }
+      ]
+    },
+    {
+      "repo": "harry0703/MoneyPrinterTurbo",
+      "url": "https://github.com/harry0703/MoneyPrinterTurbo",
+      "branch": "main",
+      "archived": false,
+      "pushed_at": "2026-11-02T02:29:36Z",
+      "license": "MIT",
+      "description": "利用 AI 大模型和自动化工作流，根据主题或关键词一键生成高清短视频。Generate HD short videos from a topic or keyword with an automated AI workflow.",
+      "files": [
+        {
+          "file": "LICENSE",
+          "url": "https://github.com/harry0703/MoneyPrinterTurbo/blob/main/LICENSE",
+          "characters": 1061,
+          "verified": "read_successfully"
+        },
+        {
+          "file": "README.md",
+          "url": "https://github.com/harry0703/MoneyPrinterTurbo/blob/main/README.md",
+          "characters": 29461,
+          "verified": "read_successfully"
+        }
+      ]
+    },
+    {
+      "repo": "midrender/revideo",
+      "url": "https://github.com/midrender/revideo",
+      "branch": "main",
+      "archived": false,
+      "pushed_at": "2026-07-15T22:43:55Z",
+      "license": "MIT",
+      "description": "Create Videos with Code",
+      "files": [
+        {
+          "file": "LICENSE",
+          "url": "https://github.com/midrender/revideo/blob/main/LICENSE",
+          "characters": 1070,
+          "verified": "read_successfully"
+        },
+        {
+          "file": "README.md",
+          "url": "https://github.com/midrender/revideo/blob/main/README.md",
+          "characters": 3669,
+          "verified": "read_successfully"
+        }
+      ]
+    }
+  ]
+}
