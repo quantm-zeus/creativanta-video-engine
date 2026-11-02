@@ -115,3 +115,21 @@ Ngày: 2026-11-02 UTC. Scope: `P0-04 / A+C / P0`. Base commit: `c3ff673791ac383c
    - Chuẩn hóa danh mục `job.error.code` cho job thất bại bất đồng bộ, đồng hồ lease chuẩn tắc trên PostgreSQL (`now()`, 60s lease / 15s heartbeat, fence `attempt_id` + `lease_epoch`), và quy tắc `Idempotency-Key` (RFC 8785 JCS SHA-256, không lưu cứng các lỗi `429`/`503`/validation để cho phép retry cùng key).
 5. **Mở và giải quyết 10 ambiguity issues (`AMB-001`..`AMB-010`) kèm cập nhật đồng bộ tài liệu:**
    - Cập nhật [PRD](PRD.md), [API](API.md), [Scene spec](SCENE-SPEC.md), [Architecture](ARCHITECTURE.md), [Security](SECURITY.md), [Progress](PROGRESS.md) và xuất báo cáo [P0-04 report](../evidence/P0-04/report.md) cùng [contract-threat-review.json](../evidence/P0-04/contract-threat-review.json).
+
+---
+
+## P0-05 — Task ledger, worktree policy, evidence template, and synthetic recovery drill
+
+Ngày: 2026-11-02 UTC. Scope: `P0-05 / Supervisor / P0`. Base commit: `704e03ef5410f94116d3652f5671d7afb7ef2b95`.
+
+### Các công việc thực tế đã hoàn thành trong P0-05
+
+1. **Thiết lập SQLite WAL task ledger (`.agy/state.sqlite`):**
+   - Triển khai [task_ledger.py](../evidence/P0-05/task_ledger.py) khởi tạo đầy đủ 8 bảng bắt buộc (`tasks`, `dependencies`, `leases`, `file_claims`, `runs`, `evidence`, `reviews`, `events`) cùng bảng `supervisor_meta`, khóa đơn thể `.agy/supervisor.lock`, xuất `.agy/status.json` và `.agy/events.jsonl`, và sao lưu trực tuyến bằng SQLite Backup API vào `.agy/backups/`.
+   - Nhập toàn bộ 52 tasks từ [P0-01 backlog snapshot](../evidence/P0-01/backlog.json), kiểm tra đồ thị phụ thuộc acyclic DAG, đối chiếu các nhiệm vụ bootstrap đã tích hợp (`P0-01`, `P0-02`, `P0-04` -> `done`) và mở khóa `P0-03`, `P0-05` sang `ready`.
+2. **Thực thi chính sách worktree và khuôn mẫu bằng chứng (`WorktreePolicy` & `EvidenceValidator`):**
+   - Kiểm tra bắt buộc worktree `.worktrees/<task-id>-<run-id>` và nhánh `agy/<task-id>-<slug>`, chặn sửa trực tiếp `main`/root checkout, chặn các lệnh Git phá hủy (`reset --hard`, `clean -fd`, `checkout --force`, `push --force`, `branch -D`), chặn xóa worktree còn thay đổi chưa commit và ngăn xung đột `file_claims` chồng lấn trong cùng giao dịch `claim_task`.
+   - Chuẩn hóa [evidence-template.md](../evidence/P0-05/evidence-template.md) và trình kiểm tra tự động `EvidenceValidator.validate_report_markdown()`.
+3. **Diễn tập phục hồi sau crash/reboot bằng trạng thái giả lập và kiểm toán chống rò rỉ credentials:**
+   - Thực thi diễn tập phục hồi tự động và xuất tạo phẩm [recovery-drill.json](../evidence/P0-05/recovery-drill.json) cùng bộ kiểm thử 13 test cases tại [test_task_ledger.py](../evidence/P0-05/test_task_ledger.py) và báo cáo [P0-05 report](../evidence/P0-05/report.md).
+   - Xác nhận bảo toàn tệp chưa commit trong worktree khi crash, reattach worker còn sống đúng `(boot_id, pid, process_start_time, run_id)`, thu hồi lease hết hạn kèm tăng `lease_epoch` fence (`1 -> 2 -> 3`), từ chối zombie worker ghi đè, đánh dấu lệnh dở dang là `NOT_RUN`, ngắt mạch sau 2 lần lỗi lặp lại cùng nguyên nhân, khôi phục từ SQLite backup + replay `events.jsonl`, và quét byte thô xác nhận 0 rò rỉ credentials.
