@@ -26,6 +26,7 @@ Artifacts:
   - fixtures/manifest-poc01.json, sha256=d495fcb30f9b655eb83ca5aa6e3e642a61e81047c41f4d207962110052ce4d90, expires=N/A (repo-versioned)
   - fixtures/manifest-poc02.json, sha256=4f0dd6722b2a1b73680b7804973f3d54cb67d661b625dd420166ccf3d7d5a1e0, expires=N/A (repo-versioned)
   - fixtures/manifest-poc03.json, sha256=6965d77956a1a36725e7cf249b607b391eb7f728e52e47604a3b9b98971640e5, expires=N/A (repo-versioned)
+  - pnpm-lock.yaml, sha256=6c2e55838de8c724e067a25ffe93951d638a944b82e3b86d3635201d7455de84, expires=N/A (repo-versioned)
   - evidence/P2-01/report.md, sha256=pending_commit, expires=N/A (repo-versioned)
   - evidence/P2-01/summary.json, sha256=bbf2805595889ee78b9ec86fe3830042df54a05b5702ef009913711656eb32bb, expires=N/A (repo-versioned)
 Acceptance mapping:
@@ -195,6 +196,21 @@ node packages/controller/dist/index.js --self-test
 PATH=/usr/bin:$PATH python3 scripts/validate_repo.py
 ```
 Tất cả các lệnh đều kết thúc với mã thoát `0` (`PASS`).
+
+### 4.3. Phân tích và Khắc phục sự cố GitHub CI (PR #9):
+- **Hiện tượng:** Kiểm tra CI tại GitHub PR #9 thất bại tại bước `Validate project tests when available` (run ID: `41580316981`, job ID: `125733359623`).
+- **Nguyên nhân gốc (Root Cause):** Khảo sát bằng lệnh `gh run view 41580316981 --log-failed` phát hiện lỗi `ERR_PNPM_PACKAGE_MANAGER_NO_IMPORTER`: khi bổ sung gói `packages/renderers`, file khóa chuỗi cung ứng `pnpm-lock.yaml` chưa được cập nhật trường mục nhập tương ứng trong bảng `importers["packages/renderers"]`, dẫn đến cờ an toàn bắt buộc `--frozen-lockfile` từ chối thực thi.
+- **Biện pháp xử lý:**
+  1. Tái đồng bộ file khóa nguyên vẹn không làm thay đổi các dependency đã ghim:
+     ```bash
+     corepack pnpm install --lockfile-only
+     ```
+  2. Xác minh tính hợp lệ với cờ đóng băng chuẩn xác của môi trường CI:
+     ```bash
+     corepack pnpm install --frozen-lockfile
+     ```
+     Kết quả: `Lockfile is up to date, resolution step is skipped` — hoàn tất trong 39ms với mã thoát `0` (`PASS`).
+  3. Xác thực trọn vẹn toàn bộ chu trình CI bao gồm py_compile, unittests supervisor, lint, typecheck, test, build và `validate_repo.py`.
 
 ---
 
