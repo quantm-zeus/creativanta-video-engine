@@ -96,6 +96,7 @@ export interface IssuedApiKeyResult {
 export class TenantRepository {
   private readonly pool: TenantConnectionPool;
   private readonly pepper: string;
+  private readonly tenantImportAllowlists = new Map<string, string[]>();
 
   constructor(pool: TenantConnectionPool, options: { pepper: string }) {
     this.pool = pool;
@@ -108,6 +109,22 @@ export class TenantRepository {
 
   public getPepper(): string {
     return this.pepper;
+  }
+
+  public getTenantImportAllowlist(tenantId: string): string[] {
+    const specific = this.tenantImportAllowlists.get(tenantId);
+    if (specific !== undefined) return specific;
+    const globalDefault = this.tenantImportAllowlists.get('*');
+    if (globalDefault !== undefined) return globalDefault;
+    return [
+      'https://approved-stock.example.invalid/assets/',
+      'approved-stock.example.invalid',
+      'cdn.partner-stock.com',
+    ];
+  }
+
+  public setTenantImportAllowlist(tenantId: string, prefixes: string[]): void {
+    this.tenantImportAllowlists.set(tenantId, prefixes);
   }
 
   // --------------------------------------------------------------------------
@@ -481,6 +498,69 @@ export class TenantRepository {
     });
   }
 
+  public createAssetImport(
+    tenantId: string,
+    input: {
+      id: string;
+      filename: string;
+      kind: 'image' | 'video' | 'audio' | 'font' | 'svg' | 'subtitle';
+      status?: 'uploading' | 'processing' | 'ready' | 'rejected' | 'deleted';
+      mimeType: string;
+      expectedSha256: string;
+      rights: Record<string, unknown>;
+      now?: Date;
+    },
+  ): {
+    id: string;
+    status: string;
+    filename: string;
+    mime_type: string;
+    bytes: number;
+    sha256: string;
+    created_at: string;
+  } {
+    const nowIso = (input.now ?? new Date()).toISOString();
+    const status = input.status ?? 'processing';
+    const rightsEnvelope = {
+      ...input.rights,
+      _upload: {
+        mime_type: input.mimeType,
+        bytes: 0,
+        sha256: input.expectedSha256,
+      },
+      _import: {
+        expected_sha256: input.expectedSha256,
+        mime_type: input.mimeType,
+      },
+    };
+
+    return this.pool.withTransaction({ tenantId, role: 'cve_api' }, (tx) => {
+      tx.insertScoped('assets', {
+        tenant_id: tenantId,
+        id: input.id,
+        filename: input.filename,
+        kind: input.kind,
+        status,
+        current_version: 1,
+        visibility: 'tenant_private',
+        rights_json: JSON.stringify(rightsEnvelope),
+        created_at: nowIso,
+        updated_at: nowIso,
+        deleted_at: null,
+      });
+
+      return {
+        id: input.id,
+        status,
+        filename: input.filename,
+        mime_type: input.mimeType,
+        bytes: 0,
+        sha256: input.expectedSha256,
+        created_at: nowIso,
+      };
+    });
+  }
+
   public getAsset(
     tenantId: string,
     assetId: string,
@@ -650,12 +730,13 @@ export class TenantRepository {
       )[0];
 
       const mimeType = input.mimeType ?? ver?.mime_type ?? uploadInfo.mime_type ?? 'application/octet-stream';
-      const finalBytes = input.bytes ?? ver?.bytes ?? uploadInfo.bytes ?? 1;
+      const candidateBytes = input.bytes ?? ver?.bytes ?? uploadInfo.bytes;
+      const finalBytes = typeof candidateBytes === 'number' && candidateBytes > 0 ? candidateBytes : 1;
       const sha256 = input.normalizedSha256 ?? ver?.original_sha256 ?? uploadInfo.sha256 ?? '';
       const storageKey = `tenant/${tenantId}/asset/${existing.id}/${existing.current_version}/${existing.filename}`;
 
-      // Insert immutable version row on ready or rejected if not yet inserted
-      if (!ver && (input.status === 'ready' || input.status === 'rejected')) {
+      // Insert immutable version row on ready if not yet inserted
+      if (!ver && input.status === 'ready') {
         tx.insertScoped('asset_versions', {
           tenant_id: tenantId,
           asset_id: existing.id,

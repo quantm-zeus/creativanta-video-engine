@@ -1,0 +1,123 @@
+{
+  "$schema": "creativanta.video-engine.p3-04-summary.v1",
+  "task_id": "P3-04",
+  "stream": "C",
+  "phase": "P3",
+  "base_commit": "5d2fc9eb1ac00277b5c6b6c9a9b2ddbfa97b034a",
+  "tested_commit": "0444dbdce66a0fd3401c9c691b7d9cc713f896aa",
+  "feature_flag": {
+    "name": "CVE_REMOTE_IMPORT_ENABLED",
+    "default": false,
+    "enforced_admission_gate": true,
+    "disabled_status_code": 403,
+    "disabled_error_code": "CAPABILITY_DISABLED"
+  },
+  "defenses": {
+    "syntactic_url": {
+      "scheme_enforced": "https:",
+      "port_enforced": "443",
+      "userinfo_prohibited": true,
+      "fragment_prohibited": true,
+      "backslash_prohibited": true,
+      "control_chars_prohibited": true,
+      "path_traversal_prohibited": true
+    },
+    "ip_encodings_blocked": [
+      "dotted_decimal",
+      "bracketed_ipv6",
+      "dword_integer",
+      "hexadecimal",
+      "octal",
+      "mixed_base"
+    ],
+    "tenant_allowlist": {
+      "server_managed": true,
+      "boundary_enforcement": "exact_hostname_or_path_prefix",
+      "tenant_isolation": true,
+      "self_whitelisting_prohibited": true
+    },
+    "dns_auditing": {
+      "prohibited_ranges": [
+        "0.0.0.0/8 (This host)",
+        "10.0.0.0/8 (RFC 1918)",
+        "100.64.0.0/10 (CGNAT)",
+        "127.0.0.0/8 (Loopback)",
+        "169.254.0.0/16 (Link Local & AWS/GCP Metadata)",
+        "172.16.0.0/12 (RFC 1918)",
+        "192.0.0.0/24 (IETF Protocol)",
+        "192.0.2.0/24 (TEST-NET-1)",
+        "192.168.0.0/16 (RFC 1918)",
+        "198.18.0.0/15 (Benchmarking)",
+        "198.51.100.0/24 (TEST-NET-2)",
+        "203.0.113.0/24 (TEST-NET-3)",
+        "224.0.0.0/4 (Multicast)",
+        "240.0.0.0/4 (Reserved)",
+        "255.255.255.255/32 (Broadcast)",
+        "::/128 (Unspecified)",
+        "::1/128 (Loopback)",
+        "fc00::/7 (Unique Local Address)",
+        "fe80::/10 (Link Local)",
+        "ff00::/8 (Multicast)",
+        "::ffff:0:0/96 (IPv4-mapped IPv6)"
+      ],
+      "cloud_metadata_explicit": [
+        "169.254.169.254",
+        "100.100.100.200"
+      ],
+      "multihomed_audit_all": true
+    },
+    "connection_security": {
+      "connect_time_ip_pinning": true,
+      "tls_hostname_verification": true,
+      "connect_timeout_ms": 3000,
+      "total_timeout_ms": 30000,
+      "max_redirect_hops": 3,
+      "per_hop_revalidation": true,
+      "credential_forwarding_prohibited": true
+    },
+    "streaming_and_provenance": {
+      "max_streaming_bytes": 104857600,
+      "expected_sha256_verification": true,
+      "quarantine_intake": true,
+      "isolated_sandbox_probe": true,
+      "rights_metadata_required": true,
+      "sensitive_query_tokens_stripped": true
+    }
+  },
+  "tests": {
+    "file": "packages/api/test/p3-04-import-connector.test.mjs",
+    "total": 68,
+    "passed": 68,
+    "failed": 0,
+    "adversarial_coverage": [
+      "flag_disabled_403",
+      "non_https_schemes",
+      "non_443_ports",
+      "userinfo_injection",
+      "fragment_injection",
+      "backslash_parser_differential",
+      "path_traversal",
+      "numeric_dword_hex_octal_ip_literals",
+      "tenant_allowlist_boundaries",
+      "domain_suffix_hijacking",
+      "unauthorized_path_prefix",
+      "tenant_isolation",
+      "self_whitelisting_prohibited",
+      "loopback_rfc1918_cgnat_metadata_multicast_broadcast",
+      "ipv6_loopback_ula_mapped",
+      "multihomed_dns_response",
+      "fail_fast_api_dns",
+      "connect_time_pinning_dns_rebinding",
+      "redirect_to_private",
+      "redirect_to_unallowlisted",
+      "redirect_loop_max_3",
+      "content_length_oversized",
+      "sha256_mismatch",
+      "html_masquerading_as_video",
+      "rights_expiration",
+      "query_string_token_redaction",
+      "idempotent_import_replay",
+      "cross_tenant_probe_404_amb007"
+    ]
+  }
+}

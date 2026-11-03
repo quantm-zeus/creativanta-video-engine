@@ -5,6 +5,7 @@
 
 import crypto from 'node:crypto';
 import http from 'node:http';
+import path from 'node:path';
 import { URL } from 'node:url';
 import {
   CapabilitiesResponse,
@@ -45,12 +46,26 @@ import {
   getMaxBytesForMimeType,
   validateUploadRequestBounds,
 } from './assets/media-guard.js';
+import {
+  ImportConnector,
+  inferAssetMimeType,
+  sanitizeSourceUrl,
+  validateImportRights,
+} from './assets/import-connector.js';
+import {
+  checkTenantImportAllowlist,
+  resolveAndAuditHostDns,
+  validateAndNormalizeImportUrl,
+  SsrSecurityError,
+  ValidatedImportUrlResult,
+} from './assets/ssrf-guard.js';
 
 export interface CreateServerOptions {
   config: CveEnvConfig;
   repository?: TenantRepository;
   requireAuthOnCapabilities?: boolean;
   quarantineStore?: QuarantineStore;
+  importConnector?: ImportConnector;
 }
 
 const IDEMPOTENCY_KEY_REGEX = /^[A-Za-z0-9._:-]{1,128}$/;
@@ -218,9 +233,11 @@ export function createServer({
   repository,
   requireAuthOnCapabilities = false,
   quarantineStore: providedStore,
+  importConnector: providedConnector,
 }: CreateServerOptions): http.Server {
   const startTime = Date.now();
   const quarantineStore = providedStore ?? new QuarantineStore();
+  const importConnector = providedConnector ?? new ImportConnector({ quarantineStore });
 
   const server = http.createServer(async (req, res) => {
     const requestId = `req_${crypto.randomBytes(6).toString('hex')}`;
@@ -1097,6 +1114,234 @@ export function createServer({
             );
             return;
           }
+
+          const bodyRes = await readJsonBody(req);
+          if (!bodyRes.ok) {
+            sendError(res, bodyRes.status, bodyRes.code, bodyRes.message, requestId);
+            return;
+          }
+
+          const reqHash = crypto
+            .createHash('sha256')
+            .update(canonicalizeJson(bodyRes.data), 'utf8')
+            .digest('hex');
+
+          const idem = repository.claimIdempotency(auth.tenantId, {
+            method: 'POST',
+            normalizedPath: '/v1/assets/imports',
+            key: idemKey,
+            requestHash: reqHash,
+          });
+
+          if (idem.replayed) {
+            res.setHeader('Idempotency-Replayed', 'true');
+            res.writeHead(idem.httpStatus);
+            res.end(idem.responseBody);
+            return;
+          }
+
+          const rawUrl = bodyRes.data['url'];
+          const expectedSha = String(bodyRes.data['expected_sha256'] ?? '').toLowerCase().trim();
+          const rightsData = bodyRes.data['rights'];
+
+          // 1. Validate rights metadata
+          const rightsCheck = validateImportRights(rightsData);
+          if (!rightsCheck.valid) {
+            repository.releaseIdempotency(auth.tenantId, {
+              method: 'POST',
+              normalizedPath: '/v1/assets/imports',
+              key: idemKey,
+            });
+            sendError(
+              res,
+              422,
+              'VALIDATION_FAILED',
+              rightsCheck.message,
+              requestId,
+              false,
+              [{ pointer: rightsCheck.pointer, code: rightsCheck.code, message: rightsCheck.message }],
+            );
+            return;
+          }
+
+          // 2. Validate expected SHA-256 format
+          if (!/^[0-9a-f]{64}$/.test(expectedSha)) {
+            repository.releaseIdempotency(auth.tenantId, {
+              method: 'POST',
+              normalizedPath: '/v1/assets/imports',
+              key: idemKey,
+            });
+            sendError(
+              res,
+              422,
+              'VALIDATION_FAILED',
+              'expected_sha256 must be a 64-character lowercase hexadecimal string',
+              requestId,
+              false,
+              [{ pointer: '/expected_sha256', code: 'INVALID_CHECKSUM', message: 'Invalid hex SHA-256' }],
+            );
+            return;
+          }
+
+          // 3. Syntactic URL validation & SSRF defense
+          let validatedUrl: ValidatedImportUrlResult;
+          try {
+            validatedUrl = validateAndNormalizeImportUrl(rawUrl, {
+              allowCustomPortForTesting: importConnector.getAllowCustomPortForTesting(),
+            });
+          } catch (err) {
+            repository.releaseIdempotency(auth.tenantId, {
+              method: 'POST',
+              normalizedPath: '/v1/assets/imports',
+              key: idemKey,
+            });
+            const isSsr = err instanceof SsrSecurityError;
+            sendError(
+              res,
+              isSsr ? err.httpStatus : 422,
+              isSsr ? err.code : 'VALIDATION_FAILED',
+              err instanceof Error ? err.message : String(err),
+              requestId,
+              false,
+              [{ pointer: isSsr ? err.pointer : '/url', code: isSsr ? err.code : 'INVALID_URL', message: err instanceof Error ? err.message : String(err) }],
+            );
+            return;
+          }
+
+          // 4. Tenant allowlist check
+          const tenantAllowlist = repository.getTenantImportAllowlist(auth.tenantId);
+          const allowCheck = checkTenantImportAllowlist(validatedUrl.url, tenantAllowlist);
+          if (!allowCheck.allowed) {
+            repository.releaseIdempotency(auth.tenantId, {
+              method: 'POST',
+              normalizedPath: '/v1/assets/imports',
+              key: idemKey,
+            });
+            sendError(
+              res,
+              422,
+              'VALIDATION_FAILED',
+              `Import URL "${sanitizeSourceUrl(validatedUrl.url)}" is not in tenant allowlist`,
+              requestId,
+              false,
+              [{ pointer: '/url', code: 'URL_NOT_ALLOWLISTED', message: 'Target host or path is not allowlisted for tenant' }],
+            );
+            return;
+          }
+
+          // 5. DNS Resolution and IP range defense (fail fast against prohibited IPs)
+          try {
+            await resolveAndAuditHostDns(
+              validatedUrl.url.hostname,
+              importConnector.getDnsResolver(),
+              { allowLoopbackForTesting: importConnector.getAllowLoopbackForTesting() },
+            );
+          } catch (err) {
+            repository.releaseIdempotency(auth.tenantId, {
+              method: 'POST',
+              normalizedPath: '/v1/assets/imports',
+              key: idemKey,
+            });
+            const isSsr = err instanceof SsrSecurityError;
+            sendError(
+              res,
+              isSsr ? err.httpStatus : 422,
+              isSsr ? err.code : 'VALIDATION_FAILED',
+              err instanceof Error ? err.message : String(err),
+              requestId,
+              false,
+              [{ pointer: isSsr ? err.pointer : '/url', code: isSsr ? err.code : 'SSRF_PROHIBITED_IP', message: err instanceof Error ? err.message : String(err) }],
+            );
+            return;
+          }
+
+          // 6. Create asset in processing status
+          const assetId = `ast_${crypto.randomBytes(6).toString('hex')}`;
+          const filename = path.basename(validatedUrl.url.pathname) || 'imported_asset.mp4';
+          const inferredMime = inferAssetMimeType(validatedUrl.url.pathname);
+          const kind = getAssetKindFromMimeType(inferredMime);
+
+          const sanitizedSource = sanitizeSourceUrl(validatedUrl.url);
+          const sanitizedRights = {
+            ...rightsCheck.sanitized,
+            source: sanitizedSource,
+          };
+
+          repository.createAssetImport(auth.tenantId, {
+            id: assetId,
+            filename,
+            kind,
+            status: 'processing',
+            mimeType: inferredMime,
+            expectedSha256: expectedSha,
+            rights: sanitizedRights,
+          });
+
+          // 7. Complete idempotency record with 202 and initial AssetSummary
+          const responsePayload = {
+            id: assetId,
+            status: 'processing' as const,
+          };
+
+          repository.completeIdempotency(auth.tenantId, {
+            method: 'POST',
+            normalizedPath: '/v1/assets/imports',
+            key: idemKey,
+            httpStatus: 202,
+            responseBody: responsePayload,
+            resourceId: assetId,
+          });
+
+          res.writeHead(202);
+          res.end(JSON.stringify(responsePayload));
+
+          // 8. Execute asynchronous background import via ImportConnector
+          const currentTenantId = auth.tenantId;
+          importConnector
+            .executeImport({
+              tenantId: currentTenantId,
+              assetId,
+              url: String(rawUrl),
+              expectedSha256: expectedSha,
+              rights: rightsCheck.sanitized,
+              allowlist: tenantAllowlist,
+            })
+            .then((result) => {
+              if (result.success) {
+                repository.updateAssetStatus(currentTenantId, assetId, {
+                  status: 'ready',
+                  mimeType: result.mimeType,
+                  probeMetadata: result.probeMetadata,
+                  normalizedSha256: result.sha256,
+                  bytes: result.bytes,
+                });
+              } else {
+                repository.updateAssetStatus(currentTenantId, assetId, {
+                  status: 'rejected',
+                  mimeType: result.mimeType,
+                  probeMetadata: {
+                    error: result.error?.code ?? 'IMPORT_FAILED',
+                    message: result.error?.message ?? 'Remote import failed validation or transfer',
+                  },
+                });
+              }
+            })
+            .catch((err) => {
+              try {
+                repository.updateAssetStatus(currentTenantId, assetId, {
+                  status: 'rejected',
+                  mimeType: inferredMime,
+                  probeMetadata: {
+                    error: 'UNHANDLED_IMPORT_ERROR',
+                    message: err instanceof Error ? err.message : String(err),
+                  },
+                });
+              } catch {
+                // Ignore secondary errors to prevent unhandled rejection
+              }
+            });
+
+          return;
         }
 
         // 5.5 GET /v1/assets/{id}
