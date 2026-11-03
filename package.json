@@ -1,0 +1,24 @@
+{
+  "name": "@creativanta/video-engine",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Independent CPU-first code-driven Video-as-a-Service engine monorepo",
+  "packageManager": "pnpm@12.16.1",
+  "engines": {
+    "node": ">=24.0.0",
+    "pnpm": ">=9.0.0"
+  },
+  "type": "module",
+  "scripts": {
+    "prepare": "pnpm -r --if-present run build",
+    "build": "pnpm -r --if-present run build",
+    "typecheck": "pnpm -r --if-present run typecheck",
+    "lint": "pnpm -r --if-present run lint",
+    "test": "pnpm -r --if-present run test",
+    "health": "node scripts/health-check.mjs"
+  },
+  "devDependencies": {
+    "@types/node": "22.10.5",
+    "typescript": "5.7.3"
+  }
+}

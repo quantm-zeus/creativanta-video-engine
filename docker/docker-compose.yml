@@ -1,0 +1,32 @@
+# Canonical symlink/mirror of root docker-compose.yml
+# Please use docker compose from repo root: docker compose up -d
+services:
+  postgres:
+    extends:
+      file: ../docker-compose.yml
+      service: postgres
+  object-store:
+    extends:
+      file: ../docker-compose.yml
+      service: object-store
+  api:
+    extends:
+      file: ../docker-compose.yml
+      service: api
+  controller:
+    extends:
+      file: ../docker-compose.yml
+      service: controller
+  ingest:
+    extends:
+      file: ../docker-compose.yml
+      service: ingest
+  webhook-sender:
+    extends:
+      file: ../docker-compose.yml
+      service: webhook-sender
+
+networks:
+  control:
+    internal: true
+  restricted-egress: {}
