@@ -171,6 +171,82 @@ export class QuarantineStore {
   }
 
   /**
+   * Retrieves permanent asset file data.
+   */
+  public getPermanentFile(
+    tenantId: string,
+    assetId: string,
+    version: number,
+    filename: string,
+  ): { buffer: Buffer; filePath: string } | null {
+    const cleanTenant = sanitizePathComponent(tenantId);
+    const cleanAsset = sanitizePathComponent(assetId);
+    const cleanVersion = sanitizePathComponent(String(version));
+    const cleanFilename = sanitizePathComponent(filename);
+    const filePath = path.join(this.rootDir, 'tenant', cleanTenant, 'asset', cleanAsset, cleanVersion, cleanFilename);
+
+    if (!fs.existsSync(filePath)) {
+      return null;
+    }
+
+    try {
+      const buffer = fs.readFileSync(filePath);
+      return { buffer, filePath };
+    } catch {
+      return null;
+    }
+  }
+
+  /**
+   * Scans and sweeps orphan quarantine .part files older than maxAgeMs.
+   */
+  public sweepQuarantine(
+    maxAgeMs: number,
+    now = new Date(),
+  ): { removedFiles: number; bytesReclaimed: number } {
+    let removedFiles = 0;
+    let bytesReclaimed = 0;
+    const quarantineBase = path.join(this.rootDir, 'quarantine');
+
+    if (!fs.existsSync(quarantineBase)) {
+      return { removedFiles, bytesReclaimed };
+    }
+
+    try {
+      const tenantDirs = fs.readdirSync(quarantineBase, { withFileTypes: true });
+      for (const tDir of tenantDirs) {
+        if (!tDir.isDirectory()) continue;
+        const tenantId = tDir.name;
+        const tenantDirPath = path.join(quarantineBase, tenantId);
+        const files = fs.readdirSync(tenantDirPath, { withFileTypes: true });
+
+        for (const file of files) {
+          if (!file.isFile() || !file.name.endsWith('.part')) continue;
+          const filePath = path.join(tenantDirPath, file.name);
+          try {
+            const stat = fs.statSync(filePath);
+            const ageMs = now.getTime() - stat.mtimeMs;
+            if (ageMs > maxAgeMs) {
+              const size = stat.size;
+              fs.unlinkSync(filePath);
+              const assetId = file.name.slice(0, -5);
+              this.memoryStore.delete(`${tenantId}:${assetId}`);
+              removedFiles++;
+              bytesReclaimed += size;
+            }
+          } catch {
+            // ignore individual file errors
+          }
+        }
+      }
+    } catch {
+      // ignore directory errors
+    }
+
+    return { removedFiles, bytesReclaimed };
+  }
+
+  /**
    * Deletes temporary quarantine data for an asset.
    */
   public removeQuarantined(tenantId: string, assetId: string): void {
