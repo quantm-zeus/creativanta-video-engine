@@ -3,7 +3,7 @@
   "task_id": "P4-06",
   "stream": "B+D",
   "phase": "P4",
-  "base_commit": "b86920a7b415f65f060829597384ca9d8f44d603",
+  "base_commit": "e1341679dbc169f7985cd68d9f4ce04852f9aa24",
   "frame_and_clip_previews": {
     "modes_supported": [
       "frame",

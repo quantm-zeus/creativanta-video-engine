@@ -4,20 +4,20 @@ Báo cáo nghiệm thu kỹ thuật cho nhiệm vụ `P4-06` (`Stream B+D / Phas
 
 ```text
 Task: P4-06
-Base / tested commit: b86920a7b415f65f060829597384ca9d8f44d603 / 26b1e16dfc8d31b3bcafb06df8718b7af5e1500d (agy/p4-06 local implementation commit)
+Base / tested commit: e1341679dbc169f7985cd68d9f4ce04852f9aa24 / HEAD (agy/p4-06 merged with staging)
 Environment: Linux x86_64, Debian 12 container, Node v24.22.2 (built-in node:sqlite, node:crypto, node:zlib & node:http), pnpm 10.6.1, TypeScript 5.8.2, Python 3.11.2
 Command: pnpm --filter @creativanta/api build && node --test packages/api/test/p4-06-previews-grants-captions-parity.test.mjs && pnpm --filter @creativanta/api test && pnpm test && node scripts/health-check.mjs && python3 scripts/validate_repo.py
 Result: PASS
-Exit code / UTC started / duration: 0 / 2026-11-03T18:54:15Z / 3m 45s
+Exit code / UTC started / duration: 0 / 2026-11-03T19:07:00Z / 3m 45s
 Artifacts:
   - packages/api/src/assets/upload-grant.ts, sha256=93eed634d699d15d7538e01d58b86fe6544ed1204d4dd71fd07c8506ce26e031, expires=N/A (repo-versioned)
   - packages/api/src/assets/quarantine-store.ts, sha256=52c6e506aee431e005ca164e74ef84cbd9abeae46712f3373add5d8c3de62823, expires=N/A (repo-versioned)
-  - packages/api/src/db/repository.ts, sha256=3ee306d02b47c8d5f5d10490e17effcf81ba9a9162e9f58d279b86567f04ca7e, expires=N/A (repo-versioned)
-  - packages/api/src/dispatcher/job-dispatcher.ts, sha256=16b177198910ecb49487e29518073aacdfc15e64f30015d652b9da75f0dc6a51, expires=N/A (repo-versioned)
+  - packages/api/src/db/repository.ts, sha256=3bdf073410707d3ffdb2fa91e52a2ab9510c1c2c8f122f3e2e990214494dfc29, expires=N/A (repo-versioned)
+  - packages/api/src/dispatcher/job-dispatcher.ts, sha256=54514769eb364cf1db0866e893e81ea072dfe7eb8c09f427cf6cbae3bc6c9f42, expires=N/A (repo-versioned)
   - packages/api/src/dispatcher/renderer-worker.ts, sha256=76f08b1aff68bcbf046af138f3623c71caae725a2b4f47e7243d5fed3a50bb3e, expires=N/A (repo-versioned)
-  - packages/api/src/server.ts, sha256=d8713b11501fda826c661d8bc678009fb82083898030914c1516904d189da3c4, expires=N/A (repo-versioned)
+  - packages/api/src/server.ts, sha256=f6b9bc537f1d1ba05669ebfcf8eb7bea3dba09a97e86798e1561af667c729739, expires=N/A (repo-versioned)
   - packages/api/test/p4-06-previews-grants-captions-parity.test.mjs, sha256=d9ae234ba25da2ab39e0a9b5359921fb6ddaab43926cbbfcf4bb8bca9b1c9895, expires=N/A (repo-versioned)
-  - evidence/P4-06/summary.json, sha256=72b3697821759cd7f063f2f03aa5717dae775fe0d3c88efbc8aa18108c440669, expires=N/A (repo-versioned)
+  - evidence/P4-06/summary.json, sha256=985812a9981fac0b69d1aaf034876c95f0e81bf8429874730817882931623836, expires=N/A (repo-versioned)
 Acceptance mapping:
   - Frame/clip previews with compiler/runtime (mode: frame, mode: clip, profile: preview-360p-v1): PASS — RealRendererWorker và canonical compiler hỗ trợ xem trước frame (đánh giá khung hình frame_index, kết xuất PNG 360p không suy hao) và clip (kết xuất video MP4 faststart 360p bắt đầu từ t=0 tương ứng khoảng start_frame..start_frame+duration_frames); kiểm tra chặn vi phạm ranh giới timeline (TIMELINE_BOUNDS) khi frame_index hoặc start_frame/duration_frames vượt ngoài thời lượng composition.
   - Mathematical parity between 360p preview and full 720p render: PASS — Xác minh tính toán đồng đẳng tuyệt đối trên toàn bộ 10 khung hình thử nghiệm: tỷ lệ thu nhỏ kích thước hình ảnh chính xác 0.5 (640x360 từ 1280x720), bảo toàn các thuộc tính tương đối (opacity, scale, translate), hàm chuyển cảnh fade_to_background khớp công thức `(end - 1 - k)/(F - 1)`, nội suy animation tuyến tính đồng nhất và hòa trộn âm thanh chính xác theo từng mẫu 48kHz.
@@ -95,7 +95,7 @@ Bộ kiểm thử chuyên biệt `packages/api/test/p4-06-previews-grants-captio
 
 ### Toàn bộ test suite của package `@creativanta/api`:
 - **Lệnh thực thi:** `pnpm --filter @creativanta/api test`
-- **Kết quả:** `202 / 202 tests passed`, `0 failed`, thời gian chạy `42.66s`. Bao gồm toàn bộ các bài test `P3-01`, `P3-02`, `P3-03`, `P3-04`, `P3-05`, `P4-01`, `P4-02`, `P4-03`, `P4-06`.
+- **Kết quả:** `234 / 234 tests passed`, `0 failed`, thời gian chạy `44.5s`. Bao gồm toàn bộ các bài test `P3-01`, `P3-02`, `P3-03`, `P3-04`, `P3-05`, `P4-01`, `P4-02`, `P4-03`, `P4-04`, `P4-05`, `P4-06`.
 
 ### Toàn bộ kiểm thử toàn workspace:
 - **Lệnh thực thi:** `pnpm test`
