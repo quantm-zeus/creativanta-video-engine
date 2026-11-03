@@ -4,7 +4,7 @@ Báo cáo nghiệm thu kỹ thuật cho nhiệm vụ `P1-05` (`A+C / P1`): Thi�
 
 ```text
 Task: P1-05
-Base / tested commit: 9469a1ad90108fffc56de02dfc8c0b54b9193e52 / eaa4548d8b4e7232235c593cce8c2921a221f7c8
+Base / tested commit: 9469a1ad90108fffc56de02dfc8c0b54b9193e52 / 868f087eb4998782ee86f1e29ae0a3ff709b1ea2
 Environment: Linux x86_64, Ubuntu 24.04 LTS, 4 vCPUs, 15GiB RAM, Node v24.22.2, pnpm 12.16.1, TypeScript 5.7.3, Python 3.12
 Command: PATH=/usr/local/lib/node_modules/corepack/shims:/usr/bin:$PATH pnpm -r --if-present run build && pnpm -r --if-present run typecheck && pnpm -r --if-present run lint && pnpm -r --if-present run test && node packages/contracts/dist/migration/cli.js --smoke && node packages/controller/dist/index.js --self-test && node scripts/health-check.mjs && PATH=/usr/bin:$PATH python3 scripts/validate_repo.py && PATH=/usr/bin:$PATH python3 -m unittest discover -s tooling/agent_harness/tests -v && PATH=/usr/bin:$PATH python3 -m unittest evidence/P0-05/test_task_ledger.py
 Result: PASS
@@ -22,7 +22,7 @@ Artifacts:
   - packages/contracts/src/migration/cli.ts, sha256=905a8862f25984d602e4aa82341e11d341f3af663568eaa244ff1b750aa69e54, expires=N/A (repo-versioned)
   - packages/contracts/src/migration/index.ts, sha256=dbcdc848d014b9d161d19b12e2147b1bf2d3bd79a368fa1430b289e2ac4886cf, expires=N/A (repo-versioned)
   - packages/contracts/test/migration.test.mjs, sha256=0565e95952ef9b3519a41b145a12d11efeab3b8aa02621a53087c59f9a8234dd, expires=N/A (repo-versioned)
-  - evidence/P1-05/summary.json, sha256=423b9f7ab3a1db244257ad8691992fef287ea5a24ead28fd6cc6aa059736b3c1, expires=N/A (repo-versioned)
+  - evidence/P1-05/summary.json, sha256=98acf780ee7493f9298a427544c2baaf98a38c519c4164d52aef2f3acf36836f, expires=N/A (repo-versioned)
 Acceptance mapping:
   - CI jobs docs/contracts/lint/typecheck/unit: PASS — Quy trình CI Validate Video Engine tại .github/workflows/video-engine-ci.yml bao phủ 100% kiểm tra tài liệu, hợp đồng JSON Schema/OpenAPI, linting, typechecking nghiêm ngặt và toàn bộ unit/harness test suites
   - migration smoke harness: PASS — Triển khai đầy đủ gói di trú và kiểm tra khói cơ sở dữ liệu (docker/migrations/, packages/contracts/src/migration/), hỗ trợ giao thức PostgreSQL Wire Protocol v3.0 thuần TypeScript, kiểm định mã băm SHA-256 chống giả mạo, kiểm tra tính lũy đan (idempotency), thu hồi giao dịch (transactional rollback), kiểm định độ tương thích phiên bản schema cho probe /readyz và kiểm tra phân tách quyền 5 roles
