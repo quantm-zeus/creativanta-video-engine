@@ -56,5 +56,14 @@
     "total": 6,
     "passed": 6,
     "failed": 0
+  },
+  "ci_audit": {
+    "pr": 27,
+    "workflow": "Video Engine CI",
+    "run_id": "41701071508",
+    "job_id": "126146081129",
+    "github_status": "job_not_started_billing_spending_limit",
+    "local_ci_simulation": "PASS",
+    "code_defects": 0
   }
 }

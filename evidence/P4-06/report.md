@@ -8,7 +8,7 @@ Base / tested commit: e1341679dbc169f7985cd68d9f4ce04852f9aa24 / HEAD (agy/p4-06
 Environment: Linux x86_64, Debian 12 container, Node v24.22.2 (built-in node:sqlite, node:crypto, node:zlib & node:http), pnpm 10.6.1, TypeScript 5.8.2, Python 3.11.2
 Command: pnpm --filter @creativanta/api build && node --test packages/api/test/p4-06-previews-grants-captions-parity.test.mjs && pnpm --filter @creativanta/api test && pnpm test && node scripts/health-check.mjs && python3 scripts/validate_repo.py
 Result: PASS
-Exit code / UTC started / duration: 0 / 2026-11-03T19:07:00Z / 3m 45s
+Exit code / UTC started / duration: 0 / 2026-11-03T19:17:20Z / 4m 00s
 Artifacts:
   - packages/api/src/assets/upload-grant.ts, sha256=93eed634d699d15d7538e01d58b86fe6544ed1204d4dd71fd07c8506ce26e031, expires=N/A (repo-versioned)
   - packages/api/src/assets/quarantine-store.ts, sha256=52c6e506aee431e005ca164e74ef84cbd9abeae46712f3373add5d8c3de62823, expires=N/A (repo-versioned)
@@ -17,7 +17,7 @@ Artifacts:
   - packages/api/src/dispatcher/renderer-worker.ts, sha256=76f08b1aff68bcbf046af138f3623c71caae725a2b4f47e7243d5fed3a50bb3e, expires=N/A (repo-versioned)
   - packages/api/src/server.ts, sha256=f6b9bc537f1d1ba05669ebfcf8eb7bea3dba09a97e86798e1561af667c729739, expires=N/A (repo-versioned)
   - packages/api/test/p4-06-previews-grants-captions-parity.test.mjs, sha256=d9ae234ba25da2ab39e0a9b5359921fb6ddaab43926cbbfcf4bb8bca9b1c9895, expires=N/A (repo-versioned)
-  - evidence/P4-06/summary.json, sha256=985812a9981fac0b69d1aaf034876c95f0e81bf8429874730817882931623836, expires=N/A (repo-versioned)
+  - evidence/P4-06/summary.json, sha256=45f40f3f9fe2cd4ce5efe3b054dec0be4195bf53075750675e1ff73cdb8f636c, expires=N/A (repo-versioned)
 Acceptance mapping:
   - Frame/clip previews with compiler/runtime (mode: frame, mode: clip, profile: preview-360p-v1): PASS — RealRendererWorker và canonical compiler hỗ trợ xem trước frame (đánh giá khung hình frame_index, kết xuất PNG 360p không suy hao) và clip (kết xuất video MP4 faststart 360p bắt đầu từ t=0 tương ứng khoảng start_frame..start_frame+duration_frames); kiểm tra chặn vi phạm ranh giới timeline (TIMELINE_BOUNDS) khi frame_index hoặc start_frame/duration_frames vượt ngoài thời lượng composition.
   - Mathematical parity between 360p preview and full 720p render: PASS — Xác minh tính toán đồng đẳng tuyệt đối trên toàn bộ 10 khung hình thử nghiệm: tỷ lệ thu nhỏ kích thước hình ảnh chính xác 0.5 (640x360 từ 1280x720), bảo toàn các thuộc tính tương đối (opacity, scale, translate), hàm chuyển cảnh fade_to_background khớp công thức `(end - 1 - k)/(F - 1)`, nội suy animation tuyến tính đồng nhất và hòa trộn âm thanh chính xác theo từng mẫu 48kHz.
@@ -103,14 +103,38 @@ Bộ kiểm thử chuyên biệt `packages/api/test/p4-06-previews-grants-captio
 
 ### Kiểm tra sức khỏe & hợp lệ kho lưu trữ:
 - **`node scripts/health-check.mjs`:** `PASS` (Cấu hình môi trường, kiểm tra endpoint `/healthz`, `/readyz`, `/v1/capabilities` trả về hồ sơ `mp4-720p-v1` và `preview-360p-v1`).
-- **`python3 scripts/validate_repo.py`:** `PASS` (`42 markdown files`, `606 internal links`, `32 json files`, `0 errors`, đồ thị phụ thuộc phi chu trình).
+- **`python3 scripts/validate_repo.py`:** `PASS` (16 tài liệu bắt buộc, 45 tệp markdown, 641 liên kết nội bộ hợp lệ, 34 tệp JSON chuẩn cú pháp, 4 khối biểu đồ mermaid, 52 tác vụ trong kế hoạch, đồ thị phụ thuộc phi chu trình, 0 lỗi, 0 cảnh báo).
+- **`python3 -m unittest discover -s tooling/agent_harness/tests -v`:** `PASS` (10/10 bài kiểm thử đơn vị cơ chế điều phối supervisor, retry logic, timeout, và cổng CI pass/fail).
 
 ---
 
-## 3. Cổng ngoại bộ và phạm vi tiếp theo (External Gates & Next Tasks)
+## 3. Điều tra kiểm thử CI GitHub (PR #27 Investigation) & Cổng ngoại bộ
 
-- **Cổng ngoại bộ:**
-  - Cổng đánh giá an ninh độc lập (Gate G3): Thẩm định việc ngăn chặn thực thi HTML tùy ý trên nguồn gốc API và cơ chế token có chữ ký thời hạn 5 phút.
-  - Cổng phê duyệt tích hợp staging: Giám sát viên (supervisor) thực hiện merge vào nhánh staging sau khi xác thực bằng chứng tại `evidence/P4-06/`.
-- **Phạm vi còn lại / Nhiệm vụ tiếp theo:**
-  - Nhiệm vụ `P4-07` / `P5-01`: Giám sát nâng cao, webhook retry với exponential backoff, và hoàn thiện hệ thống xuất bản video engine.
+### Kết quả điều tra CI GitHub Pull Request #27:
+- **Ngữ cảnh kiểm tra:** Nhận thông báo lỗi từ giám sát viên: `GitHub CI failed for PR #27. Inspect gh pr checks and gh run view --log-failed; fix actual failure, run tests, commit new changes.`
+- **Kiểm tra nhật ký trực tiếp:** Thực thi lệnh `gh pr checks 27` và `gh run view 41701071508` (Job ID: `126146081129`).
+- **Nguyên nhân cốt lõi từ GitHub Actions:**
+  ```text
+  ANNOTATIONS
+  X The job was not started because recent account payments have failed or your spending limit needs to be increased. Please check the 'Billing & plans' section in your settings
+  Validate Video Engine: .github#1
+  ```
+- **Phân tích kỹ thuật mã nguồn:**
+  - Hoàn toàn KHÔNG có lỗi mã nguồn (0 code defect / 0 regression).
+  - Toàn bộ các bước kiểm tra trong quy trình CI `.github/workflows/video-engine-ci.yml` đã được thực thi và tái hiện độc lập trên môi trường cục bộ:
+    1. `python3 scripts/validate_repo.py` -> `PASS` (0 errors)
+    2. `python3 -m py_compile tooling/agent_harness/supervisor.py` -> `PASS`
+    3. `python3 -m unittest discover -s tooling/agent_harness/tests -v` -> `PASS` (10/10)
+    4. `pnpm -r lint` -> `PASS` (0 errors)
+    5. `pnpm -r typecheck` -> `PASS` (0 errors)
+    6. `pnpm -r test` -> `PASS` (100% test suites passed across all packages)
+    7. `pnpm -r build` -> `PASS` (0 errors)
+  - Lý do thất bại trên GitHub Actions là do tài khoản GitHub `quantm-zeus` đã đạt hạn mức phút miễn phí của kho lưu trữ riêng tư (private repo) hoặc thẻ thanh toán/hạn ngạch spending limit cần được cập nhật trong phần cài đặt 'Billing & plans' trên GitHub.
+
+### Danh mục cổng ngoại bộ (External Gates):
+1. **Cổng thanh toán & hạn mức GitHub Actions (GitHub Actions Billing & Spending Limit Gate):** Yêu cầu quản trị viên tài khoản giải quyết thanh toán hoặc nâng spending limit trên GitHub Settings để GitHub-hosted runners tiếp tục thực thi CI cho các pull request tiếp theo.
+2. **Cổng an ninh độc lập (Security Gate G3):** Đánh giá việc phòng thủ chống thực thi HTML tùy ý trên nguồn gốc API (`no raw custom HTML origin`, MIME forced to `application/octet-stream`, sandbox CSP, `attachment`) và tính an toàn của token download grant HMAC-SHA256 TTL <= 300s.
+3. **Cổng phê duyệt tích hợp staging (Staging Integration Gate G2):** Giám sát viên (supervisor) thực hiện merge PR #27 vào nhánh `staging` sau khi kiểm tra bằng chứng nghiệm thu.
+
+### Phạm vi còn lại / Nhiệm vụ tiếp theo:
+- Nhiệm vụ `P4-07` / `P5-01`: Giám sát nâng cao, hàng đợi webhook retry với exponential backoff, và hoàn thiện hệ thống phân phối tác vụ video engine.
