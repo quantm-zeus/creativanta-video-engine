@@ -1,0 +1,406 @@
+{
+  "manifest_version": "1.0",
+  "compiler_version": "0.1.0",
+  "composition_id": "cmp_poc02_explainer",
+  "revision": 1,
+  "profile": "mp4-720p-v1",
+  "canvas": {
+    "width": 1280,
+    "height": 720,
+    "background": "#0B132B"
+  },
+  "fps": {
+    "num": 30,
+    "den": 1
+  },
+  "duration_frames": 900,
+  "duration_seconds": 30,
+  "seed": 2026,
+  "locale": "vi-VN",
+  "direction": "ltr",
+  "spec_hash": "13981dab4645ebd3a49235083d190240c093bf1a5683ee8dab73dcb43bdaad9e",
+  "render_hash": "023f8465a936b601b1fdada812a87c9b9a1edc4e2825217f6d9a48082e585534",
+  "scenes": [
+    {
+      "id": "scene_problem",
+      "revision": 1,
+      "scene_hash": "31cea48d4198e3ff2c27b5da45e4a4651169e5cce075cf4865c7ac4774c83401",
+      "start_frame": 0,
+      "duration_frames": 210,
+      "end_frame": 210,
+      "engine": "html-v1",
+      "background": "#0B132B",
+      "transition_out": {
+        "type": "cut",
+        "duration_frames": 0
+      },
+      "layers": [
+        {
+          "id": "icon_cloud",
+          "type": "svg",
+          "z_index": 1,
+          "global_start_frame": 0,
+          "global_end_frame": 210,
+          "local_start_frame": 0,
+          "local_duration_frames": 210,
+          "box": {
+            "x": 560,
+            "y": 140,
+            "width": 160,
+            "height": 160
+          },
+          "opacity": 1,
+          "transform": {
+            "translate_x": 0,
+            "translate_y": 0,
+            "scale_x": 1,
+            "scale_y": 1,
+            "rotate_deg": 0,
+            "origin_x": 0.5,
+            "origin_y": 0.5
+          },
+          "animations": [],
+          "content": {
+            "asset_id": "ast_svg_cloud_icon",
+            "fit": "contain",
+            "anchor_x": 0.5,
+            "anchor_y": 0.5
+          }
+        },
+        {
+          "id": "text_problem",
+          "type": "text",
+          "z_index": 2,
+          "global_start_frame": 15,
+          "global_end_frame": 210,
+          "local_start_frame": 15,
+          "local_duration_frames": 195,
+          "box": {
+            "x": 140,
+            "y": 360,
+            "width": 1000,
+            "height": 120
+          },
+          "opacity": 1,
+          "transform": {
+            "translate_x": 0,
+            "translate_y": 0,
+            "scale_x": 1,
+            "scale_y": 1,
+            "rotate_deg": 0,
+            "origin_x": 0.5,
+            "origin_y": 0.5
+          },
+          "animations": [],
+          "content": {
+            "text": "Khó khăn trong việc mở rộng quy trình sản xuất video?",
+            "font_id": "font_title",
+            "font_size": 42,
+            "color": "#F0F6FC",
+            "align": "center",
+            "overflow": "error",
+            "line_height": 1.2,
+            "max_lines": 5,
+            "min_font_size": 42
+          }
+        }
+      ]
+    },
+    {
+      "id": "scene_solution",
+      "revision": 1,
+      "scene_hash": "43f16b9e2965132666c59cd920512106044dd5adaa83b017cb6469e0c425ad88",
+      "start_frame": 210,
+      "duration_frames": 240,
+      "end_frame": 450,
+      "engine": "html-v1",
+      "background": "#0B132B",
+      "transition_out": {
+        "type": "cut",
+        "duration_frames": 0
+      },
+      "layers": [
+        {
+          "id": "text_solution_title",
+          "type": "text",
+          "z_index": 1,
+          "global_start_frame": 210,
+          "global_end_frame": 450,
+          "local_start_frame": 0,
+          "local_duration_frames": 240,
+          "box": {
+            "x": 140,
+            "y": 160,
+            "width": 1000,
+            "height": 90
+          },
+          "opacity": 1,
+          "transform": {
+            "translate_x": 0,
+            "translate_y": 0,
+            "scale_x": 1,
+            "scale_y": 1,
+            "rotate_deg": 0,
+            "origin_x": 0.5,
+            "origin_y": 0.5
+          },
+          "animations": [],
+          "content": {
+            "text": "Creativanta Video Engine: Giải pháp render bằng mã nguồn",
+            "font_id": "font_title",
+            "font_size": 40,
+            "color": "#38BDF8",
+            "align": "center",
+            "overflow": "error",
+            "line_height": 1.2,
+            "max_lines": 5,
+            "min_font_size": 40
+          }
+        },
+        {
+          "id": "metric_card",
+          "type": "svg",
+          "z_index": 2,
+          "global_start_frame": 240,
+          "global_end_frame": 450,
+          "local_start_frame": 30,
+          "local_duration_frames": 210,
+          "box": {
+            "x": 390,
+            "y": 300,
+            "width": 500,
+            "height": 260
+          },
+          "opacity": 1,
+          "transform": {
+            "translate_x": 0,
+            "translate_y": 0,
+            "scale_x": 1,
+            "scale_y": 1,
+            "rotate_deg": 0,
+            "origin_x": 0.5,
+            "origin_y": 0.5
+          },
+          "animations": [],
+          "content": {
+            "asset_id": "ast_svg_metric_card",
+            "fit": "contain",
+            "anchor_x": 0.5,
+            "anchor_y": 0.5
+          }
+        }
+      ]
+    },
+    {
+      "id": "scene_growth",
+      "revision": 1,
+      "scene_hash": "642d712a8581fceb61284eb23d3901d0bc47fa2a3d3ebdf06dcacb8a5e0f3dc9",
+      "start_frame": 450,
+      "duration_frames": 240,
+      "end_frame": 690,
+      "engine": "html-v1",
+      "background": "#0B132B",
+      "transition_out": {
+        "type": "cut",
+        "duration_frames": 0
+      },
+      "layers": [
+        {
+          "id": "growth_chart",
+          "type": "svg",
+          "z_index": 1,
+          "global_start_frame": 450,
+          "global_end_frame": 690,
+          "local_start_frame": 0,
+          "local_duration_frames": 240,
+          "box": {
+            "x": 240,
+            "y": 120,
+            "width": 800,
+            "height": 450
+          },
+          "opacity": 1,
+          "transform": {
+            "translate_x": 0,
+            "translate_y": 0,
+            "scale_x": 1,
+            "scale_y": 1,
+            "rotate_deg": 0,
+            "origin_x": 0.5,
+            "origin_y": 0.5
+          },
+          "animations": [],
+          "content": {
+            "asset_id": "ast_svg_growth_chart",
+            "fit": "contain",
+            "anchor_x": 0.5,
+            "anchor_y": 0.5
+          }
+        }
+      ]
+    },
+    {
+      "id": "scene_summary",
+      "revision": 1,
+      "scene_hash": "53681c161aacdb40ff77478d47cb8f38ea5a08bb144e4cb0440e8f86bc325345",
+      "start_frame": 690,
+      "duration_frames": 210,
+      "end_frame": 900,
+      "engine": "html-v1",
+      "background": "#0B132B",
+      "transition_out": {
+        "type": "fade_to_background",
+        "duration_frames": 30,
+        "fade_start_frame": 870,
+        "fade_end_frame": 900
+      },
+      "layers": [
+        {
+          "id": "summary_text",
+          "type": "text",
+          "z_index": 1,
+          "global_start_frame": 690,
+          "global_end_frame": 900,
+          "local_start_frame": 0,
+          "local_duration_frames": 210,
+          "box": {
+            "x": 190,
+            "y": 280,
+            "width": 900,
+            "height": 160
+          },
+          "opacity": 1,
+          "transform": {
+            "translate_x": 0,
+            "translate_y": 0,
+            "scale_x": 1,
+            "scale_y": 1,
+            "rotate_deg": 0,
+            "origin_x": 0.5,
+            "origin_y": 0.5
+          },
+          "animations": [],
+          "content": {
+            "text": "Bắt đầu tự động hóa quy trình ngay hôm nay",
+            "font_id": "font_title",
+            "font_size": 48,
+            "color": "#FFFFFF",
+            "align": "center",
+            "overflow": "error",
+            "line_height": 1.2,
+            "max_lines": 5,
+            "min_font_size": 48
+          }
+        }
+      ]
+    }
+  ],
+  "audio_tracks": [
+    {
+      "id": "narration_vo",
+      "asset_id": "ast_audio_narration_poc02",
+      "start_frame": 0,
+      "duration_frames": 900,
+      "end_frame": 900,
+      "sample_start": 0,
+      "sample_count": 1440000,
+      "source_in_samples": 0,
+      "gain_db": -2,
+      "role": "voice",
+      "fade_in_frames": 5,
+      "fade_out_frames": 15,
+      "gain_keyframes": []
+    }
+  ],
+  "subtitles": [
+    {
+      "id": "sub_vi",
+      "locale": "vi-VN",
+      "burn_in": true,
+      "style": {
+        "font_id": "font_body",
+        "font_size": 28,
+        "color": "#FFFFFF",
+        "background": "#000000CC",
+        "align": "center",
+        "max_lines": 2,
+        "safe_margin_px": 48
+      },
+      "cues": [
+        {
+          "id": "cue_1",
+          "start_frame": 15,
+          "end_frame": 195,
+          "start_ms": 500,
+          "end_ms": 6500,
+          "text": "Khó khăn trong việc mở rộng quy trình sản xuất video?"
+        },
+        {
+          "id": "cue_2",
+          "start_frame": 225,
+          "end_frame": 435,
+          "start_ms": 7500,
+          "end_ms": 14500,
+          "text": "Creativanta Video Engine mang lại giải pháp render bằng mã nguồn độc lập."
+        },
+        {
+          "id": "cue_3",
+          "start_frame": 465,
+          "end_frame": 675,
+          "start_ms": 15500,
+          "end_ms": 22500,
+          "text": "Tăng tốc độ kết xuất và tối ưu chi phí hạ tầng CPU hiệu quả."
+        },
+        {
+          "id": "cue_4",
+          "start_frame": 705,
+          "end_frame": 870,
+          "start_ms": 23500,
+          "end_ms": 29000,
+          "text": "Hãy bắt đầu chuyển đổi quy trình sản xuất video ngay hôm nay."
+        }
+      ]
+    }
+  ],
+  "fonts": [
+    {
+      "id": "font_title",
+      "asset_id": "ast_font_noto_sans_bold",
+      "sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "family": "Noto Sans",
+      "weight": 700,
+      "style": "normal"
+    },
+    {
+      "id": "font_body",
+      "asset_id": "ast_font_noto_sans_regular",
+      "sha256": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+      "family": "Noto Sans",
+      "weight": 400,
+      "style": "normal"
+    }
+  ],
+  "assets": {
+    "ast_svg_cloud_icon": {
+      "asset_id": "ast_svg_cloud_icon",
+      "kind": "svg"
+    },
+    "ast_svg_metric_card": {
+      "asset_id": "ast_svg_metric_card",
+      "kind": "svg"
+    },
+    "ast_svg_growth_chart": {
+      "asset_id": "ast_svg_growth_chart",
+      "kind": "svg"
+    },
+    "ast_audio_narration_poc02": {
+      "asset_id": "ast_audio_narration_poc02",
+      "kind": "audio"
+    }
+  },
+  "required_capabilities": [
+    "engine:html-v1",
+    "profile:mp4-720p-v1"
+  ],
+  "compiled_at": "2026-11-03T04:27:40.631Z"
+}
