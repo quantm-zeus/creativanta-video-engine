@@ -1,0 +1,66 @@
+{
+  "$schema": "creativanta.video-engine.p4-03-summary.v1",
+  "task_id": "P4-03",
+  "stream": "C+B",
+  "phase": "P4",
+  "base_commit": "d969ec66263d6f34b2963e46e4763df6ed2255f7",
+  "cancel_timeout_retry_reaper": {
+    "cancel_endpoint": "POST /v1/jobs/{id}/cancel",
+    "cancel_process_group_kill_timeout_ms": 10000,
+    "cancel_requested_reaped_to_canceled_amb_003": true,
+    "frame_readiness_timeout_ms": 5000,
+    "render_attempt_timeout_seconds": 600,
+    "preview_attempt_timeout_seconds": 120,
+    "render_job_deadline_seconds": 1800,
+    "preview_job_deadline_seconds": 300,
+    "max_attempts": 3,
+    "retry_backoff_schedule_ms": {
+      "after_attempt_1": 5000,
+      "after_attempt_2": 30000,
+      "jitter_ms_range": [0, 2000]
+    },
+    "retryable_error_codes_count": 5,
+    "non_retryable_error_codes_count": 8,
+    "reaper_reclaims_expired_active_leases": true,
+    "reaper_reaps_expired_queued_and_retry_wait_jobs": true
+  },
+  "object_temp_verification_and_atomic_publication": {
+    "attempt_temp_prefix": "temp/tenant/<tenantId>/job/<jobId>/<attemptId>/<filename>",
+    "permanent_artifact_prefix": "tenant/<tenantId>/job/<jobId>/<attemptId>/<filename>",
+    "max_attempt_temp_bytes": 8589934592,
+    "regular_file_no_symlink_no_hardlink_enforced": true,
+    "realpath_containment_enforced": true,
+    "byte_count_and_sha256_verified_before_promotion": true,
+    "container_magic_bytes_and_iso_bmff_verified_before_promotion": true,
+    "atomic_tmp_and_rename_promotion": true,
+    "permanent_artifact_rollback_on_db_commit_failure": true
+  },
+  "kill_and_race_stability": {
+    "killed_stages_tested": [
+      "preparing",
+      "rendering",
+      "encoding",
+      "verifying",
+      "before_publish",
+      "cancel_requested"
+    ],
+    "zero_partial_publication_on_worker_kill": true,
+    "cancel_vs_success_race_iterations": 20,
+    "cancel_vs_success_mutually_exclusive": true,
+    "asset_revoke_vs_publish_race_iterations": 20,
+    "asset_revoke_vs_publish_mutually_exclusive": true,
+    "amb_003_cancel_requested_immune_to_asset_revoked": true
+  },
+  "no_orphan_leak_and_sweeper": {
+    "attempt_temp_cleaned_on_publish_fail_cancel_reap_revoke": true,
+    "orphan_attempt_temp_sweeper_threshold_hours": 24,
+    "live_leased_attempt_outputs_protected": true
+  },
+  "tests": {
+    "file": "packages/api/test/p4-03-cancel-timeout-retry-reaper-races.test.mjs",
+    "suites": 1,
+    "total": 7,
+    "passed": 7,
+    "failed": 0
+  }
+}

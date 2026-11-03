@@ -18,6 +18,12 @@ import { QuarantineStore } from '../assets/quarantine-store.js';
 
 export const CVE_LEASE_DURATION_SECONDS = 60;
 export const CVE_HEARTBEAT_INTERVAL_SECONDS = 15;
+export const CVE_FRAME_TIMEOUT_MS = 5_000;
+export const CVE_RENDER_TIMEOUT_SECONDS = 600;
+export const CVE_PREVIEW_TIMEOUT_SECONDS = 120;
+export const CVE_JOB_DEADLINE_SECONDS = 1800;
+export const CVE_PREVIEW_DEADLINE_SECONDS = 300;
+export const CVE_CANCEL_KILL_TIMEOUT_MS = 10_000;
 export const DEFAULT_MAX_GLOBAL_SLOTS = 4;
 
 export const RETRYABLE_JOB_ERROR_CODES = [
@@ -234,6 +240,9 @@ export interface PublishAttemptResult {
     | 'CANCEL_REQUESTED'
     | 'ASSET_REVOKED'
     | 'JOB_DEADLINE_EXCEEDED'
+    | 'ENCODE_VERIFICATION_FAILED'
+    | 'SANDBOX_SECURITY_VIOLATION'
+    | 'SANDBOX_RESOURCE_LIMIT'
     | 'JOB_NOT_FOUND';
   state: string;
   stateVersion: number;
@@ -258,12 +267,30 @@ export interface ReclaimedLeaseRecord {
   reason: string;
 }
 
+export interface ReaperCycleResult {
+  reclaimedLeases: ReclaimedLeaseRecord[];
+  expiredQueuedJobs: Array<{
+    tenantId: string;
+    jobId: string;
+    reason: 'JOB_DEADLINE_EXCEEDED' | 'ASSET_REVOKED';
+  }>;
+  promotedRetryJobs: Array<{
+    tenantId: string;
+    jobId: string;
+    outcome: 'queued' | 'failed';
+    reason?: string;
+  }>;
+}
+
 export interface JobDispatcherOptions {
   repository: TenantRepository;
   quarantineStore?: QuarantineStore;
   maxGlobalSlots?: number;
   leaseDurationSeconds?: number;
   heartbeatIntervalSeconds?: number;
+  renderTimeoutSeconds?: number;
+  previewTimeoutSeconds?: number;
+  cancelKillTimeoutMs?: number;
   includeRetryJitter?: boolean;
   /**
    * Optional authoritative database server clock override (`SELECT now()`) for deterministic testing.
@@ -279,6 +306,9 @@ export class JobDispatcher {
   private maxGlobalSlots: number;
   private readonly leaseDurationSeconds: number;
   private readonly heartbeatIntervalSeconds: number;
+  private readonly renderTimeoutSeconds: number;
+  private readonly previewTimeoutSeconds: number;
+  private readonly cancelKillTimeoutMs: number;
   private readonly includeRetryJitter: boolean;
   private dbClockOverride?: () => Date;
 
@@ -299,6 +329,18 @@ export class JobDispatcher {
       1,
       options.heartbeatIntervalSeconds ?? CVE_HEARTBEAT_INTERVAL_SECONDS,
     );
+    this.renderTimeoutSeconds = Math.max(
+      1,
+      options.renderTimeoutSeconds ?? CVE_RENDER_TIMEOUT_SECONDS,
+    );
+    this.previewTimeoutSeconds = Math.max(
+      1,
+      options.previewTimeoutSeconds ?? CVE_PREVIEW_TIMEOUT_SECONDS,
+    );
+    this.cancelKillTimeoutMs = Math.max(
+      100,
+      options.cancelKillTimeoutMs ?? CVE_CANCEL_KILL_TIMEOUT_MS,
+    );
     this.includeRetryJitter = options.includeRetryJitter ?? true;
     this.dbClockOverride = options.dbClock;
   }
@@ -317,6 +359,18 @@ export class JobDispatcher {
 
   public getHeartbeatIntervalSeconds(): number {
     return this.heartbeatIntervalSeconds;
+  }
+
+  public getRenderTimeoutSeconds(): number {
+    return this.renderTimeoutSeconds;
+  }
+
+  public getPreviewTimeoutSeconds(): number {
+    return this.previewTimeoutSeconds;
+  }
+
+  public getCancelKillTimeoutMs(): number {
+    return this.cancelKillTimeoutMs;
   }
 
   public getMaxGlobalSlots(): number {
@@ -510,38 +564,165 @@ export class JobDispatcher {
   }
 
   /**
-   * Reclaims expired worker leases (`lease_expires_at <= db_now`) across all active jobs.
-   *   - `cancel_requested` with expired lease -> transitions to `canceled` (AMB-003).
-   *   - `preparing/rendering/encoding/verifying` with expired lease:
-   *     - If `attempt_count < max_attempts` and `db_now < deadline_at` -> transitions to `retry_wait`
-   *       and increments `lease_epoch` to fence off the stalled worker (`WORKER_LOST`).
-   *     - Otherwise -> transitions to terminal `failed` (`WORKER_LOST` or `JOB_DEADLINE_EXCEEDED`),
-   *       increments `lease_epoch`, and releases `usage_reservations`.
+   * Reaps `queued` jobs whose `deadline_at <= db_now` (`JOB_DEADLINE_EXCEEDED`)
+   * or whose referenced assets were revoked (`ASSET_REVOKED`).
    */
-  public reclaimExpiredLeases(): ReclaimedLeaseRecord[] {
+  public reapExpiredQueuedJobs(): Array<{
+    tenantId: string;
+    jobId: string;
+    reason: 'JOB_DEADLINE_EXCEEDED' | 'ASSET_REVOKED';
+  }> {
     const dbNow = this.getDbNow();
     const dbNowIso = dbNow.toISOString();
     const db = this.pool.getDatabase();
 
-    const expiredCandidates = db
+    const queuedCandidates = db
+      .prepare(
+        `SELECT tenant_id, id
+         FROM jobs
+         WHERE state = 'queued'
+         ORDER BY created_at ASC, id ASC`,
+      )
+      .all() as Array<{ tenant_id: string; id: string }>;
+
+    const reaped: Array<{
+      tenantId: string;
+      jobId: string;
+      reason: 'JOB_DEADLINE_EXCEEDED' | 'ASSET_REVOKED';
+    }> = [];
+
+    for (const candidate of queuedCandidates) {
+      const outcome = this.pool.withTransaction(
+        { tenantId: candidate.tenant_id, role: 'cve_dispatcher' },
+        (tx) => {
+          const jobs = tx.selectScoped<{
+            id: string;
+            state: string;
+            state_version: number;
+            lease_epoch: number;
+            deadline_at: string;
+            snapshot_json: string;
+          }>('jobs', 'id = ?', [candidate.id]);
+
+          const job = jobs[0];
+          if (!job || job.state !== 'queued') {
+            return null;
+          }
+
+          if (Date.parse(job.deadline_at) <= dbNow.getTime()) {
+            this.transitionJobToTerminalFailedInTx(tx, {
+              tenantId: candidate.tenant_id,
+              jobId: job.id,
+              stateVersion: job.state_version,
+              leaseEpoch: Number(job.lease_epoch),
+              errorCode: 'JOB_DEADLINE_EXCEEDED',
+              message: `Job exceeded deadline_at (${job.deadline_at}) while waiting in queue`,
+              dbNowIso,
+            });
+            return {
+              tenantId: candidate.tenant_id,
+              jobId: job.id,
+              reason: 'JOB_DEADLINE_EXCEEDED' as const,
+            };
+          }
+
+          const revokedAssetId = this.findRevokedAssetInSnapshotInTx(tx, job.snapshot_json);
+          if (revokedAssetId) {
+            this.transitionJobToTerminalFailedInTx(tx, {
+              tenantId: candidate.tenant_id,
+              jobId: job.id,
+              stateVersion: job.state_version,
+              leaseEpoch: Number(job.lease_epoch),
+              errorCode: 'ASSET_REVOKED',
+              message: `Input asset '${revokedAssetId}' was revoked while job was queued`,
+              dbNowIso,
+            });
+            return {
+              tenantId: candidate.tenant_id,
+              jobId: job.id,
+              reason: 'ASSET_REVOKED' as const,
+            };
+          }
+
+          return null;
+        },
+      );
+
+      if (outcome) {
+        reaped.push(outcome);
+      }
+    }
+
+    return reaped;
+  }
+
+  /**
+   * Executes a full reaper cycle:
+   *   1. Reclaims expired active worker leases, timed-out attempts, and expired cancel_requested jobs.
+   *   2. Reaps expired `queued` jobs (`deadline_at <= db_now` or `ASSET_REVOKED`).
+   *   3. Reaps/promotes `retry_wait` jobs.
+   */
+  public runReaperCycle(
+    options: {
+      forceIgnoreBackoff?: boolean;
+      reapCancelGraceExceeded?: boolean;
+      reapAttemptTimeoutExceeded?: boolean;
+    } = {},
+  ): ReaperCycleResult {
+    const reclaimedLeases = this.reclaimExpiredLeases({
+      reapCancelGraceExceeded: options.reapCancelGraceExceeded ?? true,
+      reapAttemptTimeoutExceeded: options.reapAttemptTimeoutExceeded ?? true,
+    });
+    const expiredQueuedJobs = this.reapExpiredQueuedJobs();
+    const promotedRetryJobs = this.promoteEligibleRetryWaitJobs({
+      forceIgnoreBackoff: options.forceIgnoreBackoff,
+    });
+    return {
+      reclaimedLeases,
+      expiredQueuedJobs,
+      promotedRetryJobs,
+    };
+  }
+
+  /**
+   * Reclaims expired worker leases (`lease_expires_at <= db_now`), timed-out active attempts,
+   * or `cancel_requested` jobs past grace window across all active jobs.
+   *   - `cancel_requested` with expired lease (or past `cancelKillTimeoutMs` when `reapCancelGraceExceeded` is set)
+   *     -> transitions to `canceled` (AMB-003).
+   *   - `preparing/rendering/encoding/verifying` with expired lease or attempt timeout:
+   *     - If `attempt_count < max_attempts` and `db_now < deadline_at` -> transitions to `retry_wait`
+   *       and increments `lease_epoch` to fence off the stalled worker (`WORKER_LOST` or `RENDER_TIMEOUT`).
+   *     - Otherwise -> transitions to terminal `failed` (`WORKER_LOST`, `RENDER_TIMEOUT`, or `JOB_DEADLINE_EXCEEDED`),
+   *       increments `lease_epoch`, and releases `usage_reservations`.
+   */
+  public reclaimExpiredLeases(
+    options: {
+      reapCancelGraceExceeded?: boolean;
+      reapAttemptTimeoutExceeded?: boolean;
+    } = {},
+  ): ReclaimedLeaseRecord[] {
+    const dbNow = this.getDbNow();
+    const dbNowIso = dbNow.toISOString();
+    const db = this.pool.getDatabase();
+
+    const activeCandidates = db
       .prepare(
         `SELECT tenant_id, id
          FROM jobs
          WHERE state IN ('preparing', 'rendering', 'encoding', 'verifying', 'cancel_requested')
-           AND lease_expires_at IS NOT NULL
-           AND lease_expires_at <= ?
          ORDER BY lease_expires_at ASC, id ASC`,
       )
-      .all(dbNowIso) as Array<{ tenant_id: string; id: string }>;
+      .all() as Array<{ tenant_id: string; id: string }>;
 
     const reclaimed: ReclaimedLeaseRecord[] = [];
 
-    for (const candidate of expiredCandidates) {
+    for (const candidate of activeCandidates) {
       const record = this.pool.withTransaction(
         { tenantId: candidate.tenant_id, role: 'cve_dispatcher' },
         (tx) => {
           const jobs = tx.selectScoped<{
             id: string;
+            kind: 'render' | 'preview';
             state: string;
             stage: string;
             state_version: number;
@@ -550,6 +731,7 @@ export class JobDispatcher {
             active_attempt_id: string | null;
             lease_epoch: number;
             lease_expires_at: string | null;
+            cancel_requested_at: string | null;
             deadline_at: string;
           }>('jobs', 'id = ?', [candidate.id]);
 
@@ -558,10 +740,43 @@ export class JobDispatcher {
             !job ||
             !['preparing', 'rendering', 'encoding', 'verifying', 'cancel_requested'].includes(
               job.state,
-            ) ||
-            !job.lease_expires_at ||
-            Date.parse(job.lease_expires_at) > dbNow.getTime()
+            )
           ) {
+            return null;
+          }
+
+          const isLeaseExpired =
+            !job.lease_expires_at || Date.parse(job.lease_expires_at) <= dbNow.getTime();
+          const isCancelGraceExceeded =
+            options.reapCancelGraceExceeded === true &&
+            job.state === 'cancel_requested' &&
+            job.cancel_requested_at !== null &&
+            dbNow.getTime() - Date.parse(job.cancel_requested_at) >= this.cancelKillTimeoutMs;
+
+          let attemptStartedAtMs = dbNow.getTime() - 1_000;
+          let isAttemptTimeoutExceeded = false;
+          if (job.active_attempt_id) {
+            const attempts = tx.selectScoped<{ started_at: string }>(
+              'job_attempts',
+              'job_id = ? AND attempt_id = ?',
+              [job.id, job.active_attempt_id],
+            );
+            if (attempts[0]?.started_at) {
+              attemptStartedAtMs = Date.parse(attempts[0].started_at);
+              const maxAttemptDurationMs =
+                (job.kind === 'preview'
+                  ? this.previewTimeoutSeconds
+                  : this.renderTimeoutSeconds) * 1000;
+              if (
+                options.reapAttemptTimeoutExceeded === true &&
+                dbNow.getTime() - attemptStartedAtMs >= maxAttemptDurationMs
+              ) {
+                isAttemptTimeoutExceeded = true;
+              }
+            }
+          }
+
+          if (!isLeaseExpired && !isCancelGraceExceeded && !isAttemptTimeoutExceeded) {
             return null;
           }
 
@@ -569,6 +784,10 @@ export class JobDispatcher {
           const previousLeaseEpoch = Number(job.lease_epoch);
           const nextLeaseEpoch = previousLeaseEpoch + 1;
           const nextStateVersion = job.state_version + 1;
+          const elapsedCpuSeconds = Math.max(
+            0.01,
+            Number(((dbNow.getTime() - attemptStartedAtMs) / 1000).toFixed(6)),
+          );
 
           // Clean up any temp files from the stalled attempt
           if (previousAttemptId && this.quarantineStore) {
@@ -579,14 +798,24 @@ export class JobDispatcher {
             );
           }
 
-          // Case 1: cancel_requested + lease expired -> canceled (AMB-003)
+          // Case 1: cancel_requested + lease expired (or cancel grace exceeded) -> canceled (AMB-003)
           if (job.state === 'cancel_requested') {
             if (previousAttemptId) {
+              this.insertOperationalCpuUsageInTx(tx, {
+                tenantId: candidate.tenant_id,
+                jobId: job.id,
+                attemptId: previousAttemptId,
+                cpuSeconds: elapsedCpuSeconds,
+                reason: `attempt_${job.attempt_count}_canceled_by_reaper`,
+                dbNowIso,
+              });
+
               tx.updateScoped(
                 'job_attempts',
                 {
                   state: 'canceled',
                   ended_at: dbNowIso,
+                  cpu_seconds: elapsedCpuSeconds,
                   error_json: JSON.stringify({
                     code: 'WORKER_LOST',
                     message: 'Worker lease expired after cancel_requested; reaper finalized cancel',
@@ -662,17 +891,30 @@ export class JobDispatcher {
             };
           }
 
-          // Case 2: Active attempt lease expired -> check deadline and max_attempts
+          // Case 2: Active attempt lease expired or attempt timed out -> check deadline and max_attempts
           const isPastDeadline = Date.parse(job.deadline_at) <= dbNow.getTime();
           const attemptsExhausted = job.attempt_count >= job.max_attempts;
+          const primaryReapCode: RetryableJobErrorCode =
+            isAttemptTimeoutExceeded && !isLeaseExpired ? 'RENDER_TIMEOUT' : 'WORKER_LOST';
+
+          if (previousAttemptId) {
+            this.insertOperationalCpuUsageInTx(tx, {
+              tenantId: candidate.tenant_id,
+              jobId: job.id,
+              attemptId: previousAttemptId,
+              cpuSeconds: elapsedCpuSeconds,
+              reason: `attempt_${job.attempt_count}_reaped:${isPastDeadline ? 'JOB_DEADLINE_EXCEEDED' : primaryReapCode}`,
+              dbNowIso,
+            });
+          }
 
           if (isPastDeadline || attemptsExhausted) {
             const errorCode: CanonicalJobErrorCode = isPastDeadline
               ? 'JOB_DEADLINE_EXCEEDED'
-              : 'WORKER_LOST';
+              : primaryReapCode;
             const errorMessage = isPastDeadline
               ? `Worker lease expired and job deadline (${job.deadline_at}) was exceeded`
-              : `Worker lease expired and max_attempts (${job.max_attempts}) exhausted`;
+              : `Worker ${primaryReapCode === 'RENDER_TIMEOUT' ? 'attempt timed out' : 'lease expired'} and max_attempts (${job.max_attempts}) exhausted`;
 
             if (previousAttemptId) {
               tx.updateScoped(
@@ -680,6 +922,7 @@ export class JobDispatcher {
                 {
                   state: 'failed',
                   ended_at: dbNowIso,
+                  cpu_seconds: elapsedCpuSeconds,
                   error_json: JSON.stringify({
                     code: errorCode,
                     message: errorMessage,
@@ -712,14 +955,17 @@ export class JobDispatcher {
             };
           }
 
-          // Case 3: Retryable WORKER_LOST -> transition to retry_wait with incremented lease_epoch
+          // Case 3: Retryable WORKER_LOST / RENDER_TIMEOUT -> transition to retry_wait with incremented lease_epoch
           const backoffMs = calculateRetryBackoffMs(job.attempt_count, job.id, {
             includeJitter: this.includeRetryJitter,
           });
           const nextRetryAtIso = new Date(dbNow.getTime() + backoffMs).toISOString();
           const retryError = {
-            code: 'WORKER_LOST',
-            message: `Worker lease expired at ${job.lease_expires_at} without heartbeat; fenced epoch ${previousLeaseEpoch} -> ${nextLeaseEpoch}`,
+            code: primaryReapCode,
+            message:
+              primaryReapCode === 'RENDER_TIMEOUT'
+                ? `Attempt exceeded timeout (${job.kind === 'preview' ? this.previewTimeoutSeconds : this.renderTimeoutSeconds}s); fenced epoch ${previousLeaseEpoch} -> ${nextLeaseEpoch}`
+                : `Worker lease expired at ${job.lease_expires_at} without heartbeat; fenced epoch ${previousLeaseEpoch} -> ${nextLeaseEpoch}`,
             retryable: true,
           };
 
@@ -729,6 +975,7 @@ export class JobDispatcher {
               {
                 state: 'retry_wait',
                 ended_at: dbNowIso,
+                cpu_seconds: elapsedCpuSeconds,
                 error_json: JSON.stringify(retryError),
               },
               'job_id = ? AND attempt_id = ?',
@@ -763,7 +1010,7 @@ export class JobDispatcher {
             payload_json: JSON.stringify({
               stage: 'retry_wait',
               progress_percent: 0,
-              error_code: 'WORKER_LOST',
+              error_code: primaryReapCode,
               backoff_ms: backoffMs,
               next_retry_at: nextRetryAtIso,
               fenced_lease_epoch: previousLeaseEpoch,
@@ -780,7 +1027,7 @@ export class JobDispatcher {
             previousLeaseEpoch,
             newLeaseEpoch: nextLeaseEpoch,
             newState: 'retry_wait' as const,
-            reason: 'WORKER_LOST',
+            reason: primaryReapCode,
           };
         },
       );
@@ -1173,6 +1420,14 @@ export class JobDispatcher {
 
         // Fence check 1: Must match active_attempt_id and monotonic lease_epoch
         if (job.active_attempt_id !== input.attemptId || currentEpoch !== input.leaseEpoch) {
+          this.reconcileFencedAttemptInTx(tx, {
+            tenantId: input.tenantId,
+            jobId: job.id,
+            attemptId: input.attemptId,
+            jobState: job.state,
+            cpuSeconds: 0.05,
+            dbNowIso,
+          });
           return {
             renewed: false,
             shouldAbortWorker: true,
@@ -1237,11 +1492,27 @@ export class JobDispatcher {
 
         // Fence check 5: Job deadline must not be exceeded
         if (Date.parse(job.deadline_at) <= dbNow.getTime()) {
+          if (this.quarantineStore) {
+            this.quarantineStore.cleanupAttemptTempDir(
+              input.tenantId,
+              job.id,
+              input.attemptId,
+            );
+          }
+          this.insertOperationalCpuUsageInTx(tx, {
+            tenantId: input.tenantId,
+            jobId: job.id,
+            attemptId: input.attemptId,
+            cpuSeconds: 0.05,
+            reason: 'attempt_deadline_exceeded_on_heartbeat',
+            dbNowIso,
+          });
           tx.updateScoped(
             'job_attempts',
             {
               state: 'failed',
               ended_at: dbNowIso,
+              cpu_seconds: 0.05,
               error_json: JSON.stringify({
                 code: 'JOB_DEADLINE_EXCEEDED',
                 message: `Job deadline (${job.deadline_at}) exceeded during heartbeat renewal`,
@@ -1386,6 +1657,14 @@ export class JobDispatcher {
         const currentEpoch = Number(job.lease_epoch);
 
         if (job.active_attempt_id !== input.attemptId || currentEpoch !== input.leaseEpoch) {
+          this.reconcileFencedAttemptInTx(tx, {
+            tenantId: input.tenantId,
+            jobId: job.id,
+            attemptId: input.attemptId,
+            jobState: job.state,
+            cpuSeconds: 0.05,
+            dbNowIso,
+          });
           return {
             transitioned: false,
             shouldAbortWorker: true,
@@ -1433,11 +1712,27 @@ export class JobDispatcher {
         }
 
         if (Date.parse(job.deadline_at) <= dbNow.getTime()) {
+          if (this.quarantineStore) {
+            this.quarantineStore.cleanupAttemptTempDir(
+              input.tenantId,
+              job.id,
+              input.attemptId,
+            );
+          }
+          this.insertOperationalCpuUsageInTx(tx, {
+            tenantId: input.tenantId,
+            jobId: job.id,
+            attemptId: input.attemptId,
+            cpuSeconds: 0.05,
+            reason: `attempt_deadline_exceeded_before_${input.targetState}`,
+            dbNowIso,
+          });
           tx.updateScoped(
             'job_attempts',
             {
               state: 'failed',
               ended_at: dbNowIso,
+              cpu_seconds: 0.05,
               error_json: JSON.stringify({
                 code: 'JOB_DEADLINE_EXCEEDED',
                 message: `Job deadline (${job.deadline_at}) exceeded before advancing to ${input.targetState}`,
@@ -1614,6 +1909,15 @@ export class JobDispatcher {
               input.attemptId,
             );
           }
+          this.reconcileFencedAttemptInTx(tx, {
+            tenantId: input.tenantId,
+            jobId: job.id,
+            attemptId: input.attemptId,
+            jobState: job.state,
+            cpuSeconds: Math.max(0.01, Number((input.cpuSeconds ?? 0.05).toFixed(6))),
+            peakRssBytes: Math.max(0, Math.round(input.peakRssBytes ?? 0)),
+            dbNowIso,
+          });
           return {
             handled: false,
             newState: 'stale' as const,
@@ -1814,6 +2118,9 @@ export class JobDispatcher {
     outputSeconds?: number;
     artifactRetentionDays?: number;
     workerLocalTime?: Date;
+    skipTempDiskVerification?: boolean;
+    maxAttemptTempBytes?: number;
+    onAfterPromoteBeforeDbCommit?: () => void;
   }): PublishAttemptResult {
     const dbNow = this.getDbNow();
     const dbNowIso = dbNow.toISOString();
@@ -1854,6 +2161,8 @@ export class JobDispatcher {
         }
 
         const currentEpoch = Number(job.lease_epoch);
+        const cpuSeconds = Math.max(0.01, Number(input.cpuSeconds.toFixed(6)));
+        const peakRssBytes = Math.max(0, Math.round(input.peakRssBytes));
 
         // 1. Stale worker fencing check (attempt_id & monotonic lease_epoch)
         if (job.active_attempt_id !== input.attemptId || currentEpoch !== input.leaseEpoch) {
@@ -1864,6 +2173,15 @@ export class JobDispatcher {
               input.attemptId,
             );
           }
+          this.reconcileFencedAttemptInTx(tx, {
+            tenantId: input.tenantId,
+            jobId: job.id,
+            attemptId: input.attemptId,
+            jobState: job.state,
+            cpuSeconds,
+            peakRssBytes,
+            dbNowIso,
+          });
           return {
             published: false,
             shouldAbortWorker: true,
@@ -1890,8 +2208,8 @@ export class JobDispatcher {
             attemptId: input.attemptId,
             stateVersion: job.state_version,
             leaseEpoch: currentEpoch,
-            cpuSeconds: input.cpuSeconds,
-            peakRssBytes: input.peakRssBytes,
+            cpuSeconds,
+            peakRssBytes,
             dbNowIso,
           });
           return {
@@ -1947,13 +2265,21 @@ export class JobDispatcher {
               input.attemptId,
             );
           }
+          this.insertOperationalCpuUsageInTx(tx, {
+            tenantId: input.tenantId,
+            jobId: job.id,
+            attemptId: input.attemptId,
+            cpuSeconds,
+            reason: `attempt_${job.attempt_count}_deadline_exceeded_before_publish`,
+            dbNowIso,
+          });
           tx.updateScoped(
             'job_attempts',
             {
               state: 'failed',
               ended_at: dbNowIso,
-              cpu_seconds: input.cpuSeconds,
-              peak_rss_bytes: input.peakRssBytes,
+              cpu_seconds: cpuSeconds,
+              peak_rss_bytes: peakRssBytes,
               error_json: JSON.stringify({
                 code: 'JOB_DEADLINE_EXCEEDED',
                 message: `Job deadline (${job.deadline_at}) exceeded before publication`,
@@ -1995,13 +2321,21 @@ export class JobDispatcher {
               input.attemptId,
             );
           }
+          this.insertOperationalCpuUsageInTx(tx, {
+            tenantId: input.tenantId,
+            jobId: job.id,
+            attemptId: input.attemptId,
+            cpuSeconds,
+            reason: `attempt_${job.attempt_count}_asset_revoked_before_publish`,
+            dbNowIso,
+          });
           tx.updateScoped(
             'job_attempts',
             {
               state: 'failed',
               ended_at: dbNowIso,
-              cpu_seconds: input.cpuSeconds,
-              peak_rss_bytes: input.peakRssBytes,
+              cpu_seconds: cpuSeconds,
+              peak_rss_bytes: peakRssBytes,
               error_json: JSON.stringify({
                 code: 'ASSET_REVOKED',
                 message: `Referenced asset '${revokedAssetId}' was revoked before publication`,
@@ -2033,7 +2367,88 @@ export class JobDispatcher {
           };
         }
 
-        // 7. Promote temp files and insert artifact records (fenced by attempt_id)
+        // 6b. Pre-promotion object temp verification (`docs/SECURITY.md:39,55`, `docs/ARCHITECTURE.md:91-92`):
+        // Verify every staged temp artifact on disk (regular file, no symlink/hardlink, realpath containment,
+        // byte count, SHA-256 checksum, and container magic bytes/faststart) BEFORE promoting any file.
+        if (this.quarantineStore && input.skipTempDiskVerification !== true) {
+          for (const descriptor of input.artifacts) {
+            const verification = this.quarantineStore.verifyAttemptTempArtifact(
+              input.tenantId,
+              job.id,
+              input.attemptId,
+              {
+                kind: descriptor.kind,
+                filename: descriptor.filename,
+                mimeType: descriptor.mimeType,
+                bytes: descriptor.bytes,
+                sha256: descriptor.sha256,
+              },
+              { maxAttemptTempBytes: input.maxAttemptTempBytes },
+            );
+
+            if (!verification.valid) {
+              const verificationErrorCode: NonRetryableJobErrorCode =
+                verification.errorCode ?? 'ENCODE_VERIFICATION_FAILED';
+              const verificationMessage = `Object temp verification failed for '${descriptor.filename}': ${verification.errors.join('; ')}`;
+
+              this.quarantineStore.cleanupAttemptTempDir(
+                input.tenantId,
+                job.id,
+                input.attemptId,
+              );
+
+              this.insertOperationalCpuUsageInTx(tx, {
+                tenantId: input.tenantId,
+                jobId: job.id,
+                attemptId: input.attemptId,
+                cpuSeconds,
+                reason: `attempt_${job.attempt_count}_temp_verification_failed:${verificationErrorCode}`,
+                dbNowIso,
+              });
+
+              tx.updateScoped(
+                'job_attempts',
+                {
+                  state: 'failed',
+                  ended_at: dbNowIso,
+                  cpu_seconds: cpuSeconds,
+                  peak_rss_bytes: peakRssBytes,
+                  error_json: JSON.stringify({
+                    code: verificationErrorCode,
+                    message: verificationMessage,
+                    retryable: false,
+                  }),
+                },
+                'job_id = ? AND attempt_id = ? AND lease_epoch = ?',
+                [job.id, input.attemptId, input.leaseEpoch],
+              );
+
+              this.transitionJobToTerminalFailedInTx(tx, {
+                tenantId: input.tenantId,
+                jobId: job.id,
+                stateVersion: job.state_version,
+                leaseEpoch: currentEpoch,
+                errorCode: verificationErrorCode,
+                message: verificationMessage,
+                dbNowIso,
+              });
+
+              return {
+                published: false,
+                shouldAbortWorker: true,
+                reason: verificationErrorCode,
+                state: 'failed',
+                stateVersion: job.state_version + 1,
+                leaseEpoch: currentEpoch + 1,
+                artifacts: [],
+              };
+            }
+          }
+        }
+
+        // 7. Atomically promote temp files to permanent storage and commit DB records.
+        // If any DB write or commit hook fails, roll back all promoted permanent files so zero
+        // partial artifacts remain on disk.
         const publishedArtifacts: Array<{
           id: string;
           kind: string;
@@ -2042,207 +2457,225 @@ export class JobDispatcher {
           bytes: number;
           storage_key: string;
         }> = [];
+        const promotedStorageKeys: string[] = [];
 
-        for (const descriptor of input.artifacts) {
-          const artifactId =
-            descriptor.id ?? `art_${job.id}_${descriptor.kind}`;
-          let storageKey = `tenant/${input.tenantId}/job/${job.id}/${input.attemptId}/${descriptor.filename}`;
-          let finalBytes = descriptor.bytes;
-          let finalSha256 = descriptor.sha256;
+        try {
+          for (const descriptor of input.artifacts) {
+            const artifactId =
+              descriptor.id ?? `art_${job.id}_${descriptor.kind}`;
+            let storageKey = `tenant/${input.tenantId}/job/${job.id}/${input.attemptId}/${descriptor.filename}`;
+            let finalBytes = descriptor.bytes;
+            let finalSha256 = descriptor.sha256;
+
+            if (this.quarantineStore) {
+              const promoted = this.quarantineStore.promoteAttemptArtifactToPermanent(
+                input.tenantId,
+                job.id,
+                input.attemptId,
+                descriptor.filename,
+                descriptor.buffer,
+              );
+              storageKey = promoted.storageKey;
+              finalBytes = promoted.bytes;
+              finalSha256 = promoted.sha256;
+              promotedStorageKeys.push(storageKey);
+            }
+
+            tx.insertScoped('artifacts', {
+              tenant_id: input.tenantId,
+              id: artifactId,
+              job_id: job.id,
+              attempt_id: input.attemptId,
+              kind: descriptor.kind,
+              mime_type: descriptor.mimeType,
+              sha256: finalSha256,
+              bytes: finalBytes,
+              storage_key: storageKey,
+              expires_at: artifactExpiresIso,
+              revoked_at: null,
+              created_at: dbNowIso,
+            });
+
+            publishedArtifacts.push({
+              id: artifactId,
+              kind: descriptor.kind,
+              mime_type: descriptor.mimeType,
+              sha256: finalSha256,
+              bytes: finalBytes,
+              storage_key: storageKey,
+            });
+          }
 
           if (this.quarantineStore) {
-            const promoted = this.quarantineStore.promoteAttemptArtifactToPermanent(
+            this.quarantineStore.cleanupAttemptTempDir(
               input.tenantId,
               job.id,
               input.attemptId,
-              descriptor.filename,
-              descriptor.buffer,
             );
-            storageKey = promoted.storageKey;
-            finalBytes = promoted.bytes;
-            finalSha256 = promoted.sha256;
           }
 
-          tx.insertScoped('artifacts', {
+          if (input.onAfterPromoteBeforeDbCommit) {
+            input.onAfterPromoteBeforeDbCommit();
+          }
+
+          const nextStateVersion = job.state_version + 1;
+
+          // 8. Update job_attempts to succeeded
+          tx.updateScoped(
+            'job_attempts',
+            {
+              state: 'succeeded',
+              heartbeat_at: dbNowIso,
+              ended_at: dbNowIso,
+              cpu_seconds: cpuSeconds,
+              peak_rss_bytes: peakRssBytes,
+            },
+            'job_id = ? AND attempt_id = ? AND lease_epoch = ?',
+            [job.id, input.attemptId, input.leaseEpoch],
+          );
+
+          // 9. Settle usage_reservations and write operational + billable usage_entries
+          const reservations = tx.selectScoped<{
+            reserved_vcpu_seconds: number;
+            reserved_output_seconds: number;
+          }>('usage_reservations', 'job_id = ?', [job.id]);
+          const reservedOutputSeconds = Number(
+            reservations[0]?.reserved_output_seconds ?? input.outputSeconds ?? 0,
+          );
+          const effectiveOutputSeconds =
+            typeof input.outputSeconds === 'number'
+              ? input.outputSeconds
+              : reservedOutputSeconds;
+
+          tx.updateScoped(
+            'usage_reservations',
+            {
+              state: 'settled',
+              settled_at: dbNowIso,
+            },
+            "job_id = ? AND state = 'reserved'",
+            [job.id],
+          );
+
+          this.insertOperationalCpuUsageInTx(tx, {
+            tenantId: input.tenantId,
+            jobId: job.id,
+            attemptId: input.attemptId,
+            cpuSeconds,
+            reason: `attempt_${job.attempt_count}_succeeded`,
+            dbNowIso,
+          });
+
+          const billableOutputMinutes = Number((effectiveOutputSeconds / 60).toFixed(6));
+          tx.insertScoped('usage_entries', {
             tenant_id: input.tenantId,
-            id: artifactId,
+            id: `use_bill_${job.id}`,
             job_id: job.id,
             attempt_id: input.attemptId,
-            kind: descriptor.kind,
-            mime_type: descriptor.mimeType,
-            sha256: finalSha256,
-            bytes: finalBytes,
-            storage_key: storageKey,
-            expires_at: artifactExpiresIso,
-            revoked_at: null,
+            usage_class: 'billable',
+            meter: 'billable_output_minutes',
+            ledger_version: 1,
+            quantity: billableOutputMinutes,
+            rate_version: 'starter-v1',
+            reason: 'terminal_succeeded_settlement',
             created_at: dbNowIso,
           });
 
-          publishedArtifacts.push({
-            id: artifactId,
-            kind: descriptor.kind,
-            mime_type: descriptor.mimeType,
-            sha256: finalSha256,
-            bytes: finalBytes,
-            storage_key: storageKey,
-          });
-        }
-
-        if (this.quarantineStore) {
-          this.quarantineStore.cleanupAttemptTempDir(
-            input.tenantId,
-            job.id,
-            input.attemptId,
+          // 10. Update jobs to terminal succeeded
+          const updatedJobs = tx.updateScoped(
+            'jobs',
+            {
+              state: 'succeeded',
+              stage: 'complete',
+              progress: 1.0,
+              state_version: nextStateVersion,
+              active_attempt_id: null,
+              lease_expires_at: null,
+              heartbeat_at: dbNowIso,
+              completed_at: dbNowIso,
+              error_json: null,
+              updated_at: dbNowIso,
+            },
+            "id = ? AND active_attempt_id = ? AND lease_epoch = ? AND state = 'verifying'",
+            [job.id, input.attemptId, input.leaseEpoch],
           );
-        }
 
-        const cpuSeconds = Math.max(0, Number(input.cpuSeconds.toFixed(6)));
-        const peakRssBytes = Math.max(0, Math.round(input.peakRssBytes));
-        const nextStateVersion = job.state_version + 1;
+          if (updatedJobs === 0) {
+            throw new StaleWorkerFenceError(job.id, input.attemptId, input.leaseEpoch);
+          }
 
-        // 8. Update job_attempts to succeeded
-        tx.updateScoped(
-          'job_attempts',
-          {
-            state: 'succeeded',
-            heartbeat_at: dbNowIso,
-            ended_at: dbNowIso,
-            cpu_seconds: cpuSeconds,
-            peak_rss_bytes: peakRssBytes,
-          },
-          'job_id = ? AND attempt_id = ? AND lease_epoch = ?',
-          [job.id, input.attemptId, input.leaseEpoch],
-        );
-
-        // 9. Settle usage_reservations and write operational + billable usage_entries
-        const reservations = tx.selectScoped<{
-          reserved_vcpu_seconds: number;
-          reserved_output_seconds: number;
-        }>('usage_reservations', 'job_id = ?', [job.id]);
-        const reservedOutputSeconds = Number(
-          reservations[0]?.reserved_output_seconds ?? input.outputSeconds ?? 0,
-        );
-        const effectiveOutputSeconds =
-          typeof input.outputSeconds === 'number'
-            ? input.outputSeconds
-            : reservedOutputSeconds;
-
-        tx.updateScoped(
-          'usage_reservations',
-          {
-            state: 'settled',
-            settled_at: dbNowIso,
-          },
-          "job_id = ? AND state = 'reserved'",
-          [job.id],
-        );
-
-        this.insertOperationalCpuUsageInTx(tx, {
-          tenantId: input.tenantId,
-          jobId: job.id,
-          attemptId: input.attemptId,
-          cpuSeconds,
-          reason: `attempt_${job.attempt_count}_succeeded`,
-          dbNowIso,
-        });
-
-        const billableOutputMinutes = Number((effectiveOutputSeconds / 60).toFixed(6));
-        tx.insertScoped('usage_entries', {
-          tenant_id: input.tenantId,
-          id: `use_bill_${job.id}`,
-          job_id: job.id,
-          attempt_id: input.attemptId,
-          usage_class: 'billable',
-          meter: 'billable_output_minutes',
-          ledger_version: 1,
-          quantity: billableOutputMinutes,
-          rate_version: 'starter-v1',
-          reason: 'terminal_succeeded_settlement',
-          created_at: dbNowIso,
-        });
-
-        // 10. Update jobs to terminal succeeded
-        const updatedJobs = tx.updateScoped(
-          'jobs',
-          {
-            state: 'succeeded',
-            stage: 'complete',
-            progress: 1.0,
-            state_version: nextStateVersion,
-            active_attempt_id: null,
-            lease_expires_at: null,
-            heartbeat_at: dbNowIso,
-            completed_at: dbNowIso,
-            error_json: null,
-            updated_at: dbNowIso,
-          },
-          "id = ? AND active_attempt_id = ? AND lease_epoch = ? AND state = 'verifying'",
-          [job.id, input.attemptId, input.leaseEpoch],
-        );
-
-        if (updatedJobs === 0) {
-          throw new StaleWorkerFenceError(job.id, input.attemptId, input.leaseEpoch);
-        }
-
-        // 11. Append monotonic job.succeeded event and transactional outbox record
-        const nextEventSeq = this.getNextEventSeqInTx(tx, job.id);
-        tx.insertScoped('job_events', {
-          tenant_id: input.tenantId,
-          job_id: job.id,
-          event_seq: nextEventSeq,
-          state: 'succeeded',
-          state_version: nextStateVersion,
-          event_type: 'job.succeeded',
-          payload_json: JSON.stringify({
-            stage: 'complete',
-            progress_percent: 100,
-            attempt_id: input.attemptId,
-            lease_epoch: input.leaseEpoch,
-            artifacts: publishedArtifacts.map((a) => ({
-              id: a.id,
-              kind: a.kind,
-              mime_type: a.mime_type,
-            })),
-            message: 'Job verified and published successfully',
-          }),
-          created_at: dbNowIso,
-        });
-
-        tx.insertScoped('outbox', {
-          tenant_id: input.tenantId,
-          id: `out_${crypto.randomBytes(6).toString('hex')}`,
-          event_type: 'job.succeeded',
-          job_id: job.id,
-          state_version: nextStateVersion,
-          payload_json: JSON.stringify({
+          // 11. Append monotonic job.succeeded event and transactional outbox record
+          const nextEventSeq = this.getNextEventSeqInTx(tx, job.id);
+          tx.insertScoped('job_events', {
+            tenant_id: input.tenantId,
             job_id: job.id,
-            kind: job.kind,
-            profile: job.profile,
+            event_seq: nextEventSeq,
             state: 'succeeded',
             state_version: nextStateVersion,
-            attempt_id: input.attemptId,
-            lease_epoch: input.leaseEpoch,
-            artifacts: publishedArtifacts.map((a) => ({
-              id: a.id,
-              kind: a.kind,
-              mime_type: a.mime_type,
-              sha256: a.sha256,
-              bytes: a.bytes,
-            })),
-          }),
-          created_at: dbNowIso,
-          processed_at: null,
-        });
+            event_type: 'job.succeeded',
+            payload_json: JSON.stringify({
+              stage: 'complete',
+              progress_percent: 100,
+              attempt_id: input.attemptId,
+              lease_epoch: input.leaseEpoch,
+              artifacts: publishedArtifacts.map((a) => ({
+                id: a.id,
+                kind: a.kind,
+                mime_type: a.mime_type,
+              })),
+              message: 'Job verified and published successfully',
+            }),
+            created_at: dbNowIso,
+          });
 
-        return {
-          published: true,
-          shouldAbortWorker: false,
-          reason: 'PUBLISHED',
-          state: 'succeeded',
-          stateVersion: nextStateVersion,
-          leaseEpoch: currentEpoch,
-          artifacts: publishedArtifacts,
-        };
+          tx.insertScoped('outbox', {
+            tenant_id: input.tenantId,
+            id: `out_${crypto.randomBytes(6).toString('hex')}`,
+            event_type: 'job.succeeded',
+            job_id: job.id,
+            state_version: nextStateVersion,
+            payload_json: JSON.stringify({
+              job_id: job.id,
+              kind: job.kind,
+              profile: job.profile,
+              state: 'succeeded',
+              state_version: nextStateVersion,
+              attempt_id: input.attemptId,
+              lease_epoch: input.leaseEpoch,
+              artifacts: publishedArtifacts.map((a) => ({
+                id: a.id,
+                kind: a.kind,
+                mime_type: a.mime_type,
+                sha256: a.sha256,
+                bytes: a.bytes,
+              })),
+            }),
+            created_at: dbNowIso,
+            processed_at: null,
+          });
+
+          return {
+            published: true,
+            shouldAbortWorker: false,
+            reason: 'PUBLISHED',
+            state: 'succeeded',
+            stateVersion: nextStateVersion,
+            leaseEpoch: currentEpoch,
+            artifacts: publishedArtifacts,
+          };
+        } catch (err) {
+          if (this.quarantineStore) {
+            for (const storageKey of promotedStorageKeys) {
+              this.quarantineStore.removePermanentArtifactByStorageKey(storageKey);
+            }
+            this.quarantineStore.cleanupAttemptTempDir(
+              input.tenantId,
+              job.id,
+              input.attemptId,
+            );
+          }
+          throw err;
+        }
       },
     );
   }
@@ -2272,6 +2705,16 @@ export class JobDispatcher {
       dbNowIso: string;
     },
   ): void {
+    // Idempotent per (job_id, attempt_id) so multiple cancel/reap/fail paths never double-record
+    const existingForAttempt = tx.selectScoped<{ id: string }>(
+      'usage_entries',
+      "job_id = ? AND attempt_id = ? AND meter = 'cpu_seconds'",
+      [input.jobId, input.attemptId],
+    );
+    if (existingForAttempt.length > 0) {
+      return;
+    }
+
     const existingCpu = tx.selectScoped<{ ledger_version: number }>(
       'usage_entries',
       "job_id = ? AND meter = 'cpu_seconds'",
@@ -2288,7 +2731,7 @@ export class JobDispatcher {
       usage_class: 'operational',
       meter: 'cpu_seconds',
       ledger_version: nextLedgerVersion,
-      quantity: Number(input.cpuSeconds.toFixed(6)),
+      quantity: Math.max(0.000001, Number(input.cpuSeconds.toFixed(6))),
       rate_version: 'starter-v1',
       reason: input.reason,
       created_at: input.dbNowIso,
@@ -2311,12 +2754,45 @@ export class JobDispatcher {
     const nextStateVersion = input.stateVersion + 1;
     const nextLeaseEpoch = input.leaseEpoch + 1;
 
+    if (this.quarantineStore) {
+      this.quarantineStore.cleanupAttemptTempDir(
+        input.tenantId,
+        input.jobId,
+        input.attemptId,
+      );
+    }
+
+    let effectiveCpuSeconds = input.cpuSeconds;
+    if (effectiveCpuSeconds === undefined) {
+      const attempts = tx.selectScoped<{ started_at: string }>(
+        'job_attempts',
+        'job_id = ? AND attempt_id = ?',
+        [input.jobId, input.attemptId],
+      );
+      if (attempts[0]?.started_at) {
+        const elapsedSec =
+          (Date.parse(input.dbNowIso) - Date.parse(attempts[0].started_at)) / 1000;
+        effectiveCpuSeconds = Math.max(0.01, Number(elapsedSec.toFixed(6)));
+      } else {
+        effectiveCpuSeconds = 0.02;
+      }
+    }
+
+    this.insertOperationalCpuUsageInTx(tx, {
+      tenantId: input.tenantId,
+      jobId: input.jobId,
+      attemptId: input.attemptId,
+      cpuSeconds: effectiveCpuSeconds,
+      reason: 'attempt_canceled_operational_cpu',
+      dbNowIso: input.dbNowIso,
+    });
+
     tx.updateScoped(
       'job_attempts',
       {
         state: 'canceled',
         ended_at: input.dbNowIso,
-        ...(input.cpuSeconds !== undefined ? { cpu_seconds: input.cpuSeconds } : {}),
+        cpu_seconds: effectiveCpuSeconds,
         ...(input.peakRssBytes !== undefined ? { peak_rss_bytes: input.peakRssBytes } : {}),
       },
       'job_id = ? AND attempt_id = ?',
@@ -2509,6 +2985,61 @@ export class JobDispatcher {
       // ignore parse errors
     }
     return null;
+  }
+
+  private reconcileFencedAttemptInTx(
+    tx: TenantTransactionContext,
+    input: {
+      tenantId: string;
+      jobId: string;
+      attemptId: string;
+      jobState: string;
+      cpuSeconds: number;
+      peakRssBytes?: number;
+      dbNowIso: string;
+    },
+  ): void {
+    const attempts = tx.selectScoped<{
+      state: string;
+      ended_at: string | null;
+    }>('job_attempts', 'job_id = ? AND attempt_id = ?', [input.jobId, input.attemptId]);
+
+    const attempt = attempts[0];
+    if (!attempt || attempt.ended_at !== null) {
+      return;
+    }
+
+    const terminalState = input.jobState === 'canceled' ? 'canceled' : 'failed';
+    const jobs = tx.selectScoped<{ error_json: string | null }>('jobs', 'id = ?', [input.jobId]);
+    const jobErrorJson = jobs[0]?.error_json ?? null;
+
+    this.insertOperationalCpuUsageInTx(tx, {
+      tenantId: input.tenantId,
+      jobId: input.jobId,
+      attemptId: input.attemptId,
+      cpuSeconds: input.cpuSeconds,
+      reason: terminalState === 'canceled' ? 'attempt_canceled' : 'attempt_fenced_or_revoked',
+      dbNowIso: input.dbNowIso,
+    });
+
+    const updates: Record<string, string | number | null> = {
+      state: terminalState,
+      ended_at: input.dbNowIso,
+      cpu_seconds: input.cpuSeconds,
+    };
+    if (typeof input.peakRssBytes === 'number' && input.peakRssBytes > 0) {
+      updates['peak_rss_bytes'] = input.peakRssBytes;
+    }
+    if (jobErrorJson) {
+      updates['error_json'] = jobErrorJson;
+    }
+
+    tx.updateScoped(
+      'job_attempts',
+      updates,
+      'job_id = ? AND attempt_id = ?',
+      [input.jobId, input.attemptId],
+    );
   }
 
   private parseJobSnapshot(
