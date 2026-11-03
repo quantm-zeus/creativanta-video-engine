@@ -1,0 +1,119 @@
+{
+  "$schema": "creativanta.video-engine.p3-01-summary.v1",
+  "task_id": "P3-01",
+  "stream": "A",
+  "phase": "P3",
+  "base_commit": "0f532f82d3c0294b5bba427e722aa074036e0897",
+  "migrations": {
+    "manifest_path": "migrations/manifest.json",
+    "rollback_plan_path": "migrations/ROLLBACK_AND_RECOVERY.md",
+    "versions": [
+      {
+        "version": "0001",
+        "name": "tenant_foundation",
+        "up_file": "migrations/0001_tenant_foundation.up.sql",
+        "up_sha256": "0e40b7b08c0dbcafba03bab072c6909b015e3f1127312105db615fbf6be69bcd",
+        "down_file": "migrations/0001_tenant_foundation.down.sql",
+        "down_sha256": "f63b1e71801f4af73d53ab31c395ae4e99628b8876ce0263b1739d0a4626cde2"
+      },
+      {
+        "version": "0002",
+        "name": "seed_system_catalog",
+        "up_file": "migrations/0002_seed_system_catalog.up.sql",
+        "up_sha256": "36433c3ab4a1be546ab572015b266bf50ffd4125ec9d976ad25b1196d9a9ae9f",
+        "down_file": "migrations/0002_seed_system_catalog.down.sql",
+        "down_sha256": "53ad7a1afaad8d76d128af7e18a4cc4193f68fb47f313ca6b502689da26b0156"
+      }
+    ],
+    "table_count": 21,
+    "rls_enabled_count": 21,
+    "rls_forced_count": 21,
+    "immutable_tables": [
+      "template_revisions",
+      "composition_revisions",
+      "asset_versions",
+      "scene_bundle_revisions",
+      "job_events",
+      "usage_entries"
+    ],
+    "sentinel_system_catalog_tenant_id": "00000000-0000-0000-0000-000000000000"
+  },
+  "db_service_roles": [
+    {
+      "role": "cve_migrator",
+      "bypasses_rls": true,
+      "capabilities": ["DDL migrations", "system_catalog seeding", "snapshot restore"]
+    },
+    {
+      "role": "cve_api",
+      "bypasses_rls": false,
+      "capabilities": [
+        "Transaction-local tenant CRUD under FORCE ROW LEVEL SECURITY",
+        "Read-only SELECT on curated_public system_catalog templates and fonts",
+        "Zero write access to system_catalog rows"
+      ]
+    },
+    {
+      "role": "cve_dispatcher",
+      "bypasses_rls": false,
+      "capabilities": [
+        "Job queue claim, lease renewal, reaper recovery, fenced publication, and usage settlement",
+        "No access to api_keys, idempotency_records, webhook_endpoints, or webhook_deliveries"
+      ]
+    },
+    {
+      "role": "cve_ingest",
+      "bypasses_rls": false,
+      "capabilities": [
+        "Quarantine asset probe, normalization, SVG sanitization, and ready/rejected state transition",
+        "No access to api_keys, templates, compositions, artifacts, or usage_entries"
+      ]
+    },
+    {
+      "role": "cve_sender",
+      "bypasses_rls": false,
+      "capabilities": [
+        "Transactional outbox reader and webhook delivery writer",
+        "No access to api_keys, assets, templates, compositions, or artifacts"
+      ]
+    }
+  ],
+  "api_key_security": {
+    "entropy_bytes": 32,
+    "prefix_format": "cve_(live|test)_[0-9a-f]{12}",
+    "hash_algorithm": "HMAC-SHA256(CVE_API_KEY_PEPPER, pepperVersion:keyPrefix:secretHex)",
+    "verification": "Constant-time crypto.timingSafeEqual with dummy HMAC equalization on missing/malformed prefix",
+    "plaintext_persisted": false,
+    "rotation_overlap_supported": true,
+    "immediate_revocation_supported": true,
+    "suspended_tenant_status": 403
+  },
+  "pool_context_isolation": {
+    "mechanism": "SET LOCAL app.current_tenant_id = '<tenant_uuid>' inside BEGIN ... COMMIT/ROLLBACK",
+    "session_level_set_blocked": true,
+    "unset_context_behavior": "Fail-closed (0 rows on SELECT, RLS_CONTEXT_MISSING 42501 on writes)",
+    "reused_slot_contamination": 0
+  },
+  "idor_and_error_taxonomy_verification": {
+    "url_path_foreign_resource_status": 404,
+    "url_path_foreign_resource_code": "NOT_FOUND",
+    "json_body_foreign_asset_status": 422,
+    "json_body_foreign_asset_code": "VALIDATION_FAILED",
+    "json_body_detail_codes": ["ASSET_NOT_FOUND", "UNKNOWN_FONT"],
+    "cross_tenant_cursor_replay_status": 400,
+    "cross_tenant_cursor_replay_code": "INVALID_CURSOR",
+    "client_supplied_tenant_id_rejected": true
+  },
+  "rollback_and_recovery_drill": {
+    "down_up_cycle_verified": true,
+    "snapshot_sha256_integrity_verified": true,
+    "rpo_seconds_measured": 180,
+    "rpo_target_seconds": 900,
+    "rto_target_seconds": 14400,
+    "post_restore_safety_locks": {
+      "customCodeEnabled": false,
+      "remoteImportEnabled": false,
+      "outboundWebhooksEnabled": false
+    }
+  }
+}

@@ -1,9 +1,15 @@
 /**
- * API Service Entrypoint
+ * API Service Entrypoint & Tenant Foundation Exports (P1-01 / P3-01)
  */
 
 import { loadEnvConfig, redactEnvConfig } from '@creativanta/contracts';
 import { createServer } from './server.js';
+
+export * from './server.js';
+export * from './auth/api-key.js';
+export * from './db/migration-runner.js';
+export * from './db/tenant-pool.js';
+export * from './db/repository.js';
 
 export function main(): void {
   const config = loadEnvConfig();
