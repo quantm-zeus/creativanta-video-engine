@@ -1,0 +1,54 @@
+{
+  "$schema": "creativanta.video-engine.p3-02-summary.v1",
+  "task_id": "P3-02",
+  "stream": "C+A",
+  "phase": "P3",
+  "base_commit": "985f471f21b074ae2de2771c63ecce0b40b179b6",
+  "pipeline": {
+    "upload_grant": {
+      "algorithm": "HMAC-SHA256",
+      "ttl_seconds": 600,
+      "constant_time_verification": true
+    },
+    "quarantine_store": {
+      "path_traversal_protection": true,
+      "streaming_sha256": true,
+      "isolated_part_files": true
+    },
+    "security_guards": {
+      "max_upload_bytes": 104857600,
+      "max_font_bytes": 33554432,
+      "max_svg_bytes": 5242880,
+      "svg_disallowed_patterns": [
+        "<!DOCTYPE",
+        "<!ENTITY",
+        "<script",
+        "<foreignObject",
+        "<iframe>",
+        "<embed",
+        "<object",
+        "on\\w+\\s*=",
+        "href\\s*=\\s*['\"]https?:",
+        "@import",
+        "url\\s*\\("
+      ],
+      "svg_max_nodes": 5000,
+      "svg_max_depth": 16,
+      "font_required_tables": ["cmap", "head", "hhea", "hmtx", "maxp"],
+      "image_max_dimension_px": 8192,
+      "image_max_pixels": 40000000,
+      "sandbox_probe_timeout_ms": 5000,
+      "sandbox_probe_max_buffer_bytes": 1048576
+    },
+    "foreign_asset_isolation": {
+      "path_behavior": "404 NOT_FOUND",
+      "no_tenant_leakage": true
+    }
+  },
+  "tests": {
+    "file": "packages/api/test/p3-02-asset-pipeline.test.mjs",
+    "total": 41,
+    "passed": 41,
+    "failed": 0
+  }
+}
