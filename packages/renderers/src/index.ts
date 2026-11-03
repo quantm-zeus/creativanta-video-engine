@@ -14,3 +14,7 @@ export * from './comparison/adapter-comparator.js';
 export * from './footage/cfr-trimmer.js';
 export * from './subtitles/subtitle-generator.js';
 export * from './audio/audio-mixer.js';
+export * from './mp4/mp4-types.js';
+export * from './mp4/mp4-muxer.js';
+export * from './mp4/mp4-decoder.js';
+export * from './pipeline/render-pipeline.js';
