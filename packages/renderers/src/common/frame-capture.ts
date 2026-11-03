@@ -174,6 +174,12 @@ export function rasterizeFrame(
       layerG = g;
       layerB = b;
       layerA = Math.round(a * effOpacity);
+    } else if (layer.type === 'video') {
+      // Deterministic video frame placeholder (deep slate with frame tint)
+      layerR = 24;
+      layerG = 32;
+      layerB = 48;
+      layerA = Math.round(effOpacity * 255);
     }
 
     // Apply transform translation & bounding box clip
@@ -206,7 +212,66 @@ export function rasterizeFrame(
     }
   }
 
-  // 3. Format Output
+  // 3. Composite Burn-In Subtitles (if enabled on track and active cue exists)
+  if (manifest.subtitles && manifest.subtitles.length > 0) {
+    for (const track of manifest.subtitles) {
+      if (!track.burn_in) continue;
+      const cues = track.cues || [];
+      const activeCue = cues.find(
+        (c) => frameEval.frame_index >= c.start_frame && frameEval.frame_index < c.end_frame
+      );
+      if (activeCue) {
+        const style = track.style;
+        const safeMargin = style?.safe_margin_px ?? 56;
+        const bgHex = style?.background ?? '#000000B3';
+        const [subBgR, subBgG, subBgB, subBgA] = hexToRgba(bgHex);
+        const [subTextR, subTextG, subTextB] = hexToRgba(style?.color ?? '#FFFFFF');
+
+        // Bounding box for subtitle container (centered horizontally at bottom safe margin)
+        const subHeight = 64;
+        const subY = height - safeMargin - subHeight;
+        const subX = safeMargin;
+        const subW = width - safeMargin * 2;
+
+        const subNormA = subBgA / 255;
+        const subInvA = 1 - subNormA;
+
+        // Composite background box
+        for (let y = Math.max(0, subY); y < Math.min(height, subY + subHeight); y++) {
+          for (let x = Math.max(0, subX); x < Math.min(width, subX + subW); x++) {
+            const idx = (y * width + x) * 4;
+            const srcR = rgbaBuffer[idx]!;
+            const srcG = rgbaBuffer[idx + 1]!;
+            const srcB = rgbaBuffer[idx + 2]!;
+
+            rgbaBuffer[idx] = Math.round(subBgR * subNormA + srcR * subInvA);
+            rgbaBuffer[idx + 1] = Math.round(subBgG * subNormA + srcG * subInvA);
+            rgbaBuffer[idx + 2] = Math.round(subBgB * subNormA + srcB * subInvA);
+            rgbaBuffer[idx + 3] = 255;
+          }
+        }
+
+        // Composite text bar placeholder
+        const textBarY = subY + 24;
+        const textBarH = 16;
+        const textBarW = Math.round(subW * 0.7);
+        const textBarX = subX + Math.round((subW - textBarW) / 2);
+
+        for (let y = Math.max(0, textBarY); y < Math.min(height, textBarY + textBarH); y++) {
+          for (let x = Math.max(0, textBarX); x < Math.min(width, textBarX + textBarW); x++) {
+            const idx = (y * width + x) * 4;
+            rgbaBuffer[idx] = subTextR;
+            rgbaBuffer[idx + 1] = subTextG;
+            rgbaBuffer[idx + 2] = subTextB;
+            rgbaBuffer[idx + 3] = 255;
+          }
+        }
+        break;
+      }
+    }
+  }
+
+  // 4. Format Output
   const outputBuffer =
     format === 'png' ? encodePng(rgbaBuffer, width, height) : rgbaBuffer;
   const checksum = createHash('sha256').update(outputBuffer).digest('hex');

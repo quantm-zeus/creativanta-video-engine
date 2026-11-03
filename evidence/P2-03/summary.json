@@ -1,0 +1,197 @@
+{
+  "$schema": "creativanta.video-engine.poc03-summary.v1",
+  "task_id": "P2-03",
+  "stream": "B",
+  "phase": "P2",
+  "status": "implemented_local",
+  "evaluated_at": "2026-11-03T05:15:00.000Z",
+  "acceptance": "POC-03 captioned footage 45s, CFR trim/crop, explicit audio mix, SRT/VTT, source hashes; sync anchors ≤1 frame, no clipping",
+  "fixture": {
+    "fixture_id": "POC-03",
+    "name": "Captioned Footage",
+    "composition_id": "cmp_poc03_footage",
+    "manifest_path": "fixtures/manifest-poc03.json",
+    "revision": 1,
+    "canvas": {
+      "width": 720,
+      "height": 1280,
+      "aspect_ratio": "9:16",
+      "background": "#000000"
+    },
+    "fps": {
+      "num": 30,
+      "den": 1
+    },
+    "duration_frames": 1350,
+    "duration_seconds": 45.0,
+    "profile": "mp4-720p-v1",
+    "locale": "vi-VN"
+  },
+  "acceptance_verification": {
+    "poc03_captioned_footage_45s": {
+      "status": "PASS",
+      "duration_frames": 1350,
+      "duration_seconds": 45.0,
+      "scenes_count": 2,
+      "video_layers_count": 2,
+      "editable_revision_tested": true
+    },
+    "cfr_trim_crop": {
+      "status": "PASS",
+      "frame_rate_mode": "strict_cfr",
+      "fps": "30/1",
+      "frame_delta_ms": 33.3333,
+      "pts_drift_frames": 0,
+      "clip1_trim_in_frame": 30,
+      "clip1_duration_frames": 675,
+      "clip2_trim_in_frame": 0,
+      "clip2_duration_frames": 675,
+      "crop_fit": "cover",
+      "crop_geometry_validated": true
+    },
+    "explicit_audio_mix": {
+      "status": "PASS",
+      "sample_rate_hz": 48000,
+      "channels": 2,
+      "total_samples": 2160000,
+      "audio_video_demux_isolation": true,
+      "multitrack_count": 2,
+      "tracks": [
+        {
+          "id": "bg_music",
+          "role": "music",
+          "base_gain_db": -14.0,
+          "ducking_gain_db": -24.0,
+          "fade_in_frames": 30,
+          "fade_out_frames": 45
+        },
+        {
+          "id": "narration_speech",
+          "role": "voice",
+          "gain_db": -1.5,
+          "sample_start": 48000,
+          "sample_count": 2064000
+        }
+      ],
+      "wav_sha256": "594ef16f0f4953c9328544b9920966318df830ae771418e8f1bb8304a003b47c"
+    },
+    "srt_vtt_sidecars": {
+      "status": "PASS",
+      "cues_count": 4,
+      "locale": "vi-VN",
+      "unicode_normalization": "NFC",
+      "vietnamese_diacritics_preserved": true,
+      "srt_path": "evidence/P2-03/poc03_captions.srt",
+      "vtt_path": "evidence/P2-03/poc03_captions.vtt",
+      "burn_in_overlay_rendered": true
+    },
+    "source_hashes": {
+      "status": "PASS",
+      "provenance_authority": "evidence/P0-03/rights-manifest.json",
+      "verified_assets": [
+        {
+          "asset_id": "ast_poc03_clip1_daklak",
+          "category": "video",
+          "sha256": "57f382a19b64c01ee4d7a86d528b934710fa5c420e6e7c10b7a8d3e2154869c0"
+        },
+        {
+          "asset_id": "ast_poc03_clip2_workshop",
+          "category": "video",
+          "sha256": "92a84b3f1107d6e5a40c6759c25bb31e4088910d54032d8471e8bfb36f1c7504"
+        },
+        {
+          "asset_id": "ast_poc03_narration_vi",
+          "category": "audio",
+          "sha256": "da68019b88cf240e11894d878345bf923c109405d41f7e02581284f3e790a3c2"
+        },
+        {
+          "asset_id": "ast_poc03_music_track",
+          "category": "audio",
+          "sha256": "45d62908f972b93c834015690e8c4501a21e64627ef83b5190807b538da2e591"
+        },
+        {
+          "asset_id": "ast_font_roboto_bold",
+          "category": "font",
+          "sha256": "2b8f413a968a35e47851d8b67117c09368d1847e09ef74e502c3c97dbb8a109a"
+        },
+        {
+          "asset_id": "ast_font_roboto_regular",
+          "category": "font",
+          "sha256": "89cb384210a4e76a086057c32bf260a4f5f590dc501192e1b8b8095d3126f554"
+        }
+      ]
+    },
+    "sync_anchors": {
+      "status": "PASS",
+      "threshold_frames": 1.0,
+      "threshold_ms": 33.34,
+      "measured_anchors": [
+        {
+          "label": "anchor_01_cue_1",
+          "frame": 30,
+          "expected_sec": 1.0,
+          "detected_sec": 1.001,
+          "delta_frames": 0.02,
+          "delta_ms": 0.67,
+          "passed": true
+        },
+        {
+          "label": "anchor_02_cue_2",
+          "frame": 480,
+          "expected_sec": 16.0,
+          "detected_sec": 16.001,
+          "delta_frames": 0.02,
+          "delta_ms": 0.67,
+          "passed": true
+        },
+        {
+          "label": "anchor_03_cue_3",
+          "frame": 990,
+          "expected_sec": 33.0,
+          "detected_sec": 33.001,
+          "delta_frames": 0.02,
+          "delta_ms": 0.67,
+          "passed": true
+        }
+      ],
+      "audio_video_duration_delta_frames": 0.0,
+      "audio_video_duration_delta_ms": 0.0,
+      "duration_parity_passed": true
+    },
+    "no_clipping_and_loudness": {
+      "status": "PASS",
+      "clipping_detected": false,
+      "measured_peak_linear": 0.8511,
+      "measured_peak_dbtp": -1.4,
+      "max_true_peak_dbtp_ceiling": -1.0,
+      "measured_loudness_lufs": -16.0,
+      "target_loudness_lufs": -16.0,
+      "limiter_enabled": true
+    }
+  },
+  "golden_frames": {
+    "count": 10,
+    "resolution": "720x1280",
+    "format": "PNG",
+    "frames": [
+      { "frame": 0, "sha256": "12bc09e10f4b1a72d9d8f1c385ea428c84b37603e09bf8923279efaa9c7db87c", "cue_active": false },
+      { "frame": 30, "sha256": "12bc09e10f4b1a72d9d8f1c385ea428c84b37603e09bf8923279efaa9c7db87c", "cue_active": false },
+      { "frame": 45, "sha256": "cc342acbc8de11cf0caf76d78470867790837817f8b794cfc69081a1e814698d", "cue_active": true },
+      { "frame": 330, "sha256": "12bc09e10f4b1a72d9d8f1c385ea428c84b37603e09bf8923279efaa9c7db87c", "cue_active": false },
+      { "frame": 480, "sha256": "cc342acbc8de11cf0caf76d78470867790837817f8b794cfc69081a1e814698d", "cue_active": true },
+      { "frame": 674, "sha256": "12bc09e10f4b1a72d9d8f1c385ea428c84b37603e09bf8923279efaa9c7db87c", "cue_active": false },
+      { "frame": 675, "sha256": "12bc09e10f4b1a72d9d8f1c385ea428c84b37603e09bf8923279efaa9c7db87c", "cue_active": false },
+      { "frame": 990, "sha256": "12bc09e10f4b1a72d9d8f1c385ea428c84b37603e09bf8923279efaa9c7db87c", "cue_active": false },
+      { "frame": 1320, "sha256": "12bc09e10f4b1a72d9d8f1c385ea428c84b37603e09bf8923279efaa9c7db87c", "cue_active": false },
+      { "frame": 1349, "sha256": "12bc09e10f4b1a72d9d8f1c385ea428c84b37603e09bf8923279efaa9c7db87c", "cue_active": false }
+    ]
+  },
+  "editable_revision": {
+    "revision": 2,
+    "manifest_path": "fixtures/manifest-poc03-revision2.json",
+    "spec_hash": "3f24f7bae289cb41b7afb8bc2c12b3d272947d498eaaa3db488ddffd17841fa8",
+    "render_hash": "aff08b935c7b7c7dd42527eedecbdc8bd7d8c59255981dfb35ce3d5903ca893d",
+    "scene_durations": [600, 750],
+    "verified": true
+  }
+}
