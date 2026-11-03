@@ -15,7 +15,8 @@
     "build": "tsc -p tsconfig.json",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "lint": "tsc -p tsconfig.json --noEmit",
-    "test": "node --test test/**/*.test.mjs"
+    "test": "node --test test/**/*.test.mjs",
+    "migrate": "node dist/migration/cli.js"
   },
   "devDependencies": {
     "@types/node": "22.10.5",

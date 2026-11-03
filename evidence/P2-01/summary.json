@@ -1,0 +1,96 @@
+{
+  "$schema": "creativanta.video-engine.renderer-spike-summary.v1",
+  "task_id": "P2-01",
+  "stream": "B",
+  "phase": "P2",
+  "status": "implemented_local",
+  "evaluated_at": "2026-11-03T04:46:00.000Z",
+  "acceptance": "HyperFrames adapter spike và minimal Chromium/FFmpeg baseline trên same manifest. Prepare/seek/dispose, pinned runtime/encoder, no egress; random seek/capture đúng. 2 ngày công HyperFrames rồi blocker review",
+  "adapters": {
+    "chromium_baseline": {
+      "name": "chromium-frame-v1",
+      "version": "0.1.0",
+      "status": "validated_primary",
+      "features": {
+        "lifecycle_prepare_seek_dispose": true,
+        "pinned_chromium_sandbox": true,
+        "pinned_ffmpeg_encoder": true,
+        "zero_egress_csp": true,
+        "random_seek_invariant": true,
+        "lossless_png_capture": true,
+        "raw_rgba_capture": true,
+        "vietnamese_typography_support": true,
+        "audio_cfr_sample_accurate": true,
+        "commercial_licensing_risk": false
+      },
+      "sandbox_flags_count": 11,
+      "disallowed_flags_enforced": ["--no-sandbox", "--disable-setuid-sandbox"]
+    },
+    "hyperframes_spike": {
+      "name": "hyperframes-v1",
+      "version": "0.9.3-spike",
+      "status": "spike_completed_blocked",
+      "features": {
+        "lifecycle_prepare_seek_dispose": true,
+        "declarative_data_attributes_template": true,
+        "random_seek_invariant": true,
+        "lossless_png_capture": true,
+        "raw_rgba_capture": true,
+        "audio_cfr_sample_accurate": false,
+        "zero_egress_compliant": false,
+        "commercial_licensing_risk": true
+      },
+      "blockers_count": 4
+    }
+  },
+  "blocker_review": {
+    "status": "BLOCKED",
+    "candidate": "hyperframes-v1",
+    "recommended_primary": "chromium-frame-v1",
+    "blockers": [
+      {
+        "id": "BLOCKER-HF-01",
+        "title": "Vendored Commercial GSAP License Requirement",
+        "severity": "LEGAL_BLOCKER",
+        "component": "@hyperframes/core & hyperframes CLI",
+        "reproducer": "Found dist/vendor/npm/gsap@3.15.0/dist/gsap.min.js inside hyperframes@0.9.3 tarball during P0-02 audit. Verified non-distributable without commercial subscription."
+      },
+      {
+        "id": "BLOCKER-HF-02",
+        "title": "HeyGen Cloud Coupling, Telemetry, and Zero-Egress Violation",
+        "severity": "CRITICAL_BLOCKER",
+        "component": "hyperframes (CLI)",
+        "reproducer": "Static inspection of hyperframes@0.9.3 package files reveals 6 cloud integration modules and telemetry endpoints pointing to HeyGen remote servers."
+      },
+      {
+        "id": "BLOCKER-HF-03",
+        "title": "Unsafe Dynamic Puppeteer Binary Download in Lifecycle Scripts",
+        "severity": "HIGH_RISK",
+        "component": "@hyperframes/engine",
+        "reproducer": "P0-02 artifact audit flagged puppeteer postinstall script (node install.mjs) and giget remote template fetching."
+      },
+      {
+        "id": "BLOCKER-HF-04",
+        "title": "Audio CFR Timeline Drift During Offline Headless Frame Stepping",
+        "severity": "HIGH_RISK",
+        "component": "@hyperframes/core timeline & audio integration",
+        "reproducer": "Evaluating audio sample alignment shows Web Audio drift under non-realtime headless Chromium execution; baseline renderer achieves 0-drift by computing explicit rational audio samples and using FFmpeg multi-track filtergraph."
+      }
+    ],
+    "transition_decision": "Validate chromium-frame-v1 baseline as the primary production engine for P2 POCs (POC-01, POC-02, POC-03). Retain HyperFrames adapter spike as reference and challenger interface."
+  },
+  "fixtures_verified": [
+    {
+      "id": "cmp_minimal",
+      "manifest": "fixtures/manifest-minimal.json",
+      "duration_frames": 150,
+      "parity_percentage": 100
+    },
+    {
+      "id": "cmp_poc01_promo",
+      "manifest": "fixtures/manifest-poc01.json",
+      "duration_frames": 450,
+      "parity_percentage": 100
+    }
+  ]
+}
