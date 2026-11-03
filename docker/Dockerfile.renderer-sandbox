@@ -1,0 +1,69 @@
+# ==============================================================================
+# Creativanta Video Engine - Isolated Trusted-Template Renderer Sandbox (P1-04)
+# Canonical specification: docs/SECURITY.md & docs/DEPLOYMENT.md
+# - Non-root execution: UID 10001 / GID 10001 (cve-render)
+# - Chromium user-namespace sandbox enabled (--no-sandbox strictly forbidden)
+# - FFmpeg safe argv execution (-protocol_whitelist "file,pipe", no nonfree)
+# - Zero external network egress (--network=none)
+# - Read-only rootfs & read-only /workspace/inputs
+# - Custom code strictly disabled (CVE_CUSTOM_CODE_ENABLED=false)
+# ==============================================================================
+FROM node:24-alpine AS builder
+
+WORKDIR /app
+
+RUN corepack enable && corepack prepare pnpm@12.16.1 --activate
+
+COPY package.json pnpm-lock.yaml pnpm-workspace.yaml tsconfig.base.json tsconfig.json ./
+COPY packages/contracts/package.json packages/contracts/tsconfig*.json ./packages/contracts/
+COPY packages/contracts/src ./packages/contracts/src
+COPY packages/controller/package.json packages/controller/tsconfig*.json ./packages/controller/
+COPY packages/controller/src ./packages/controller/src
+COPY packages/api/package.json packages/api/tsconfig*.json ./packages/api/
+COPY packages/api/src ./packages/api/src
+COPY packages/ingest/package.json packages/ingest/tsconfig*.json ./packages/ingest/
+COPY packages/ingest/src ./packages/ingest/src
+
+RUN pnpm install --frozen-lockfile --ignore-scripts
+RUN pnpm build
+
+FROM node:24-alpine AS sandbox-runner
+
+# Install OS-packaged Chromium, FFmpeg (LGPL/GPL system package, no nonfree), and open-source fonts
+RUN apk add --no-cache \
+    chromium \
+    ffmpeg \
+    font-noto \
+    font-noto-cjk \
+    fontconfig \
+  && addgroup -g 10001 -S cve-render \
+  && adduser -u 10001 -S -G cve-render -h /workspace/tmp -s /sbin/nologin cve-render \
+  && mkdir -p /workspace/inputs /workspace/output /workspace/tmp \
+  && chmod 0550 /workspace/inputs \
+  && chown -R 10001:10001 /workspace/output /workspace/tmp
+
+WORKDIR /app
+
+ENV NODE_ENV=production
+ENV TZ=UTC
+ENV LANG=C.UTF-8
+ENV LC_ALL=C.UTF-8
+ENV HOME=/workspace/tmp
+ENV TMPDIR=/workspace/tmp
+ENV CVE_SANDBOX_MODE=trusted-template-v1
+ENV CVE_CUSTOM_CODE_ENABLED=false
+ENV CVE_CUSTOM_RUNTIME=disabled
+
+COPY --from=builder --chown=root:root /app/package.json /app/pnpm-lock.yaml /app/pnpm-workspace.yaml ./
+COPY --from=builder --chown=root:root /app/node_modules ./node_modules
+COPY --from=builder --chown=root:root /app/packages/contracts/package.json ./packages/contracts/
+COPY --from=builder --chown=root:root /app/packages/contracts/dist ./packages/contracts/dist
+COPY --from=builder --chown=root:root /app/packages/controller/package.json ./packages/controller/
+COPY --from=builder --chown=root:root /app/packages/controller/dist ./packages/controller/dist
+
+USER 10001:10001
+
+HEALTHCHECK --interval=30s --timeout=10s --retries=2 \
+  CMD ["node", "packages/controller/dist/index.js", "--self-test"]
+
+CMD ["node", "packages/controller/dist/index.js", "--self-test"]
