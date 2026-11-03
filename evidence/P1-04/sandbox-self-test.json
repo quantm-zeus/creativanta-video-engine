@@ -1,0 +1,126 @@
+{
+  "$schema": "creativanta.video-engine.sandbox-self-test.v1",
+  "task_id": "P1-04",
+  "stream": "C",
+  "phase": "P1",
+  "base_commit": "340ac073513591b59764a57297ba59da1f25c4cb",
+  "status": "PASS",
+  "sandbox_policy": {
+    "nonroot": {
+      "container_uid": 10001,
+      "container_gid": 10001,
+      "container_user": "cve-render",
+      "read_only_rootfs": true,
+      "no_new_privileges": true,
+      "privileged": false,
+      "cap_drop": ["ALL"],
+      "cap_add": [],
+      "seccomp_profile": "docker/seccomp-renderer.json"
+    },
+    "chromium_sandbox": {
+      "sandbox_enabled": true,
+      "forbidden_flags": [
+        "--no-sandbox",
+        "--disable-setuid-sandbox",
+        "--no-zygote",
+        "--single-process",
+        "--disable-seccomp-filter-sandbox",
+        "--disable-namespace-sandbox",
+        "--disable-gpu-sandbox",
+        "--disable-web-security",
+        "--allow-running-insecure-content",
+        "--allow-file-access-from-files",
+        "--unsafely-treat-insecure-origin-as-secure",
+        "--remote-allow-origins=*"
+      ],
+      "required_flags_count": 24,
+      "csp": "default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self' data:; media-src 'self'; font-src 'self'; connect-src 'none'; object-src 'none'; frame-src 'none'; worker-src 'none'; base-uri 'none'; form-action 'none'"
+    },
+    "ffmpeg_sandbox": {
+      "execution_mode": "argv_array_only",
+      "protocol_whitelist": "file,pipe",
+      "probesize": "32M",
+      "analyzeduration": "32M",
+      "nonfree_forbidden": true
+    },
+    "network_isolation": {
+      "network_mode": "none",
+      "external_egress": false,
+      "internal_loopback_asset_server": "127.0.0.1 allowlisted manifest paths only"
+    },
+    "filesystem_and_mounts": {
+      "inputs_mount": "/workspace/inputs (readonly, mode 0550/0440)",
+      "output_mount": "/workspace/output (rw, quota-enforced, magic-byte verified)",
+      "tmp_mount": "/workspace/tmp (tmpfs rw,noexec,nosuid,nodev,size=8192m)",
+      "host_docker_socket_mounted": false,
+      "bundle_v1_limits": {
+        "max_files": 100,
+        "max_source_bytes": 5242880,
+        "max_built_asset_bytes": 20971520,
+        "max_nesting_depth": 8
+      }
+    },
+    "cgroup_and_resource_limits": {
+      "cpu_limit_vcpu": 2,
+      "cgroup_v2_cpu_max": "200000 100000",
+      "memory_mib": 4096,
+      "cgroup_v2_memory_max": "4294967296",
+      "cgroup_v2_memory_swap_max": "0",
+      "pids_limit": 256,
+      "cgroup_v2_pids_max": "256",
+      "temp_disk_mib": 8192,
+      "frame_timeout_ms": 5000,
+      "render_timeout_seconds": 600,
+      "preview_timeout_seconds": 120,
+      "kill_grace_ms": 5000
+    },
+    "custom_code_gate": {
+      "CVE_CUSTOM_CODE_ENABLED": false,
+      "CVE_CUSTOM_RUNTIME": "disabled",
+      "CVE_CUSTOM_TENANT_ALLOWLIST": [],
+      "custom_html_v1_blocked": true
+    }
+  },
+  "self_test_checks": [
+    {
+      "name": "nonroot_identity_and_context",
+      "status": "PASS",
+      "detail": "Verified non-root worker identity (uid=1001, gid=1002) and container UID=10001 with capDrop=ALL, readOnlyRootfs=true, noNewPrivileges=true"
+    },
+    {
+      "name": "custom_code_disabled_gate",
+      "status": "PASS",
+      "detail": "Verified CVE_CUSTOM_CODE_ENABLED=false, CVE_CUSTOM_RUNTIME=disabled, and custom-html-v1 rejection"
+    },
+    {
+      "name": "chromium_sandbox_and_csp",
+      "status": "PASS",
+      "detail": "Verified 24 hardened Chromium flags, --no-sandbox rejection, and zero-egress CSP"
+    },
+    {
+      "name": "ffmpeg_safe_argv_whitelist",
+      "status": "PASS",
+      "detail": "Verified FFmpeg/ffprobe argv array enforcement and -protocol_whitelist \"file,pipe\""
+    },
+    {
+      "name": "no_host_socket_and_secret_redaction",
+      "status": "PASS",
+      "detail": "Verified /var/run/docker.sock rejection and secret-free sandbox environment"
+    },
+    {
+      "name": "read_only_inputs_and_workspace_isolation",
+      "status": "PASS",
+      "detail": "Verified read-only staged inputs (EACCES on write), MP4 magic-byte verification, and deterministic workspace cleanup"
+    },
+    {
+      "name": "cgroup_time_disk_pid_limits",
+      "status": "PASS",
+      "detail": "Verified cgroup v2 limits (cpu.max=\"200000 100000\", memory.max=4294967296, pids.max=256) and hard timeout process-group termination"
+    },
+    {
+      "name": "zero_egress_and_loopback_asset_guard",
+      "status": "PASS",
+      "detail": "Verified container --network=none and internal loopback asset server allowlist/hash enforcement"
+    }
+  ]
+}
