@@ -20,6 +20,7 @@ export * from './storage/sweeper.js';
 export * from './admission/rate-limiter.js';
 export * from './admission/job-admission.js';
 export * from './dispatcher/index.js';
+export * from './webhook/index.js';
 
 export function main(): void {
   const config = loadEnvConfig();

@@ -53,6 +53,17 @@ import {
   calculateJobReservation,
   validatePreviewBoundsAgainstComposition,
 } from '../admission/job-admission.js';
+import {
+  encryptSecretAtRest,
+  generateWebhookSecret,
+} from '../webhook/crypto.js';
+import {
+  MAX_DELIVERY_DEADLINE_MS,
+  MAX_REPLAYS_PER_DAY,
+  WEBHOOK_REPLAY_RETENTION_MS,
+  WebhookDeliveryRecord,
+  WebhookEndpointRecord,
+} from '../webhook/types.js';
 
 export class ResourceNotFoundError extends Error {
   public readonly httpStatus = 404;
@@ -116,6 +127,38 @@ export class IdempotencyInProgressError extends Error {
   }
 }
 
+export class DeliveryExpiredError extends Error {
+  public readonly httpStatus = 410;
+  public readonly code = 'DELIVERY_EXPIRED';
+
+  constructor(message = 'Webhook delivery expired (replay retention is 7 days from event creation)') {
+    super(message);
+    this.name = 'DeliveryExpiredError';
+  }
+}
+
+export class ReplayQuotaExceededError extends Error {
+  public readonly httpStatus = 429;
+  public readonly code = 'QUOTA_EXCEEDED';
+  public readonly retryAfterSeconds: number;
+
+  constructor(message = 'Daily replay quota exceeded for delivery (maximum 5 replays per day)', retryAfterSeconds = 86400) {
+    super(message);
+    this.name = 'ReplayQuotaExceededError';
+    this.retryAfterSeconds = retryAfterSeconds;
+  }
+}
+
+export class ChallengeExpiredError extends Error {
+  public readonly httpStatus = 410;
+  public readonly code = 'CHALLENGE_EXPIRED';
+
+  constructor(message = 'Webhook challenge has expired (validity is 10 minutes)') {
+    super(message);
+    this.name = 'ChallengeExpiredError';
+  }
+}
+
 export function computeSha256Hex(input: string): string {
   return crypto.createHash('sha256').update(input, 'utf8').digest('hex');
 }
@@ -132,6 +175,103 @@ export interface IssuedApiKeyResult {
   createdAt: string;
 }
 
+export interface UsageEntryRecord {
+  id: string;
+  job_id: string;
+  attempt_id: string | null;
+  usage_class: string;
+  meter: string;
+  ledger_version: number;
+  quantity: number;
+  rate_version: string;
+  reason: string | null;
+  created_at: string;
+}
+
+export interface UsageEntriesFilter {
+  jobId?: string;
+  from?: string;
+  to?: string;
+  usageClass?: 'operational' | 'billable' | 'compensating';
+  meter?: 'cpu_seconds' | 'reserved_vcpu_seconds' | 'billable_output_minutes' | 'storage_byte_hours' | 'egress_bytes';
+}
+
+export interface UsageSummaryResponse {
+  from: string;
+  to: string;
+  operational_attempts: number;
+  billable_output_minutes: number;
+  estimated_cost: number;
+  currency: string;
+  operational_cpu_seconds: number;
+  billable_jobs: number;
+  preview_jobs: number;
+  reservations: {
+    pending_count: number;
+    pending_vcpu_seconds: number;
+    pending_output_seconds: number;
+    settled_count: number;
+    released_count: number;
+  };
+  canceled_units: {
+    jobs_count: number;
+    attempts_count: number;
+    operational_cpu_seconds: number;
+    released_output_seconds: number;
+    billable_output_minutes: number;
+  };
+  failed_units: {
+    jobs_count: number;
+    attempts_count: number;
+    operational_cpu_seconds: number;
+    released_output_seconds: number;
+    billable_output_minutes: number;
+  };
+  succeeded_units: {
+    jobs_count: number;
+    attempts_count: number;
+    operational_cpu_seconds: number;
+    settled_output_seconds: number;
+    billable_output_minutes: number;
+  };
+  reconciliation: {
+    clean: boolean;
+    double_debit_detected: boolean;
+    discrepancies: string[];
+  };
+}
+
+export interface UsageReconciliationReport {
+  clean: boolean;
+  tenant_id: string;
+  evaluated_at: string;
+  summary: {
+    succeeded_jobs_count: number;
+    failed_jobs_count: number;
+    canceled_jobs_count: number;
+    non_terminal_jobs_count: number;
+    settled_reservations_count: number;
+    released_reservations_count: number;
+    pending_reservations_count: number;
+    total_billable_output_minutes: number;
+    total_operational_cpu_seconds: number;
+  };
+  discrepancies: Array<{
+    type: 'DOUBLE_DEBIT' | 'UNEXPECTED_BILLABLE_ENTRY' | 'MISSING_BILLABLE_ENTRY' | 'RESERVATION_STATE_MISMATCH';
+    job_id: string;
+    message: string;
+  }>;
+}
+
+export interface CompensatingUsageEntryInput {
+  jobId: string;
+  meter: 'cpu_seconds' | 'reserved_vcpu_seconds' | 'billable_output_minutes' | 'storage_byte_hours' | 'egress_bytes';
+  quantity: number;
+  reason: string;
+  rateVersion?: string;
+  now?: Date;
+}
+
 export class TenantRepository {
   private readonly pool: TenantConnectionPool;
   private readonly pepper: string;
@@ -139,6 +279,7 @@ export class TenantRepository {
   private readonly revocationStore: StorageGrantRevocationStore;
   private readonly baseUrl: string;
   private readonly tenantImportAllowlists = new Map<string, string[]>();
+  private readonly masterKey?: Buffer | string;
 
   constructor(
     pool: TenantConnectionPool,
@@ -147,6 +288,7 @@ export class TenantRepository {
       quarantineStore?: QuarantineStore;
       revocationStore?: StorageGrantRevocationStore;
       baseUrl?: string;
+      masterKey?: Buffer | string;
     },
   ) {
     this.pool = pool;
@@ -154,6 +296,7 @@ export class TenantRepository {
     this.quarantineStore = options.quarantineStore;
     this.revocationStore = options.revocationStore ?? defaultGrantRevocationStore;
     this.baseUrl = options.baseUrl ?? (process.env['CVE_PUBLIC_BASE_URL'] || 'http://127.0.0.1:8080/v1');
+    this.masterKey = options.masterKey;
   }
 
   public getPool(): TenantConnectionPool {
@@ -3801,47 +3944,68 @@ export class TenantRepository {
     });
   }
 
-  public listUsageEntries(
+  public getOutboxEvents(
     tenantId: string,
     jobId?: string,
   ): Array<{
     id: string;
+    event_type: string;
     job_id: string;
-    attempt_id: string | null;
-    usage_class: string;
-    meter: string;
-    ledger_version: number;
-    quantity: number;
-    rate_version: string;
-    reason: string | null;
+    state_version: number;
+    payload: Record<string, unknown>;
     created_at: string;
+    processed_at: string | null;
   }> {
+    return this.listOutboxEvents(tenantId, jobId);
+  }
+
+  public listUsageEntries(
+    tenantId: string,
+    filterOrJobId?: string | UsageEntriesFilter,
+  ): Array<UsageEntryRecord> {
     return this.pool.withTransaction({ tenantId, role: 'cve_api' }, (tx) => {
-      const rows = jobId
-        ? tx.selectScoped<{
-            id: string;
-            job_id: string;
-            attempt_id: string | null;
-            usage_class: string;
-            meter: string;
-            ledger_version: number;
-            quantity: number;
-            rate_version: string;
-            reason: string | null;
-            created_at: string;
-          }>('usage_entries', 'job_id = ?', [jobId], 'created_at ASC, ledger_version ASC')
-        : tx.selectScoped<{
-            id: string;
-            job_id: string;
-            attempt_id: string | null;
-            usage_class: string;
-            meter: string;
-            ledger_version: number;
-            quantity: number;
-            rate_version: string;
-            reason: string | null;
-            created_at: string;
-          }>('usage_entries', '1=1', [], 'created_at ASC, ledger_version ASC');
+      const conditions: string[] = [];
+      const params: (string | number | null)[] = [];
+
+      if (typeof filterOrJobId === 'string') {
+        conditions.push('job_id = ?');
+        params.push(filterOrJobId);
+      } else if (filterOrJobId && typeof filterOrJobId === 'object') {
+        if (filterOrJobId.jobId) {
+          conditions.push('job_id = ?');
+          params.push(filterOrJobId.jobId);
+        }
+        if (filterOrJobId.from) {
+          conditions.push('created_at >= ?');
+          params.push(filterOrJobId.from);
+        }
+        if (filterOrJobId.to) {
+          conditions.push('created_at <= ?');
+          params.push(filterOrJobId.to);
+        }
+        if (filterOrJobId.usageClass) {
+          conditions.push('usage_class = ?');
+          params.push(filterOrJobId.usageClass);
+        }
+        if (filterOrJobId.meter) {
+          conditions.push('meter = ?');
+          params.push(filterOrJobId.meter);
+        }
+      }
+
+      const whereClause = conditions.length > 0 ? conditions.join(' AND ') : '1=1';
+      const rows = tx.selectScoped<{
+        id: string;
+        job_id: string;
+        attempt_id: string | null;
+        usage_class: string;
+        meter: string;
+        ledger_version: number;
+        quantity: number;
+        rate_version: string;
+        reason: string | null;
+        created_at: string;
+      }>('usage_entries', whereClause, params, 'created_at ASC, ledger_version ASC');
 
       return rows.map((r) => ({
         ...r,
@@ -3877,6 +4041,101 @@ export class TenantRepository {
   ): { id: string; state: 'active' } {
     this.setWebhookEndpointState(tenantId, endpointId, 'active', now);
     return { id: endpointId, state: 'active' };
+  }
+
+  public initiateWebhookChallenge(
+    tenantId: string,
+    endpointId: string,
+    now = new Date(),
+  ): { challengeToken: string; expiresAt: string } {
+    const challengeToken = crypto.randomBytes(32).toString('hex');
+    const challengeHash = crypto.createHash('sha256').update(challengeToken).digest('hex');
+    const expiresAt = new Date(now.getTime() + 10 * 60 * 1000).toISOString();
+
+    this.pool.withTransaction({ tenantId, role: 'cve_api' }, (tx) => {
+      const rows = tx.selectScoped<{ id: string; state: string }>(
+        'webhook_endpoints',
+        'id = ?',
+        [endpointId],
+      );
+      const ep = rows[0];
+      if (!ep) {
+        throw new ResourceNotFoundError(`Webhook endpoint ${endpointId} not found`);
+      }
+      if (ep.state === 'disabled') {
+        throw new WebhookNotVerifiedError(`Webhook endpoint ${endpointId} is disabled`);
+      }
+
+      tx.updateScoped(
+        'webhook_endpoints',
+        {
+          challenge_token_hash: challengeHash,
+          challenge_expires_at: expiresAt,
+          updated_at: now.toISOString(),
+        },
+        'id = ?',
+        [endpointId],
+      );
+    });
+
+    return { challengeToken, expiresAt };
+  }
+
+  public confirmWebhookChallenge(
+    tenantId: string,
+    endpointId: string,
+    echoedChallenge: string,
+    now = new Date(),
+  ): { id: string; state: 'active' } {
+    const nowIso = now.toISOString();
+
+    return this.pool.withTransaction({ tenantId, role: 'cve_api' }, (tx) => {
+      const rows = tx.selectScoped<{
+        id: string;
+        state: string;
+        challenge_token_hash: string | null;
+        challenge_expires_at: string | null;
+      }>('webhook_endpoints', 'id = ?', [endpointId]);
+
+      const ep = rows[0];
+      if (!ep) {
+        throw new ResourceNotFoundError(`Webhook endpoint ${endpointId} not found`);
+      }
+      if (ep.state === 'disabled') {
+        throw new WebhookNotVerifiedError(`Webhook endpoint ${endpointId} is disabled`);
+      }
+      if (!ep.challenge_token_hash || !ep.challenge_expires_at) {
+        throw new WebhookNotVerifiedError(`Webhook endpoint ${endpointId} has no pending challenge`);
+      }
+      if (now.getTime() > Date.parse(ep.challenge_expires_at)) {
+        throw new ChallengeExpiredError(`Webhook challenge for ${endpointId} has expired`);
+      }
+
+      const expectedHash = ep.challenge_token_hash;
+      const actualHash = crypto.createHash('sha256').update(echoedChallenge).digest('hex');
+
+      const expectedBuf = Buffer.from(expectedHash, 'utf8');
+      const actualBuf = Buffer.from(actualHash, 'utf8');
+      const isMatch = expectedBuf.length === actualBuf.length && crypto.timingSafeEqual(expectedBuf, actualBuf);
+
+      if (!isMatch) {
+        throw new WebhookNotVerifiedError('Challenge token verification failed: challenge does not match');
+      }
+
+      tx.updateScoped(
+        'webhook_endpoints',
+        {
+          state: 'active',
+          challenge_token_hash: null,
+          challenge_expires_at: null,
+          updated_at: nowIso,
+        },
+        'id = ?',
+        [endpointId],
+      );
+
+      return { id: endpointId, state: 'active' };
+    });
   }
 
   public registerSceneBundle(
@@ -4154,8 +4413,11 @@ export class TenantRepository {
     created_at: string;
   } {
     const nowIso = (input.now ?? new Date()).toISOString();
-    const signingSecret = `whsec_${crypto.randomBytes(32).toString('hex')}`;
-    const secretCiphertext = `enc:v1:${computeSha256Hex(signingSecret)}`;
+    const signingSecret = generateWebhookSecret();
+    const secretCiphertext = encryptSecretAtRest(signingSecret, this.masterKey);
+    const events = (input.events && input.events.length > 0)
+      ? input.events
+      : ['job.succeeded', 'job.failed', 'job.canceled'];
 
     this.pool.withTransaction({ tenantId, role: 'cve_api' }, (tx) => {
       tx.insertScoped('webhook_endpoints', {
@@ -4163,7 +4425,7 @@ export class TenantRepository {
         id: input.id,
         url: input.url,
         state: 'pending_verification',
-        events_filter_json: JSON.stringify(input.events),
+        events_filter_json: JSON.stringify(events),
         active_key_id: 'whk_1',
         secret_ciphertext: secretCiphertext,
         prev_key_id: null,
@@ -4182,7 +4444,7 @@ export class TenantRepository {
       url: input.url,
       state: 'pending_verification',
       signing_secret: signingSecret,
-      events: [...input.events],
+      events: [...events],
       created_at: nowIso,
     };
   }
@@ -4197,6 +4459,13 @@ export class TenantRepository {
     events: string[];
     created_at: string;
     last_delivery_at: string | null;
+    delivery_summary?: {
+      total: number;
+      delivered: number;
+      queued: number;
+      failed: number;
+      dead_letter: number;
+    };
   } {
     return this.pool.withTransaction({ tenantId, role: 'cve_api' }, (tx) => {
       const rows = tx.selectScoped<{
@@ -4213,6 +4482,24 @@ export class TenantRepository {
         throw new ResourceNotFoundError(`Webhook endpoint ${endpointId} not found`);
       }
 
+      const deliveries = tx.selectScoped<{ state: string }>(
+        'webhook_deliveries',
+        'endpoint_id = ?',
+        [endpointId],
+      );
+
+      let delivered = 0;
+      let queued = 0;
+      let failed = 0;
+      let dead_letter = 0;
+
+      for (const d of deliveries) {
+        if (d.state === 'delivered') delivered++;
+        else if (d.state === 'queued') queued++;
+        else if (d.state === 'failed') failed++;
+        else if (d.state === 'dead_letter') dead_letter++;
+      }
+
       return {
         id: ep.id,
         url: ep.url,
@@ -4220,6 +4507,301 @@ export class TenantRepository {
         events: JSON.parse(ep.events_filter_json) as string[],
         created_at: ep.created_at,
         last_delivery_at: ep.last_delivery_at,
+        delivery_summary: {
+          total: deliveries.length,
+          delivered,
+          queued,
+          failed,
+          dead_letter,
+        },
+      };
+    });
+  }
+
+  public rotateWebhookSecret(
+    tenantId: string,
+    endpointId: string,
+    now = new Date(),
+  ): {
+    id: string;
+    active_key_id: string;
+    signing_secret: string;
+    prev_key_id: string;
+    prev_secret_expires_at: string;
+  } {
+    const nowIso = now.toISOString();
+    const prevSecretExpiresAt = new Date(now.getTime() + 24 * 3600 * 1000).toISOString(); // 24h grace period
+    const newSigningSecret = generateWebhookSecret();
+    const newSecretCiphertext = encryptSecretAtRest(newSigningSecret, this.masterKey);
+
+    return this.pool.withTransaction({ tenantId, role: 'cve_api' }, (tx) => {
+      const rows = tx.selectScoped<WebhookEndpointRecord>(
+        'webhook_endpoints',
+        'id = ?',
+        [endpointId],
+      );
+      const ep = rows[0];
+      if (!ep) {
+        throw new ResourceNotFoundError(`Webhook endpoint ${endpointId} not found`);
+      }
+      if (ep.state === 'disabled') {
+        throw new WebhookNotVerifiedError(`Webhook endpoint ${endpointId} is disabled`);
+      }
+
+      const match = /^whk_(\d+)$/.exec(ep.active_key_id);
+      const nextNum = match ? parseInt(match[1]!, 10) + 1 : 2;
+      const nextKeyId = `whk_${nextNum}`;
+
+      tx.updateScoped(
+        'webhook_endpoints',
+        {
+          active_key_id: nextKeyId,
+          secret_ciphertext: newSecretCiphertext,
+          prev_key_id: ep.active_key_id,
+          prev_secret_ciphertext: ep.secret_ciphertext,
+          prev_secret_expires_at: prevSecretExpiresAt,
+          updated_at: nowIso,
+        },
+        'id = ?',
+        [endpointId],
+      );
+
+      return {
+        id: endpointId,
+        active_key_id: nextKeyId,
+        signing_secret: newSigningSecret,
+        prev_key_id: ep.active_key_id,
+        prev_secret_expires_at: prevSecretExpiresAt,
+      };
+    });
+  }
+
+  public deleteWebhookEndpoint(
+    tenantId: string,
+    endpointId: string,
+    now = new Date(),
+  ): void {
+    const nowIso = now.toISOString();
+    this.pool.withTransaction({ tenantId, role: 'cve_api' }, (tx) => {
+      const updated = tx.updateScoped(
+        'webhook_endpoints',
+        { state: 'disabled', updated_at: nowIso },
+        'id = ?',
+        [endpointId],
+      );
+      if (updated === 0) {
+        throw new ResourceNotFoundError(`Webhook endpoint ${endpointId} not found`);
+      }
+
+      // "Endpoint bị xóa thì không gửi tiếp": cancel all queued deliveries for this endpoint
+      tx.updateScoped(
+        'webhook_deliveries',
+        { state: 'dead_letter', updated_at: nowIso },
+        'endpoint_id = ? AND state = ?',
+        [endpointId, 'queued'],
+      );
+    });
+  }
+
+  public listWebhookDeliveries(
+    tenantId: string,
+    options: {
+      jobId?: string;
+      endpointId?: string;
+      state?: string;
+      limit?: number;
+      cursor?: string;
+    } = {},
+  ): {
+    data: Array<{
+      id: string;
+      endpoint_id: string;
+      outbox_event_id: string;
+      job_id: string;
+      state: string;
+      attempt_count: number;
+      next_attempt_at: string | null;
+      deadline_at: string;
+      last_http_status: number | null;
+      replay_count_today: number;
+      created_at: string;
+      updated_at: string;
+    }>;
+    next_cursor: string | null;
+  } {
+    const limit = Math.min(Math.max(options.limit ?? 20, 1), 100);
+
+    return this.pool.withTransaction({ tenantId, role: 'cve_api' }, (tx) => {
+      const clauses: string[] = ['1=1'];
+      const params: any[] = [];
+
+      if (options.jobId) {
+        clauses.push('job_id = ?');
+        params.push(options.jobId);
+      }
+      if (options.endpointId) {
+        clauses.push('endpoint_id = ?');
+        params.push(options.endpointId);
+      }
+      if (options.state) {
+        clauses.push('state = ?');
+        params.push(options.state);
+      }
+
+      const rows = tx.selectScoped<WebhookDeliveryRecord>(
+        'webhook_deliveries',
+        clauses.join(' AND '),
+        params,
+        'created_at DESC, id DESC',
+      );
+
+      const pageRows = rows.slice(0, limit);
+      return {
+        data: pageRows.map((r) => ({
+          id: r.id,
+          endpoint_id: r.endpoint_id,
+          outbox_event_id: r.outbox_event_id,
+          job_id: r.job_id,
+          state: r.state,
+          attempt_count: Number(r.attempt_count),
+          next_attempt_at: r.next_attempt_at,
+          deadline_at: r.deadline_at,
+          last_http_status: r.last_http_status !== null ? Number(r.last_http_status) : null,
+          replay_count_today: Number(r.replay_count_today),
+          created_at: r.created_at,
+          updated_at: r.updated_at,
+        })),
+        next_cursor: null,
+      };
+    });
+  }
+
+  public getWebhookDelivery(
+    tenantId: string,
+    deliveryId: string,
+  ): {
+    id: string;
+    endpoint_id: string;
+    outbox_event_id: string;
+    job_id: string;
+    state: string;
+    attempt_count: number;
+    next_attempt_at: string | null;
+    deadline_at: string;
+    last_http_status: number | null;
+    replay_count_today: number;
+    created_at: string;
+    updated_at: string;
+  } {
+    return this.pool.withTransaction({ tenantId, role: 'cve_api' }, (tx) => {
+      const rows = tx.selectScoped<WebhookDeliveryRecord>(
+        'webhook_deliveries',
+        'id = ?',
+        [deliveryId],
+      );
+      const delivery = rows[0];
+      if (!delivery) {
+        throw new ResourceNotFoundError(`Webhook delivery ${deliveryId} not found`);
+      }
+      return {
+        id: delivery.id,
+        endpoint_id: delivery.endpoint_id,
+        outbox_event_id: delivery.outbox_event_id,
+        job_id: delivery.job_id,
+        state: delivery.state,
+        attempt_count: Number(delivery.attempt_count),
+        next_attempt_at: delivery.next_attempt_at,
+        deadline_at: delivery.deadline_at,
+        last_http_status: delivery.last_http_status !== null ? Number(delivery.last_http_status) : null,
+        replay_count_today: Number(delivery.replay_count_today),
+        created_at: delivery.created_at,
+        updated_at: delivery.updated_at,
+      };
+    });
+  }
+
+  public replayWebhookDelivery(
+    tenantId: string,
+    deliveryId: string,
+    now = new Date(),
+  ): {
+    id: string;
+    state: 'queued';
+    replay_count_today: number;
+    outbox_event_id: string;
+  } {
+    const nowMs = now.getTime();
+    const nowIso = now.toISOString();
+
+    return this.pool.withTransaction({ tenantId, role: 'cve_api' }, (tx) => {
+      const deliveries = tx.selectScoped<WebhookDeliveryRecord>(
+        'webhook_deliveries',
+        'id = ?',
+        [deliveryId],
+      );
+      const delivery = deliveries[0];
+      if (!delivery) {
+        throw new ResourceNotFoundError(`Webhook delivery ${deliveryId} not found`);
+      }
+
+      // 1. Check 7-day retention limit: docs/API.md line 151
+      const createdAtMs = Date.parse(delivery.created_at);
+      if (nowMs - createdAtMs > WEBHOOK_REPLAY_RETENTION_MS) {
+        throw new DeliveryExpiredError(
+          `Webhook delivery ${deliveryId} expired (> 7 days since creation); reconcile via GET /jobs/{id}`,
+        );
+      }
+
+      // Check calendar day rollover for daily quota (resets each calendar day)
+      const lastUpdatedMs = Date.parse(delivery.updated_at);
+      const lastDate = new Date(lastUpdatedMs).toISOString().slice(0, 10);
+      const currentDate = now.toISOString().slice(0, 10);
+      const replayCountToday = currentDate === lastDate ? Number(delivery.replay_count_today) : 0;
+
+      // 2. Check daily replay limit (<= 5 per day): docs/API.md line 151
+      if (replayCountToday >= MAX_REPLAYS_PER_DAY) {
+        throw new ReplayQuotaExceededError(
+          `Daily replay limit of ${MAX_REPLAYS_PER_DAY} exceeded for delivery ${deliveryId}`,
+        );
+      }
+
+      // 3. Check endpoint not disabled: "Endpoint bị xóa thì không gửi tiếp"
+      const endpoints = tx.selectScoped<WebhookEndpointRecord>(
+        'webhook_endpoints',
+        'id = ?',
+        [delivery.endpoint_id],
+      );
+      const endpoint = endpoints[0];
+      if (!endpoint || endpoint.state === 'disabled') {
+        throw new WebhookNotVerifiedError(
+          `Webhook endpoint ${delivery.endpoint_id} is disabled; cannot replay delivery`,
+        );
+      }
+
+      // 4. Update delivery record to queued with same outbox_event_id
+      const nextReplayCount = replayCountToday + 1;
+      const newDeadlineIso = new Date(nowMs + MAX_DELIVERY_DEADLINE_MS).toISOString();
+
+      tx.updateScoped(
+        'webhook_deliveries',
+        {
+          state: 'queued',
+          attempt_count: 0,
+          next_attempt_at: nowIso,
+          deadline_at: newDeadlineIso,
+          last_http_status: null,
+          replay_count_today: nextReplayCount,
+          updated_at: nowIso,
+        },
+        'id = ?',
+        [deliveryId],
+      );
+
+      return {
+        id: delivery.id,
+        state: 'queued',
+        replay_count_today: nextReplayCount,
+        outbox_event_id: delivery.outbox_event_id,
       };
     });
   }
@@ -4228,44 +4810,549 @@ export class TenantRepository {
     tenantId: string,
     fromIso: string,
     toIso: string,
-  ): {
-    from: string;
-    to: string;
-    operational_attempts: number;
-    billable_output_minutes: number;
-    estimated_cost: number;
-    currency: string;
-  } {
+  ): UsageSummaryResponse {
     return this.pool.withTransaction({ tenantId, role: 'cve_api' }, (tx) => {
+      // 1. Fetch usage entries in the specified time window
       const entries = tx.selectScoped<{
+        id: string;
+        job_id: string;
+        attempt_id: string | null;
         usage_class: string;
         meter: string;
+        ledger_version: number;
         quantity: number;
+        reason: string | null;
+        created_at: string;
       }>(
         'usage_entries',
         'created_at >= ? AND created_at <= ?',
         [fromIso, toIso],
+        'created_at ASC',
       );
 
+      // 2. Fetch reservations relevant to the window or currently active
+      const reservations = tx.selectScoped<{
+        job_id: string;
+        reserved_vcpu_seconds: number;
+        reserved_output_seconds: number;
+        state: 'reserved' | 'settled' | 'released';
+        created_at: string;
+        settled_at: string | null;
+      }>(
+        'usage_reservations',
+        '(created_at >= ? AND created_at <= ?) OR (settled_at >= ? AND settled_at <= ?) OR state = ?',
+        [fromIso, toIso, fromIso, toIso, 'reserved'],
+      );
+
+      // 3. Collect all referenced job IDs to inspect final terminal state and kind
+      const referencedJobIds = Array.from(
+        new Set([
+          ...entries.map((e) => e.job_id),
+          ...reservations.map((r) => r.job_id),
+        ]),
+      );
+
+      const jobMap = new Map<
+        string,
+        { id: string; kind: 'render' | 'preview'; state: string; completed_at: string | null }
+      >();
+      for (const jid of referencedJobIds) {
+        const jrows = tx.selectScoped<{
+          id: string;
+          kind: 'render' | 'preview';
+          state: string;
+          completed_at: string | null;
+        }>('jobs', 'id = ?', [jid]);
+        if (jrows[0]) {
+          jobMap.set(jid, jrows[0]);
+        }
+      }
+
+      // Also include jobs created or completed in this window that might have been canceled before claim
+      const jobsInWindow = tx.selectScoped<{
+        id: string;
+        kind: 'render' | 'preview';
+        state: string;
+        completed_at: string | null;
+      }>(
+        'jobs',
+        '(created_at >= ? AND created_at <= ?) OR (completed_at >= ? AND completed_at <= ?)',
+        [fromIso, toIso, fromIso, toIso],
+      );
+      for (const j of jobsInWindow) {
+        if (!jobMap.has(j.id)) {
+          jobMap.set(j.id, j);
+        }
+      }
+
+      // 4. Summarize usage metrics
       let operationalAttempts = 0;
+      let operationalCpuSeconds = 0;
       let billableMinutes = 0;
+      let renderJobsCount = 0;
+      let previewJobsCount = 0;
+      const countedRenderJobs = new Set<string>();
+      const countedPreviewJobs = new Set<string>();
+
+      const canceledUnits = {
+        jobs_count: 0,
+        attempts_count: 0,
+        operational_cpu_seconds: 0,
+        released_output_seconds: 0,
+        billable_output_minutes: 0,
+      };
+
+      const failedUnits = {
+        jobs_count: 0,
+        attempts_count: 0,
+        operational_cpu_seconds: 0,
+        released_output_seconds: 0,
+        billable_output_minutes: 0,
+      };
+
+      const succeededUnits = {
+        jobs_count: 0,
+        attempts_count: 0,
+        operational_cpu_seconds: 0,
+        settled_output_seconds: 0,
+        billable_output_minutes: 0,
+      };
+
+      const billableEntriesByJob = new Map<string, number>();
+      const doubleDebitJobIds = new Set<string>();
+
       for (const e of entries) {
+        const qty = Number(e.quantity);
+        const job = jobMap.get(e.job_id);
+
         if (e.usage_class === 'operational' && e.meter === 'cpu_seconds') {
           operationalAttempts += 1;
+          operationalCpuSeconds += qty;
+
+          if (job?.state === 'canceled') {
+            canceledUnits.attempts_count += 1;
+            canceledUnits.operational_cpu_seconds += qty;
+          } else if (job?.state === 'failed') {
+            failedUnits.attempts_count += 1;
+            failedUnits.operational_cpu_seconds += qty;
+          } else if (job?.state === 'succeeded') {
+            succeededUnits.attempts_count += 1;
+            succeededUnits.operational_cpu_seconds += qty;
+          }
+        } else if (
+          (e.usage_class === 'billable' || e.usage_class === 'compensating') &&
+          e.meter === 'billable_output_minutes'
+        ) {
+          billableMinutes += qty;
+
+          if (e.usage_class === 'billable') {
+            const currentCount = (billableEntriesByJob.get(e.job_id) ?? 0) + 1;
+            billableEntriesByJob.set(e.job_id, currentCount);
+            if (currentCount > 1) {
+              doubleDebitJobIds.add(e.job_id);
+            }
+
+            if (job?.kind === 'preview') {
+              if (!countedPreviewJobs.has(e.job_id)) {
+                countedPreviewJobs.add(e.job_id);
+                previewJobsCount += 1;
+              }
+            } else {
+              if (!countedRenderJobs.has(e.job_id)) {
+                countedRenderJobs.add(e.job_id);
+                renderJobsCount += 1;
+              }
+            }
+
+            if (job?.state === 'succeeded' || !job) {
+              succeededUnits.billable_output_minutes += qty;
+            }
+          }
         }
-        if (e.usage_class === 'billable' && e.meter === 'billable_output_minutes') {
-          billableMinutes += Number(e.quantity);
+      }
+
+      // Count distinct jobs by outcome
+      for (const job of jobMap.values()) {
+        if (job.state === 'succeeded') {
+          succeededUnits.jobs_count += 1;
+        } else if (job.state === 'failed') {
+          failedUnits.jobs_count += 1;
+        } else if (job.state === 'canceled') {
+          canceledUnits.jobs_count += 1;
+        }
+      }
+
+      // 5. Reservation metrics
+      let pendingCount = 0;
+      let pendingVcpu = 0;
+      let pendingOutput = 0;
+      let settledCount = 0;
+      let releasedCount = 0;
+
+      for (const r of reservations) {
+        const vcpu = Number(r.reserved_vcpu_seconds);
+        const outSec = Number(r.reserved_output_seconds);
+
+        if (r.state === 'reserved') {
+          pendingCount += 1;
+          pendingVcpu += vcpu;
+          pendingOutput += outSec;
+        } else if (r.state === 'settled') {
+          settledCount += 1;
+          succeededUnits.settled_output_seconds += outSec;
+        } else if (r.state === 'released') {
+          releasedCount += 1;
+          const job = jobMap.get(r.job_id);
+          if (job?.state === 'canceled') {
+            canceledUnits.released_output_seconds += outSec;
+          } else if (job?.state === 'failed') {
+            failedUnits.released_output_seconds += outSec;
+          } else {
+            canceledUnits.released_output_seconds += outSec;
+          }
         }
       }
 
       const roundedMinutes = Number(billableMinutes.toFixed(6));
+      const roundedCpuSec = Number(operationalCpuSeconds.toFixed(6));
+      const roundedEstimatedCost = Number((roundedMinutes * 0.05).toFixed(6));
+
+      canceledUnits.operational_cpu_seconds = Number(canceledUnits.operational_cpu_seconds.toFixed(6));
+      canceledUnits.released_output_seconds = Number(canceledUnits.released_output_seconds.toFixed(6));
+      failedUnits.operational_cpu_seconds = Number(failedUnits.operational_cpu_seconds.toFixed(6));
+      failedUnits.released_output_seconds = Number(failedUnits.released_output_seconds.toFixed(6));
+      succeededUnits.operational_cpu_seconds = Number(succeededUnits.operational_cpu_seconds.toFixed(6));
+      succeededUnits.settled_output_seconds = Number(succeededUnits.settled_output_seconds.toFixed(6));
+      succeededUnits.billable_output_minutes = Number(succeededUnits.billable_output_minutes.toFixed(6));
+
+      // 6. Reconciliation analysis
+      const discrepancies: string[] = [];
+      if (doubleDebitJobIds.size > 0) {
+        for (const jid of doubleDebitJobIds) {
+          discrepancies.push(`Job ${jid} has multiple billable output minute entries (double debit detected)`);
+        }
+      }
+      for (const e of entries) {
+        if (e.usage_class === 'billable' && e.meter === 'billable_output_minutes' && Number(e.quantity) > 0) {
+          const job = jobMap.get(e.job_id);
+          if (job && (job.state === 'canceled' || job.state === 'failed')) {
+            discrepancies.push(`Job ${e.job_id} is in terminal state '${job.state}' but has billable output minutes entry`);
+          }
+        }
+      }
+
       return {
         from: fromIso,
         to: toIso,
         operational_attempts: operationalAttempts,
         billable_output_minutes: roundedMinutes,
-        estimated_cost: Number((roundedMinutes * 0.05).toFixed(6)),
+        estimated_cost: roundedEstimatedCost,
         currency: 'USD',
+        operational_cpu_seconds: roundedCpuSec,
+        billable_jobs: renderJobsCount,
+        preview_jobs: previewJobsCount,
+        reservations: {
+          pending_count: pendingCount,
+          pending_vcpu_seconds: Number(pendingVcpu.toFixed(6)),
+          pending_output_seconds: Number(pendingOutput.toFixed(6)),
+          settled_count: settledCount,
+          released_count: releasedCount,
+        },
+        canceled_units: canceledUnits,
+        failed_units: failedUnits,
+        succeeded_units: succeededUnits,
+        reconciliation: {
+          clean: discrepancies.length === 0,
+          double_debit_detected: doubleDebitJobIds.size > 0,
+          discrepancies,
+        },
+      };
+    });
+  }
+
+  public reconcileUsage(
+    tenantId: string,
+    options: { from?: string; to?: string } = {},
+  ): UsageReconciliationReport {
+    return this.pool.withTransaction({ tenantId, role: 'cve_api' }, (tx) => {
+      const nowIso = new Date().toISOString();
+      const whereConditions: string[] = ['1=1'];
+      const params: (string | number | null)[] = [];
+      if (options.from) {
+        whereConditions.push('created_at >= ?');
+        params.push(options.from);
+      }
+      if (options.to) {
+        whereConditions.push('created_at <= ?');
+        params.push(options.to);
+      }
+      const whereClause = whereConditions.join(' AND ');
+
+      const jobs = tx.selectScoped<{
+        id: string;
+        kind: 'render' | 'preview';
+        state: string;
+        attempt_count: number;
+        created_at: string;
+        completed_at: string | null;
+      }>('jobs', whereClause, params, 'created_at ASC');
+
+      const reservations = tx.selectScoped<{
+        job_id: string;
+        reserved_vcpu_seconds: number;
+        reserved_output_seconds: number;
+        state: 'reserved' | 'settled' | 'released';
+        created_at: string;
+        settled_at: string | null;
+      }>('usage_reservations', '1=1', []);
+
+      const reservationMap = new Map<
+        string,
+        {
+          reserved_vcpu_seconds: number;
+          reserved_output_seconds: number;
+          state: 'reserved' | 'settled' | 'released';
+        }
+      >();
+      for (const r of reservations) {
+        reservationMap.set(r.job_id, r);
+      }
+
+      const entries = tx.selectScoped<{
+        id: string;
+        job_id: string;
+        attempt_id: string | null;
+        usage_class: string;
+        meter: string;
+        ledger_version: number;
+        quantity: number;
+        created_at: string;
+      }>('usage_entries', '1=1', []);
+
+      const entriesByJob = new Map<
+        string,
+        Array<{
+          id: string;
+          attempt_id: string | null;
+          usage_class: string;
+          meter: string;
+          ledger_version: number;
+          quantity: number;
+        }>
+      >();
+      for (const e of entries) {
+        const list = entriesByJob.get(e.job_id) ?? [];
+        list.push(e);
+        entriesByJob.set(e.job_id, list);
+      }
+
+      const discrepancies: UsageReconciliationReport['discrepancies'] = [];
+      let succeededJobsCount = 0;
+      let failedJobsCount = 0;
+      let canceledJobsCount = 0;
+      let nonTerminalJobsCount = 0;
+      let settledReservationsCount = 0;
+      let releasedReservationsCount = 0;
+      let pendingReservationsCount = 0;
+      let totalBillableOutputMinutes = 0;
+      let totalOperationalCpuSeconds = 0;
+
+      for (const job of jobs) {
+        const jobEntries = entriesByJob.get(job.id) ?? [];
+        const res = reservationMap.get(job.id);
+
+        const billableEntries = jobEntries.filter(
+          (e) =>
+            (e.usage_class === 'billable' || e.usage_class === 'compensating') &&
+            e.meter === 'billable_output_minutes',
+        );
+        const operationalCpuEntries = jobEntries.filter(
+          (e) => e.usage_class === 'operational' && e.meter === 'cpu_seconds',
+        );
+
+        for (const b of billableEntries) {
+          totalBillableOutputMinutes += Number(b.quantity);
+        }
+        for (const o of operationalCpuEntries) {
+          totalOperationalCpuSeconds += Number(o.quantity);
+        }
+
+        if (res) {
+          if (res.state === 'settled') settledReservationsCount += 1;
+          else if (res.state === 'released') releasedReservationsCount += 1;
+          else if (res.state === 'reserved') pendingReservationsCount += 1;
+        }
+
+        if (job.state === 'succeeded') {
+          succeededJobsCount += 1;
+          if (job.kind === 'render') {
+            const rawBillable = jobEntries.filter(
+              (e) => e.usage_class === 'billable' && e.meter === 'billable_output_minutes',
+            );
+            if (rawBillable.length > 1) {
+              discrepancies.push({
+                type: 'DOUBLE_DEBIT',
+                job_id: job.id,
+                message: `Job ${job.id} has ${rawBillable.length} billable output minute entries (double debit)`,
+              });
+            } else if (rawBillable.length === 0) {
+              discrepancies.push({
+                type: 'MISSING_BILLABLE_ENTRY',
+                job_id: job.id,
+                message: `Succeeded render job ${job.id} has no billable output minutes entry`,
+              });
+            }
+          }
+          if (res && res.state !== 'settled') {
+            discrepancies.push({
+              type: 'RESERVATION_STATE_MISMATCH',
+              job_id: job.id,
+              message: `Succeeded job ${job.id} has reservation in state '${res.state}', expected 'settled'`,
+            });
+          }
+        } else if (job.state === 'failed') {
+          failedJobsCount += 1;
+          const positiveBillable = jobEntries.filter(
+            (e) =>
+              e.usage_class === 'billable' &&
+              e.meter === 'billable_output_minutes' &&
+              Number(e.quantity) > 0,
+          );
+          if (positiveBillable.length > 0) {
+            discrepancies.push({
+              type: 'UNEXPECTED_BILLABLE_ENTRY',
+              job_id: job.id,
+              message: `Failed job ${job.id} has positive billable entry ${positiveBillable[0]?.id ?? 'unknown'}`,
+            });
+          }
+          if (res && res.state !== 'released') {
+            discrepancies.push({
+              type: 'RESERVATION_STATE_MISMATCH',
+              job_id: job.id,
+              message: `Failed job ${job.id} has reservation in state '${res.state}', expected 'released'`,
+            });
+          }
+        } else if (job.state === 'canceled') {
+          canceledJobsCount += 1;
+          const positiveBillable = jobEntries.filter(
+            (e) =>
+              e.usage_class === 'billable' &&
+              e.meter === 'billable_output_minutes' &&
+              Number(e.quantity) > 0,
+          );
+          if (positiveBillable.length > 0) {
+            discrepancies.push({
+              type: 'UNEXPECTED_BILLABLE_ENTRY',
+              job_id: job.id,
+              message: `Canceled job ${job.id} has positive billable entry ${positiveBillable[0]?.id ?? 'unknown'}`,
+            });
+          }
+          if (res && res.state !== 'released') {
+            discrepancies.push({
+              type: 'RESERVATION_STATE_MISMATCH',
+              job_id: job.id,
+              message: `Canceled job ${job.id} has reservation in state '${res.state}', expected 'released'`,
+            });
+          }
+        } else {
+          // non-terminal
+          nonTerminalJobsCount += 1;
+          const positiveBillable = jobEntries.filter(
+            (e) =>
+              e.usage_class === 'billable' &&
+              e.meter === 'billable_output_minutes' &&
+              Number(e.quantity) > 0,
+          );
+          if (positiveBillable.length > 0) {
+            discrepancies.push({
+              type: 'UNEXPECTED_BILLABLE_ENTRY',
+              job_id: job.id,
+              message: `Non-terminal job ${job.id} (state: ${job.state}) has billable entry before completion`,
+            });
+          }
+          if (res && res.state !== 'reserved') {
+            discrepancies.push({
+              type: 'RESERVATION_STATE_MISMATCH',
+              job_id: job.id,
+              message: `Non-terminal job ${job.id} has reservation in state '${res.state}', expected 'reserved'`,
+            });
+          }
+        }
+      }
+
+      return {
+        clean: discrepancies.length === 0,
+        tenant_id: tenantId,
+        evaluated_at: nowIso,
+        summary: {
+          succeeded_jobs_count: succeededJobsCount,
+          failed_jobs_count: failedJobsCount,
+          canceled_jobs_count: canceledJobsCount,
+          non_terminal_jobs_count: nonTerminalJobsCount,
+          settled_reservations_count: settledReservationsCount,
+          released_reservations_count: releasedReservationsCount,
+          pending_reservations_count: pendingReservationsCount,
+          total_billable_output_minutes: Number(totalBillableOutputMinutes.toFixed(6)),
+          total_operational_cpu_seconds: Number(totalOperationalCpuSeconds.toFixed(6)),
+        },
+        discrepancies,
+      };
+    });
+  }
+
+  public insertCompensatingUsageEntry(
+    tenantId: string,
+    input: CompensatingUsageEntryInput,
+  ): {
+    id: string;
+    job_id: string;
+    attempt_id: string | null;
+    usage_class: 'compensating';
+    meter: string;
+    ledger_version: number;
+    quantity: number;
+    rate_version: string;
+    reason: string;
+    created_at: string;
+  } {
+    const now = input.now ?? new Date();
+    const nowIso = now.toISOString();
+
+    return this.pool.withTransaction({ tenantId, role: 'cve_dispatcher' }, (tx) => {
+      const existing = tx.selectScoped<{ ledger_version: number }>(
+        'usage_entries',
+        'job_id = ? AND meter = ?',
+        [input.jobId, input.meter],
+        'ledger_version DESC',
+      );
+      const nextLedgerVersion = Number(existing[0]?.ledger_version ?? 0) + 1;
+      const entryId = `use_comp_${input.jobId}_v${nextLedgerVersion}_${crypto.randomBytes(4).toString('hex')}`;
+
+      tx.insertScoped('usage_entries', {
+        tenant_id: tenantId,
+        id: entryId,
+        job_id: input.jobId,
+        attempt_id: null,
+        usage_class: 'compensating',
+        meter: input.meter,
+        ledger_version: nextLedgerVersion,
+        quantity: Number(input.quantity.toFixed(6)),
+        rate_version: input.rateVersion ?? 'starter-v1',
+        reason: input.reason,
+        created_at: nowIso,
+      });
+
+      return {
+        id: entryId,
+        job_id: input.jobId,
+        attempt_id: null,
+        usage_class: 'compensating',
+        meter: input.meter,
+        ledger_version: nextLedgerVersion,
+        quantity: Number(input.quantity.toFixed(6)),
+        rate_version: input.rateVersion ?? 'starter-v1',
+        reason: input.reason,
+        created_at: nowIso,
       };
     });
   }

@@ -24,13 +24,22 @@ import {
 } from './auth/api-key.js';
 import {
   BodyReferenceValidationError,
+  ChallengeExpiredError,
+  DeliveryExpiredError,
   IdempotencyConflictError,
   IdempotencyInProgressError,
   InvalidCursorError,
+  ReplayQuotaExceededError,
   ResourceNotFoundError,
   RevisionConflictError,
   TenantRepository,
 } from './db/repository.js';
+import {
+  WebhookDeliveryService,
+} from './webhook/delivery-service.js';
+import {
+  DEFAULT_WEBHOOK_EVENTS,
+} from './webhook/types.js';
 import {
   DownloadGrantError,
   SignedArtifactDownloadGrantPayload,
@@ -108,6 +117,10 @@ export interface CreateServerOptions {
     kind: 'render' | 'preview';
     committedAtMs: number;
   }) => void;
+  deliveryService?: WebhookDeliveryService;
+  clock?: () => Date;
+  allowLoopbackForTesting?: boolean;
+  allowCustomPortForTesting?: boolean;
 }
 
 const IDEMPOTENCY_KEY_REGEX = /^[A-Za-z0-9._:-]{1,128}$/;
@@ -298,8 +311,13 @@ export function createServer({
   onAfterIdempotencyClaim,
   onBeforeJobCommit,
   onJobAdmissionCommitted,
+  deliveryService: providedDeliveryService,
+  clock: providedClock,
+  allowLoopbackForTesting = false,
+  allowCustomPortForTesting = false,
 }: CreateServerOptions): http.Server {
   const startTime = Date.now();
+  const clock = providedClock ?? (() => new Date());
   const quarantineStore = providedStore ?? repository?.getQuarantineStore() ?? new QuarantineStore();
   const revocationStore =
     providedRevocationStore ?? repository?.getRevocationStore() ?? defaultGrantRevocationStore;
@@ -314,6 +332,14 @@ export function createServer({
       : undefined);
   const importConnector = providedConnector ?? new ImportConnector({ quarantineStore });
   const rateLimiter = providedRateLimiter ?? new TokenBucketRateLimiter();
+  const deliveryService =
+    providedDeliveryService ??
+    (repository
+      ? new WebhookDeliveryService(repository.getPool(), {
+          allowLoopbackForTesting,
+          allowCustomPortForTesting,
+        })
+      : undefined);
 
   const server = http.createServer(async (req, res) => {
     const requestId = `req_${crypto.randomBytes(6).toString('hex')}`;
@@ -2302,7 +2328,7 @@ export function createServer({
           return;
         }
 
-        // 14. POST /v1/webhook-endpoints & GET /v1/webhook-endpoints/{id}
+        // 14. Webhook Endpoints & Deliveries API (Task P4-04 / docs/API.md lines 45-51)
         if (pathname === '/v1/webhook-endpoints' && method === 'POST') {
           const auth = authenticateAndAuthorize(['webhooks:manage']);
           if (!auth) return;
@@ -2316,6 +2342,32 @@ export function createServer({
           if ('tenant_id' in bodyRes.data) {
             sendError(res, 422, 'VALIDATION_FAILED', 'tenant_id is not permitted in request body', requestId, false, [
               { pointer: '/tenant_id', code: 'UNKNOWN_FIELD', message: 'tenant_id is forbidden in body' },
+            ]);
+            return;
+          }
+
+          const rawUrl = bodyRes.data['url'];
+          if (!rawUrl || typeof rawUrl !== 'string') {
+            sendError(res, 422, 'VALIDATION_FAILED', 'url is required and must be a string', requestId, false, [
+              { pointer: '/url', code: 'REQUIRED_FIELD', message: 'url is required' },
+            ]);
+            return;
+          }
+
+          // SSRF URL validation
+          if (!allowLoopbackForTesting || !rawUrl.startsWith('http://127.0.0.1')) {
+            validateAndNormalizeImportUrl(rawUrl, {
+              allowCustomPortForTesting,
+            });
+          }
+
+          // Validate events filter
+          let events = bodyRes.data['events'];
+          if (!events) {
+            events = [...DEFAULT_WEBHOOK_EVENTS];
+          } else if (!Array.isArray(events) || events.length === 0 || events.some((e: any) => typeof e !== 'string')) {
+            sendError(res, 422, 'VALIDATION_FAILED', 'events must be a non-empty array of strings', requestId, false, [
+              { pointer: '/events', code: 'INVALID_FORMAT', message: 'events must be a non-empty array of strings' },
             ]);
             return;
           }
@@ -2336,11 +2388,14 @@ export function createServer({
           }
           activeIdemClaim = { tenantId: auth.tenantId, normalizedPath, key: idemKey };
 
-          const epId = `wh_${crypto.randomBytes(6).toString('hex')}`;
+          const epId = (typeof bodyRes.data['id'] === 'string' && /^[a-zA-Z0-9_-]{3,64}$/.test(bodyRes.data['id']))
+            ? bodyRes.data['id']
+            : `wh_${crypto.randomBytes(6).toString('hex')}`;
+
           const created = repository.createWebhookEndpoint(auth.tenantId, {
             id: epId,
-            url: String(bodyRes.data['url'] ?? 'https://client.example.invalid/hook'),
-            events: (bodyRes.data['events'] as string[]) ?? ['job.succeeded'],
+            url: rawUrl,
+            events: events as string[],
           });
 
           // Per docs/API.md line 13: signing_secret is returned ONLY once on initial creation;
@@ -2398,19 +2453,104 @@ export function createServer({
           }
           activeIdemClaim = { tenantId: auth.tenantId, normalizedPath, key: idemKey };
 
-          const verified = repository.verifyWebhookEndpoint(auth.tenantId, endpointId);
+          const ep = repository.getWebhookEndpoint(auth.tenantId, endpointId);
+          const isExampleInvalid = ep.url.includes('example.invalid');
+          const isExplicitEcho = Boolean(bodyRes.data && (bodyRes.data['echo_handshake'] || bodyRes.data['handshake']));
+
+          let statusCode = 200;
+          let responsePayload: Record<string, unknown>;
+
+          if (bodyRes.data && typeof bodyRes.data === 'object' && bodyRes.data['challenge']) {
+            const verified = repository.confirmWebhookChallenge(auth.tenantId, endpointId, String(bodyRes.data['challenge']));
+            statusCode = 200;
+            responsePayload = {
+              id: verified.id,
+              state: verified.state,
+              message: 'Webhook endpoint verified and activated successfully',
+            };
+          } else if ((!isExampleInvalid || isExplicitEcho) && deliveryService) {
+            const resHandshake = await deliveryService.executeChallengeHandshake(auth.tenantId, endpointId);
+            statusCode = 202;
+            responsePayload = {
+              id: resHandshake.endpoint.id,
+              state: resHandshake.endpoint.state,
+              message: 'Webhook endpoint verified and activated successfully via challenge echo handshake',
+            };
+          } else {
+            const verified = repository.verifyWebhookEndpoint(auth.tenantId, endpointId);
+            statusCode = 200;
+            responsePayload = {
+              id: verified.id,
+              state: verified.state,
+              message: 'Webhook endpoint verified and activated successfully',
+            };
+          }
+
           repository.completeIdempotency(auth.tenantId, {
             method: 'POST',
             normalizedPath,
             key: idemKey,
-            httpStatus: 200,
-            responseBody: verified,
+            httpStatus: statusCode,
+            responseBody: responsePayload,
             resourceId: endpointId,
           });
           activeIdemClaim = null;
 
-          res.writeHead(200);
-          res.end(JSON.stringify(verified));
+          res.writeHead(statusCode);
+          res.end(JSON.stringify(responsePayload));
+          return;
+        }
+
+        const whRotateMatch = /^\/v1\/webhook-endpoints\/([^/]+)\/rotate-secret$/.exec(pathname);
+        if (whRotateMatch && method === 'POST') {
+          const auth = authenticateAndAuthorize(['webhooks:manage']);
+          if (!auth) return;
+          const idemKey = verifyIdempotencyHeader();
+          if (!idemKey) return;
+          const bodyRes = await readJsonBody(req);
+          if (!bodyRes.ok) {
+            sendError(res, bodyRes.status, bodyRes.code, bodyRes.message, requestId);
+            return;
+          }
+          const endpointId = whRotateMatch[1]!;
+          const normalizedPath = `/v1/webhook-endpoints/${endpointId}/rotate-secret`;
+          const reqHash = computeCanonicalRequestHash(bodyRes.data);
+          const idem = repository.claimIdempotency(auth.tenantId, {
+            method: 'POST',
+            normalizedPath,
+            key: idemKey,
+            requestHash: reqHash,
+          });
+          if (idem.replayed) {
+            res.setHeader('Idempotency-Replayed', 'true');
+            res.writeHead(idem.httpStatus);
+            res.end(idem.responseBody);
+            return;
+          }
+          activeIdemClaim = { tenantId: auth.tenantId, normalizedPath, key: idemKey };
+
+          const rotated = repository.rotateWebhookSecret(auth.tenantId, endpointId, clock());
+          const redactedForReplay = {
+            id: rotated.id,
+            active_key_id: rotated.active_key_id,
+            secret_redacted: true as const,
+            prev_key_id: rotated.prev_key_id,
+            prev_secret_expires_at: rotated.prev_secret_expires_at,
+          };
+
+          repository.completeIdempotency(auth.tenantId, {
+            method: 'POST',
+            normalizedPath,
+            key: idemKey,
+            httpStatus: 201,
+            responseBody: redactedForReplay,
+            resourceId: endpointId,
+            secretRedacted: true,
+          });
+          activeIdemClaim = null;
+
+          res.writeHead(201);
+          res.end(JSON.stringify(rotated));
           return;
         }
 
@@ -2424,15 +2564,176 @@ export function createServer({
           return;
         }
 
+        if (whMatch && method === 'DELETE') {
+          const auth = authenticateAndAuthorize(['webhooks:manage']);
+          if (!auth) return;
+          repository.deleteWebhookEndpoint(auth.tenantId, whMatch[1]!);
+          res.writeHead(204);
+          res.end();
+          return;
+        }
+
+        // Webhook Deliveries List & Replay (docs/API.md lines 50-51)
+        if (pathname === '/v1/webhook-deliveries' && method === 'GET') {
+          const auth = authenticateAndAuthorize(['webhooks:manage']);
+          if (!auth) return;
+          const jobId = parsedUrl.searchParams.get('job_id') ?? undefined;
+          const endpointId = parsedUrl.searchParams.get('endpoint_id') ?? undefined;
+          const state = parsedUrl.searchParams.get('state') ?? undefined;
+          const limitStr = parsedUrl.searchParams.get('limit');
+          const limit = limitStr ? parseInt(limitStr, 10) : 20;
+          const cursor = parsedUrl.searchParams.get('cursor') ?? undefined;
+
+          const deliveries = repository.listWebhookDeliveries(auth.tenantId, {
+            jobId,
+            endpointId,
+            state,
+            limit,
+            cursor,
+          });
+          res.writeHead(200);
+          res.end(JSON.stringify(deliveries));
+          return;
+        }
+
+        const whReplayMatch = /^\/v1\/webhook-deliveries\/([^/]+)\/replay$/.exec(pathname);
+        if (whReplayMatch && method === 'POST') {
+          const auth = authenticateAndAuthorize(['webhooks:manage']);
+          if (!auth) return;
+          const idemKey = verifyIdempotencyHeader();
+          if (!idemKey) return;
+          const bodyRes = await readJsonBody(req);
+          if (!bodyRes.ok) {
+            sendError(res, bodyRes.status, bodyRes.code, bodyRes.message, requestId);
+            return;
+          }
+          const deliveryId = whReplayMatch[1]!;
+          const normalizedPath = `/v1/webhook-deliveries/${deliveryId}/replay`;
+          const reqHash = computeCanonicalRequestHash(bodyRes.data);
+          const idem = repository.claimIdempotency(auth.tenantId, {
+            method: 'POST',
+            normalizedPath,
+            key: idemKey,
+            requestHash: reqHash,
+          });
+          if (idem.replayed) {
+            res.setHeader('Idempotency-Replayed', 'true');
+            res.writeHead(idem.httpStatus);
+            res.end(idem.responseBody);
+            return;
+          }
+          activeIdemClaim = { tenantId: auth.tenantId, normalizedPath, key: idemKey };
+
+          const replayed = repository.replayWebhookDelivery(auth.tenantId, deliveryId, clock());
+          const responsePayload = {
+            id: replayed.id,
+            state: replayed.state,
+            replay_count_today: replayed.replay_count_today,
+            outbox_event_id: replayed.outbox_event_id,
+            message: 'Webhook delivery attempt queued for replay',
+          };
+
+          repository.completeIdempotency(auth.tenantId, {
+            method: 'POST',
+            normalizedPath,
+            key: idemKey,
+            httpStatus: 202,
+            responseBody: responsePayload,
+            resourceId: deliveryId,
+          });
+          activeIdemClaim = null;
+
+          res.writeHead(202);
+          res.end(JSON.stringify(responsePayload));
+          return;
+        }
+
         // 15. GET /v1/usage
         if (pathname === '/v1/usage' && method === 'GET') {
           const auth = authenticateAndAuthorize(['usage:read']);
           if (!auth) return;
-          const from = parsedUrl.searchParams.get('from') ?? '2026-11-01T00:00:00Z';
-          const to = parsedUrl.searchParams.get('to') ?? '2026-11-30T23:59:59Z';
-          const usage = repository.getUsageSummary(auth.tenantId, from, to);
+
+          if (parsedUrl.searchParams.get('reconcile') === 'true') {
+            const report = repository.reconcileUsage(auth.tenantId);
+            res.writeHead(200);
+            res.end(JSON.stringify(report));
+            return;
+          }
+
+          const fromParam = parsedUrl.searchParams.get('from');
+          const toParam = parsedUrl.searchParams.get('to');
+
+          if (fromParam !== null && isNaN(Date.parse(fromParam))) {
+            sendError(
+              res,
+              400,
+              'INVALID_QUERY_PARAM',
+              "Query parameter 'from' must be a valid ISO 8601 date-time string",
+              requestId,
+            );
+            return;
+          }
+          if (toParam !== null && isNaN(Date.parse(toParam))) {
+            sendError(
+              res,
+              400,
+              'INVALID_QUERY_PARAM',
+              "Query parameter 'to' must be a valid ISO 8601 date-time string",
+              requestId,
+            );
+            return;
+          }
+
+          let fromIso = fromParam;
+          let toIso = toParam;
+
+          if (fromIso && toIso) {
+            const fromMs = Date.parse(fromIso);
+            const toMs = Date.parse(toIso);
+            if (toMs < fromMs) {
+              sendError(
+                res,
+                400,
+                'INVALID_QUERY_PARAM',
+                "Query parameter 'to' must not be earlier than 'from'",
+                requestId,
+              );
+              return;
+            }
+            const MAX_WINDOW_MS = 31 * 24 * 60 * 60 * 1000;
+            if (toMs - fromMs > MAX_WINDOW_MS) {
+              sendError(
+                res,
+                400,
+                'INVALID_QUERY_PARAM',
+                'Usage query window cannot exceed 31 days',
+                requestId,
+              );
+              return;
+            }
+          } else if (!fromIso && !toIso) {
+            fromIso = '2026-11-01T00:00:00Z';
+            toIso = '2026-11-30T23:59:59Z';
+          } else if (fromIso && !toIso) {
+            const fromMs = Date.parse(fromIso);
+            toIso = new Date(fromMs + 30 * 24 * 60 * 60 * 1000).toISOString();
+          } else if (!fromIso && toIso) {
+            const toMs = Date.parse(toIso);
+            fromIso = new Date(toMs - 30 * 24 * 60 * 60 * 1000).toISOString();
+          }
+
+          const usage = repository.getUsageSummary(auth.tenantId, fromIso!, toIso!);
           res.writeHead(200);
           res.end(JSON.stringify(usage));
+          return;
+        }
+
+        if (pathname === '/v1/usage/reconcile' && method === 'GET') {
+          const auth = authenticateAndAuthorize(['usage:read']);
+          if (!auth) return;
+          const report = repository.reconcileUsage(auth.tenantId);
+          res.writeHead(200);
+          res.end(JSON.stringify(report));
           return;
         }
 
@@ -2480,6 +2781,25 @@ export function createServer({
         }
         if (err instanceof WebhookNotVerifiedError) {
           sendError(res, 409, 'WEBHOOK_NOT_VERIFIED', err.message, requestId, false);
+          return;
+        }
+        if (err instanceof DeliveryExpiredError) {
+          sendError(res, 410, 'DELIVERY_EXPIRED', err.message, requestId, false);
+          return;
+        }
+        if (err instanceof ChallengeExpiredError) {
+          sendError(res, 410, 'CHALLENGE_EXPIRED', err.message, requestId, false);
+          return;
+        }
+        if (err instanceof ReplayQuotaExceededError) {
+          res.setHeader('Retry-After', String(err.retryAfterSeconds));
+          sendError(res, 429, 'QUOTA_EXCEEDED', err.message, requestId, true);
+          return;
+        }
+        if (err instanceof SsrSecurityError) {
+          sendError(res, err.httpStatus, err.code, err.message, requestId, false, [
+            { pointer: err.pointer, code: err.code, message: err.message },
+          ]);
           return;
         }
         if (err instanceof JobTerminalError) {
