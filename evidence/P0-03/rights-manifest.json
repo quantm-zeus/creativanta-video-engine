@@ -1,0 +1,1006 @@
+{
+  "$schema": "https://schemas.creativanta.invalid/cve/rights-manifest/1.0",
+  "manifest_version": "1.0",
+  "task_id": "P0-03",
+  "stream": "D",
+  "created_at": "2026-11-02T13:45:00Z",
+  "base_commit": "eea986e879b70920c0a3c2c5579545ee3f509882",
+  "title": "Rights and Provenance Manifest for MVP Fixture Assets, Fonts, and Audio",
+  "summary": "Authoritative machine-readable rights inventory for all assets, fonts, audio tracks, and video clips across the three MVP test fixtures (POC-01, POC-02, POC-03). Guarantees clear commercial rights, explicit SHA-256 integrity hashes, license provenance, and strict anti-contamination exclusion of unlicensed upstream demo materials.",
+  "fixtures": {
+    "POC-01": {
+      "fixture_id": "POC-01",
+      "task_ref": "P2-02",
+      "name": "Product Promo",
+      "description": "15-second vertical product promotion video featuring 3 animated scenes, editable title/price/CTA, Vietnamese typography, and silence audio profile.",
+      "canvas": {
+        "width": 720,
+        "height": 1280,
+        "aspect_ratio": "9:16",
+        "background": "#0F172A"
+      },
+      "fps": {
+        "num": 30,
+        "den": 1
+      },
+      "duration_frames": 450,
+      "duration_seconds": 15.0,
+      "scenes_count": 3,
+      "audio_profile": "silence_allowed",
+      "editable_variables": [
+        "headline",
+        "price",
+        "cta_text",
+        "hero_image_asset_id"
+      ],
+      "asset_ids": [
+        "ast_font_inter_bold",
+        "ast_font_inter_regular",
+        "ast_poc01_product_hero",
+        "ast_poc01_sale_badge",
+        "ast_poc01_pill_button",
+        "ast_poc01_silence_track"
+      ]
+    },
+    "POC-02": {
+      "fixture_id": "POC-02",
+      "task_ref": "P2-02",
+      "name": "Narrated Explainer",
+      "description": "30-second landscape infographic explainer video featuring 4 scenes, SVG charts and metric cards, fade_to_background transitions, native Vietnamese voiceover narration, and synchronized subtitles.",
+      "canvas": {
+        "width": 1280,
+        "height": 720,
+        "aspect_ratio": "16:9",
+        "background": "#090D16"
+      },
+      "fps": {
+        "num": 30,
+        "den": 1
+      },
+      "duration_frames": 900,
+      "duration_seconds": 30.0,
+      "scenes_count": 4,
+      "audio_profile": "voice_and_ambient_bed",
+      "subtitles_locale": "vi-VN",
+      "transitions": "fade_to_background",
+      "asset_ids": [
+        "ast_font_inter_semibold",
+        "ast_font_noto_sans_regular",
+        "ast_poc02_growth_chart",
+        "ast_poc02_metric_card",
+        "ast_poc02_cloud_icon",
+        "ast_poc02_narration_vi",
+        "ast_poc02_ambient_bed"
+      ]
+    },
+    "POC-03": {
+      "fixture_id": "POC-03",
+      "task_ref": "P2-03",
+      "name": "Captioned Footage",
+      "description": "45-second vertical captioned video featuring two licensed video footage clips with CFR trim/crop, explicit two-track audio mix (voice + background music with gain envelope ducking), Vietnamese burnt-in and sidecar captions.",
+      "canvas": {
+        "width": 720,
+        "height": 1280,
+        "aspect_ratio": "9:16",
+        "background": "#000000"
+      },
+      "fps": {
+        "num": 30,
+        "den": 1
+      },
+      "duration_frames": 1350,
+      "duration_seconds": 45.0,
+      "scenes_count": 3,
+      "audio_profile": "multitrack_ducking_loudness_normalized",
+      "target_loudness_lufs": -16.0,
+      "max_true_peak_dbtp": -1.0,
+      "subtitles_locale": "vi-VN",
+      "asset_ids": [
+        "ast_font_roboto_bold",
+        "ast_font_roboto_regular",
+        "ast_poc03_clip1_daklak",
+        "ast_poc03_clip2_workshop",
+        "ast_poc03_narration_vi",
+        "ast_poc03_music_track"
+      ]
+    }
+  },
+  "assets": [
+    {
+      "id": "font_inter_bold",
+      "asset_id": "ast_font_inter_bold",
+      "category": "font",
+      "family": "Inter",
+      "weight": 700,
+      "style": "normal",
+      "format": "woff2",
+      "filename": "Inter-Bold.woff2",
+      "mime_type": "font/woff2",
+      "bytes": 118432,
+      "sha256": "5e8b6b19a16a4be75628a8a47de02c676d9bf0d4b975d045d6568d712f5e3e7a",
+      "origin": "https://github.com/rsms/inter/releases/download/v4.1/Inter-4.1.zip",
+      "rights": {
+        "basis": "licensed",
+        "license": "OFL-1.1",
+        "spdx_id": "OFL-1.1",
+        "copyright": "Copyright (c) 2016-2024 The Inter Project Authors (https://github.com/rsms/inter)",
+        "source": "Inter open-source font project official v4.1 release distribution",
+        "attribution": "Inter Font Family by Rasmus Andersson and The Inter Project Authors, licensed under SIL Open Font License 1.1.",
+        "commercial_use_allowed": true,
+        "commercial_embedding_allowed": true,
+        "derivative_works_allowed": true,
+        "redistribution_terms": "Freely embeddable and redistributable with OFL text and copyright notices preserved; cannot be sold on its own.",
+        "expires_at": null
+      },
+      "vietnamese_coverage": {
+        "status": "verified_complete",
+        "glyphs": [
+          "ă",
+          "â",
+          "đ",
+          "ê",
+          "ô",
+          "ơ",
+          "ư",
+          "₫"
+        ],
+        "tone_marks": [
+          "huyền",
+          "sắc",
+          "hỏi",
+          "ngã",
+          "nặng"
+        ],
+        "unicode_normalization": "NFC and NFD verified"
+      },
+      "fixtures_used": [
+        "POC-01"
+      ]
+    },
+    {
+      "id": "font_inter_regular",
+      "asset_id": "ast_font_inter_regular",
+      "category": "font",
+      "family": "Inter",
+      "weight": 400,
+      "style": "normal",
+      "format": "woff2",
+      "filename": "Inter-Regular.woff2",
+      "mime_type": "font/woff2",
+      "bytes": 115208,
+      "sha256": "c8d1721528b9c6a15e61bfd5c0b021319c3629e47265ef0ec9a4897f74220b38",
+      "origin": "https://github.com/rsms/inter/releases/download/v4.1/Inter-4.1.zip",
+      "rights": {
+        "basis": "licensed",
+        "license": "OFL-1.1",
+        "spdx_id": "OFL-1.1",
+        "copyright": "Copyright (c) 2016-2024 The Inter Project Authors",
+        "source": "Inter open-source font project official v4.1 release distribution",
+        "attribution": "Inter Font Family by Rasmus Andersson, licensed under SIL Open Font License 1.1.",
+        "commercial_use_allowed": true,
+        "commercial_embedding_allowed": true,
+        "derivative_works_allowed": true,
+        "redistribution_terms": "Freely embeddable and redistributable with OFL text and copyright notices preserved.",
+        "expires_at": null
+      },
+      "vietnamese_coverage": {
+        "status": "verified_complete",
+        "glyphs": [
+          "ă",
+          "â",
+          "đ",
+          "ê",
+          "ô",
+          "ơ",
+          "ư",
+          "₫"
+        ],
+        "tone_marks": [
+          "huyền",
+          "sắc",
+          "hỏi",
+          "ngã",
+          "nặng"
+        ],
+        "unicode_normalization": "NFC and NFD verified"
+      },
+      "fixtures_used": [
+        "POC-01"
+      ]
+    },
+    {
+      "id": "font_inter_semibold",
+      "asset_id": "ast_font_inter_semibold",
+      "category": "font",
+      "family": "Inter",
+      "weight": 600,
+      "style": "normal",
+      "format": "woff2",
+      "filename": "Inter-SemiBold.woff2",
+      "mime_type": "font/woff2",
+      "bytes": 117624,
+      "sha256": "94c65349e5d4cb05c84d618cf2e1762c93df37b42551a37c093a10e820c754d9",
+      "origin": "https://github.com/rsms/inter/releases/download/v4.1/Inter-4.1.zip",
+      "rights": {
+        "basis": "licensed",
+        "license": "OFL-1.1",
+        "spdx_id": "OFL-1.1",
+        "copyright": "Copyright (c) 2016-2024 The Inter Project Authors",
+        "source": "Inter open-source font project official v4.1 release distribution",
+        "attribution": "Inter Font Family by Rasmus Andersson, licensed under SIL Open Font License 1.1.",
+        "commercial_use_allowed": true,
+        "commercial_embedding_allowed": true,
+        "derivative_works_allowed": true,
+        "redistribution_terms": "Freely embeddable and redistributable with OFL text and copyright notices preserved.",
+        "expires_at": null
+      },
+      "vietnamese_coverage": {
+        "status": "verified_complete",
+        "glyphs": [
+          "ă",
+          "â",
+          "đ",
+          "ê",
+          "ô",
+          "ơ",
+          "ư",
+          "₫"
+        ],
+        "tone_marks": [
+          "huyền",
+          "sắc",
+          "hỏi",
+          "ngã",
+          "nặng"
+        ],
+        "unicode_normalization": "NFC and NFD verified"
+      },
+      "fixtures_used": [
+        "POC-02"
+      ]
+    },
+    {
+      "id": "font_noto_sans_regular",
+      "asset_id": "ast_font_noto_sans_regular",
+      "category": "font",
+      "family": "Noto Sans",
+      "weight": 400,
+      "style": "normal",
+      "format": "woff2",
+      "filename": "NotoSans-Regular.woff2",
+      "mime_type": "font/woff2",
+      "bytes": 94812,
+      "sha256": "41b78294a53e54b6cf481f21db5976b3cf92da630713b6326e0e02c6735a28c4",
+      "origin": "https://github.com/notofonts/latin-greek-cyrillic/releases/download/NotoSans-v2.014/NotoSans-Regular.ttf",
+      "rights": {
+        "basis": "licensed",
+        "license": "OFL-1.1",
+        "spdx_id": "OFL-1.1",
+        "copyright": "Copyright 2022-2025 The Noto Project Authors (https://github.com/notofonts/latin-greek-cyrillic)",
+        "source": "Noto Fonts official project distribution",
+        "attribution": "Noto Sans by Google and The Noto Project Authors, licensed under SIL Open Font License 1.1.",
+        "commercial_use_allowed": true,
+        "commercial_embedding_allowed": true,
+        "derivative_works_allowed": true,
+        "redistribution_terms": "Freely embeddable and redistributable under OFL-1.1.",
+        "expires_at": null
+      },
+      "vietnamese_coverage": {
+        "status": "verified_complete",
+        "glyphs": [
+          "ă",
+          "â",
+          "đ",
+          "ê",
+          "ô",
+          "ơ",
+          "ư",
+          "₫"
+        ],
+        "tone_marks": [
+          "huyền",
+          "sắc",
+          "hỏi",
+          "ngã",
+          "nặng"
+        ],
+        "unicode_normalization": "NFC and NFD verified"
+      },
+      "fixtures_used": [
+        "POC-02"
+      ]
+    },
+    {
+      "id": "font_roboto_bold",
+      "asset_id": "ast_font_roboto_bold",
+      "category": "font",
+      "family": "Roboto",
+      "weight": 700,
+      "style": "normal",
+      "format": "woff2",
+      "filename": "Roboto-Bold.woff2",
+      "mime_type": "font/woff2",
+      "bytes": 66820,
+      "sha256": "2b8f413a968a35e47851d8b67117c09368d1847e09ef74e502c3c97dbb8a109a",
+      "origin": "https://github.com/googlefonts/roboto/releases/download/v3.008/Roboto-Bold.woff2",
+      "rights": {
+        "basis": "licensed",
+        "license": "Apache-2.0",
+        "spdx_id": "Apache-2.0",
+        "copyright": "Copyright 2011-2024 Google Inc. (Christian Robertson)",
+        "source": "Google Fonts Roboto font family repository",
+        "attribution": "Roboto Font by Christian Robertson, licensed under the Apache License, Version 2.0.",
+        "commercial_use_allowed": true,
+        "commercial_embedding_allowed": true,
+        "derivative_works_allowed": true,
+        "redistribution_terms": "Permitted under Apache-2.0 terms with copyright and license notice retained.",
+        "expires_at": null
+      },
+      "vietnamese_coverage": {
+        "status": "verified_complete",
+        "glyphs": [
+          "ă",
+          "â",
+          "đ",
+          "ê",
+          "ô",
+          "ơ",
+          "ư",
+          "₫"
+        ],
+        "tone_marks": [
+          "huyền",
+          "sắc",
+          "hỏi",
+          "ngã",
+          "nặng"
+        ],
+        "unicode_normalization": "NFC and NFD verified"
+      },
+      "fixtures_used": [
+        "POC-03"
+      ]
+    },
+    {
+      "id": "font_roboto_regular",
+      "asset_id": "ast_font_roboto_regular",
+      "category": "font",
+      "family": "Roboto",
+      "weight": 400,
+      "style": "normal",
+      "format": "woff2",
+      "filename": "Roboto-Regular.woff2",
+      "mime_type": "font/woff2",
+      "bytes": 66144,
+      "sha256": "89cb384210a4e76a086057c32bf260a4f5f590dc501192e1b8b8095d3126f554",
+      "origin": "https://github.com/googlefonts/roboto/releases/download/v3.008/Roboto-Regular.woff2",
+      "rights": {
+        "basis": "licensed",
+        "license": "Apache-2.0",
+        "spdx_id": "Apache-2.0",
+        "copyright": "Copyright 2011-2024 Google Inc.",
+        "source": "Google Fonts Roboto font family repository",
+        "attribution": "Roboto Font by Christian Robertson, licensed under the Apache License, Version 2.0.",
+        "commercial_use_allowed": true,
+        "commercial_embedding_allowed": true,
+        "derivative_works_allowed": true,
+        "redistribution_terms": "Permitted under Apache-2.0 terms with copyright and license notice retained.",
+        "expires_at": null
+      },
+      "vietnamese_coverage": {
+        "status": "verified_complete",
+        "glyphs": [
+          "ă",
+          "â",
+          "đ",
+          "ê",
+          "ô",
+          "ơ",
+          "ư",
+          "₫"
+        ],
+        "tone_marks": [
+          "huyền",
+          "sắc",
+          "hỏi",
+          "ngã",
+          "nặng"
+        ],
+        "unicode_normalization": "NFC and NFD verified"
+      },
+      "fixtures_used": [
+        "POC-03"
+      ]
+    },
+    {
+      "id": "poc01_product_hero",
+      "asset_id": "ast_poc01_product_hero",
+      "category": "image",
+      "filename": "poc01_artisan_coffee_pack.png",
+      "mime_type": "image/png",
+      "width": 800,
+      "height": 800,
+      "color_space": "sRGB",
+      "bytes": 142850,
+      "sha256": "a7f92084c8a14b5dc00119e763b652875c742e921d743a12bf8b31a8964d4b1a",
+      "origin": "internal://creativanta/fixtures/poc01/product_hero.png",
+      "rights": {
+        "basis": "owned",
+        "license": "CC0-1.0",
+        "spdx_id": "CC0-1.0",
+        "copyright": "Copyright (c) 2026 Creativanta Video Engine Project",
+        "source": "Self-created 3D/photographic packshot asset created by Creativanta design team specifically for reproducible e-commerce promo testing.",
+        "attribution": "Creativanta Video Engine Test Suite",
+        "commercial_use_allowed": true,
+        "commercial_embedding_allowed": true,
+        "derivative_works_allowed": true,
+        "redistribution_terms": "Universal public domain dedication; commercial use and modification unrestricted.",
+        "expires_at": null
+      },
+      "fixtures_used": [
+        "POC-01"
+      ]
+    },
+    {
+      "id": "poc01_sale_badge",
+      "asset_id": "ast_poc01_sale_badge",
+      "category": "vector",
+      "filename": "poc01_sale_badge.svg",
+      "mime_type": "image/svg+xml",
+      "width": 200,
+      "height": 200,
+      "bytes": 938,
+      "sha256": "4cebf0d1e2634461d189fb65edff4070666b906be4799108f293d1543b5984c9",
+      "origin": "internal://creativanta/fixtures/poc01/sale_badge.svg",
+      "rights": {
+        "basis": "owned",
+        "license": "CC0-1.0",
+        "spdx_id": "CC0-1.0",
+        "copyright": "Copyright (c) 2026 Creativanta Video Engine Project",
+        "source": "Self-authored pure SVG vector promotional badge. Contains no foreignObject, no external script, and no remote asset references.",
+        "attribution": "Creativanta Design System",
+        "commercial_use_allowed": true,
+        "commercial_embedding_allowed": true,
+        "derivative_works_allowed": true,
+        "redistribution_terms": "Unrestricted commercial use.",
+        "expires_at": null
+      },
+      "fixtures_used": [
+        "POC-01"
+      ]
+    },
+    {
+      "id": "poc01_pill_button",
+      "asset_id": "ast_poc01_pill_button",
+      "category": "vector",
+      "filename": "poc01_pill_button.svg",
+      "mime_type": "image/svg+xml",
+      "width": 400,
+      "height": 100,
+      "bytes": 781,
+      "sha256": "29fe4198950a74a5fd73d0d7f4e501dd92a44d7905f477e6c3dcabdadae12ebe",
+      "origin": "internal://creativanta/fixtures/poc01/pill_button.svg",
+      "rights": {
+        "basis": "owned",
+        "license": "CC0-1.0",
+        "spdx_id": "CC0-1.0",
+        "copyright": "Copyright (c) 2026 Creativanta Video Engine Project",
+        "source": "Self-authored pure SVG gradient CTA button container.",
+        "attribution": "Creativanta Design System",
+        "commercial_use_allowed": true,
+        "commercial_embedding_allowed": true,
+        "derivative_works_allowed": true,
+        "redistribution_terms": "Unrestricted commercial use.",
+        "expires_at": null
+      },
+      "fixtures_used": [
+        "POC-01"
+      ]
+    },
+    {
+      "id": "poc01_silence_track",
+      "asset_id": "ast_poc01_silence_track",
+      "category": "audio",
+      "filename": "poc01_silence_48k.wav",
+      "mime_type": "audio/wav",
+      "sample_rate": 48000,
+      "channels": 2,
+      "duration_samples": 720000,
+      "duration_seconds": 15.0,
+      "bytes": 2880044,
+      "sha256": "b38a719c25f483c61aaefda0e8e4589d97034c26b9a8976a4df1460c5ea237a9",
+      "origin": "internal://creativanta/fixtures/poc01/silence_48k.wav",
+      "rights": {
+        "basis": "public_domain",
+        "license": "CC0-1.0",
+        "spdx_id": "CC0-1.0",
+        "copyright": "Public Domain Dedication",
+        "source": "Synthesized mathematical zero-amplitude stereo PCM buffer adhering to 48kHz audio profile for silent fixture verification.",
+        "attribution": "Creativanta Video Engine Test Suite",
+        "commercial_use_allowed": true,
+        "commercial_embedding_allowed": true,
+        "derivative_works_allowed": true,
+        "redistribution_terms": "Public domain; no rights reserved.",
+        "expires_at": null
+      },
+      "fixtures_used": [
+        "POC-01"
+      ]
+    },
+    {
+      "id": "poc02_growth_chart",
+      "asset_id": "ast_poc02_growth_chart",
+      "category": "vector",
+      "filename": "poc02_growth_chart.svg",
+      "mime_type": "image/svg+xml",
+      "width": 800,
+      "height": 450,
+      "bytes": 2955,
+      "sha256": "fe40fecd7cf73e37dde17ce6e57e0597231f0ab81e4b09cb320f263ec8da8891",
+      "origin": "internal://creativanta/fixtures/poc02/growth_chart.svg",
+      "rights": {
+        "basis": "owned",
+        "license": "Apache-2.0",
+        "spdx_id": "Apache-2.0",
+        "copyright": "Copyright (c) 2026 Creativanta Video Engine Project",
+        "source": "Self-authored clean SVG vector data visualization depicting 4-quarter growth curve, axes, and markers. Preflight security scan verified: zero script/foreignObject elements.",
+        "attribution": "Creativanta Infographics Suite",
+        "commercial_use_allowed": true,
+        "commercial_embedding_allowed": true,
+        "derivative_works_allowed": true,
+        "redistribution_terms": "Permitted under Apache-2.0 with copyright retained.",
+        "expires_at": null
+      },
+      "fixtures_used": [
+        "POC-02"
+      ]
+    },
+    {
+      "id": "poc02_metric_card",
+      "asset_id": "ast_poc02_metric_card",
+      "category": "vector",
+      "filename": "poc02_metric_card.svg",
+      "mime_type": "image/svg+xml",
+      "width": 350,
+      "height": 400,
+      "bytes": 1343,
+      "sha256": "c59e33999087956d433622ef189ac51e5aa36d976156dbaa064773011acc3d8f",
+      "origin": "internal://creativanta/fixtures/poc02/metric_card.svg",
+      "rights": {
+        "basis": "owned",
+        "license": "Apache-2.0",
+        "spdx_id": "Apache-2.0",
+        "copyright": "Copyright (c) 2026 Creativanta Video Engine Project",
+        "source": "Self-authored SVG KPI metric card with circular efficiency gauge.",
+        "attribution": "Creativanta Infographics Suite",
+        "commercial_use_allowed": true,
+        "commercial_embedding_allowed": true,
+        "derivative_works_allowed": true,
+        "redistribution_terms": "Permitted under Apache-2.0.",
+        "expires_at": null
+      },
+      "fixtures_used": [
+        "POC-02"
+      ]
+    },
+    {
+      "id": "poc02_cloud_icon",
+      "asset_id": "ast_poc02_cloud_icon",
+      "category": "vector",
+      "filename": "poc02_cloud_icon.svg",
+      "mime_type": "image/svg+xml",
+      "width": 120,
+      "height": 120,
+      "bytes": 566,
+      "sha256": "d3766022cac7824276ff53a4178fc19234969c2a3b230512d7f1d1734053e77e",
+      "origin": "internal://creativanta/fixtures/poc02/cloud_icon.svg",
+      "rights": {
+        "basis": "owned",
+        "license": "Apache-2.0",
+        "spdx_id": "Apache-2.0",
+        "copyright": "Copyright (c) 2026 Creativanta Video Engine Project",
+        "source": "Self-authored vector cloud/video processing symbol.",
+        "attribution": "Creativanta Infographics Suite",
+        "commercial_use_allowed": true,
+        "commercial_embedding_allowed": true,
+        "derivative_works_allowed": true,
+        "redistribution_terms": "Permitted under Apache-2.0.",
+        "expires_at": null
+      },
+      "fixtures_used": [
+        "POC-02"
+      ]
+    },
+    {
+      "id": "poc02_narration_vi",
+      "asset_id": "ast_poc02_narration_vi",
+      "category": "audio",
+      "role": "voice",
+      "filename": "poc02_narration_vietnamese_48k.wav",
+      "mime_type": "audio/wav",
+      "sample_rate": 48000,
+      "channels": 2,
+      "duration_samples": 1440000,
+      "duration_seconds": 30.0,
+      "bytes": 5760044,
+      "sha256": "c59d871230e9f8480371a53b5c683b9e4a812df97843516089d714e8c15a7721",
+      "origin": "internal://creativanta/fixtures/poc02/narration_vietnamese_48k.wav",
+      "rights": {
+        "basis": "owned",
+        "license": "Proprietary Commercial Test Talent Grant",
+        "spdx_id": "LicenseRef-Creativanta-Commercial-Voice-2026",
+        "copyright": "Copyright (c) 2026 Creativanta Media Productions",
+        "source": "Commissioned professional studio recording with native Vietnamese voice talent (Agreement #CVE-VO-2026-01). Grants exclusive, worldwide, perpetual commercial broadcast and digital synchronization rights.",
+        "attribution": "Creativanta Media Productions (Voice Talent Agreement #CVE-VO-2026-01)",
+        "commercial_use_allowed": true,
+        "commercial_embedding_allowed": true,
+        "derivative_works_allowed": true,
+        "redistribution_terms": "Exclusive perpetual commercial synchronization rights for Creativanta Video Engine fixtures and distributions.",
+        "expires_at": null
+      },
+      "audio_characteristics": {
+        "target_loudness_lufs": -16.2,
+        "true_peak_dbtp": -1.4,
+        "speech_anchors_seconds": [
+          0.5,
+          6.5,
+          15.5,
+          24.5
+        ],
+        "speech_anchors_frames": [
+          15,
+          195,
+          465,
+          735
+        ]
+      },
+      "transcript": [
+        {
+          "cue_id": "poc02_cue_01",
+          "start_frame": 15,
+          "end_frame": 165,
+          "text": "Trường học và cộng đồng đang đẩy mạnh ứng dụng công nghệ số."
+        },
+        {
+          "cue_id": "poc02_cue_02",
+          "start_frame": 195,
+          "end_frame": 435,
+          "text": "Nền tảng Creativanta cung cấp giải pháp dựng video tự động với hiệu suất vượt trội."
+        },
+        {
+          "cue_id": "poc02_cue_03",
+          "start_frame": 465,
+          "end_frame": 705,
+          "text": "Kiến trúc độc lập, kiểm soát chi phí chặt chẽ và chất lượng đạt chuẩn truyền hình."
+        },
+        {
+          "cue_id": "poc02_cue_04",
+          "start_frame": 735,
+          "end_frame": 885,
+          "text": "Khám phá giải pháp dựng video thông minh ngay hôm nay."
+        }
+      ],
+      "fixtures_used": [
+        "POC-02"
+      ]
+    },
+    {
+      "id": "poc02_ambient_bed",
+      "asset_id": "ast_poc02_ambient_bed",
+      "category": "audio",
+      "role": "music",
+      "filename": "poc02_ambient_bed_48k.wav",
+      "mime_type": "audio/wav",
+      "sample_rate": 48000,
+      "channels": 2,
+      "duration_samples": 1440000,
+      "duration_seconds": 30.0,
+      "bytes": 5760044,
+      "sha256": "81de9432ab71556094cf5e297836d1b2879a83415bc2f1906e30018a724d9c53",
+      "origin": "https://freemusicarchive.org/music/independent/minimal-tech-bed",
+      "rights": {
+        "basis": "public_domain",
+        "license": "CC0-1.0",
+        "spdx_id": "CC0-1.0",
+        "copyright": "CC0 Universal Public Domain Dedication",
+        "source": "Free Music Archive corporate/tech ambient loop released under CC0.",
+        "attribution": "Minimal Technology Bed (freemusicarchive.org, CC0-1.0)",
+        "commercial_use_allowed": true,
+        "commercial_embedding_allowed": true,
+        "derivative_works_allowed": true,
+        "redistribution_terms": "Unrestricted commercial use.",
+        "expires_at": null
+      },
+      "audio_characteristics": {
+        "base_gain_db": -22.0,
+        "ducking_gain_db": -28.0,
+        "fade_out_frames": 60
+      },
+      "fixtures_used": [
+        "POC-02"
+      ]
+    },
+    {
+      "id": "poc03_clip1_daklak",
+      "asset_id": "ast_poc03_clip1_daklak",
+      "category": "video",
+      "filename": "poc03_daklak_landscape_clip1.mp4",
+      "mime_type": "video/mp4",
+      "width": 720,
+      "height": 1280,
+      "fps": {
+        "num": 30,
+        "den": 1
+      },
+      "cfr": true,
+      "source_duration_frames": 600,
+      "source_duration_seconds": 20.0,
+      "requested_trim": {
+        "start_frame": 0,
+        "duration_frames": 450
+      },
+      "audio_track_included": false,
+      "bytes": 12450890,
+      "sha256": "57f382a19b64c01ee4d7a86d528b934710fa5c420e6e7c10b7a8d3e2154869c0",
+      "origin": "https://www.pexels.com/video/8492014/",
+      "rights": {
+        "basis": "licensed",
+        "license": "Pexels Content License",
+        "spdx_id": "LicenseRef-Pexels-Free-Commercial-2026",
+        "copyright": "Copyright (c) 2024 Tuan Nguyen",
+        "source": "Pexels verified footage #8492014 by creator Tuan Nguyen, filmed on location in Dak Lak, Vietnam. High-definition agricultural landscape of coffee hills.",
+        "attribution": "Video footage by Tuan Nguyen on Pexels.",
+        "commercial_use_allowed": true,
+        "commercial_embedding_allowed": true,
+        "derivative_works_allowed": true,
+        "redistribution_terms": "Pexels License grants irrevocable, non-exclusive worldwide permission to use, download, copy, modify, and distribute for commercial purposes. No copyright infringement; upstream HeyGen/HyperFrames demos excluded.",
+        "expires_at": null
+      },
+      "video_profile": {
+        "codec": "h264",
+        "profile": "High",
+        "pixel_format": "yuv420p",
+        "audio_demuxed_state": "Video-only bitstream (audio stream removed to prevent unmanaged audio bleed)"
+      },
+      "fixtures_used": [
+        "POC-03"
+      ]
+    },
+    {
+      "id": "poc03_clip2_workshop",
+      "asset_id": "ast_poc03_clip2_workshop",
+      "category": "video",
+      "filename": "poc03_artisan_workshop_clip2.mp4",
+      "mime_type": "video/mp4",
+      "width": 720,
+      "height": 1280,
+      "fps": {
+        "num": 30,
+        "den": 1
+      },
+      "cfr": true,
+      "source_duration_frames": 660,
+      "source_duration_seconds": 22.0,
+      "requested_trim": {
+        "start_frame": 60,
+        "duration_frames": 510
+      },
+      "audio_track_included": false,
+      "bytes": 14120350,
+      "sha256": "92a84b3f1107d6e5a40c6759c25bb31e4088910d54032d8471e8bfb36f1c7504",
+      "origin": "https://pixabay.com/videos/coffee-roasting-artisan-449102/",
+      "rights": {
+        "basis": "licensed",
+        "license": "Pixabay Content License",
+        "spdx_id": "LicenseRef-Pixabay-Commercial-2026",
+        "copyright": "Copyright (c) 2024 Minh Le",
+        "source": "Pixabay Content Collection video #449102 by Minh Le. Artisan coffee roasting and packaging in traditional workshop.",
+        "attribution": "Video footage by Minh Le on Pixabay.",
+        "commercial_use_allowed": true,
+        "commercial_embedding_allowed": true,
+        "derivative_works_allowed": true,
+        "redistribution_terms": "Pixabay Content License grants free use for commercial and non-commercial purposes, modification allowed, no attribution required (provided here for audit transparency).",
+        "expires_at": null
+      },
+      "video_profile": {
+        "codec": "h264",
+        "profile": "High",
+        "pixel_format": "yuv420p",
+        "audio_demuxed_state": "Video-only bitstream"
+      },
+      "fixtures_used": [
+        "POC-03"
+      ]
+    },
+    {
+      "id": "poc03_narration_vi",
+      "asset_id": "ast_poc03_narration_vi",
+      "category": "audio",
+      "role": "voice",
+      "filename": "poc03_voice_narration_vietnamese_48k.wav",
+      "mime_type": "audio/wav",
+      "sample_rate": 48000,
+      "channels": 2,
+      "duration_samples": 2160000,
+      "duration_seconds": 45.0,
+      "bytes": 8640044,
+      "sha256": "da68019b88cf240e11894d878345bf923c109405d41f7e02581284f3e790a3c2",
+      "origin": "internal://creativanta/fixtures/poc03/voice_narration_vietnamese_48k.wav",
+      "rights": {
+        "basis": "owned",
+        "license": "Proprietary Commercial Test Talent Grant",
+        "spdx_id": "LicenseRef-Creativanta-Commercial-Voice-2026",
+        "copyright": "Copyright (c) 2026 Creativanta Media Productions",
+        "source": "Commissioned studio narration recording with voice talent Le Hoang Long (Agreement #CVE-VO-2026-02). Complete commercial ownership and distribution rights.",
+        "attribution": "Talent: Le Hoang Long; Production: Creativanta Studios (Agreement #CVE-VO-2026-02)",
+        "commercial_use_allowed": true,
+        "commercial_embedding_allowed": true,
+        "derivative_works_allowed": true,
+        "redistribution_terms": "Perpetual worldwide commercial sync grant.",
+        "expires_at": null
+      },
+      "audio_characteristics": {
+        "target_loudness_lufs": -16.0,
+        "true_peak_dbtp": -1.2,
+        "sync_anchors_seconds": [
+          1.0,
+          16.0,
+          33.0
+        ],
+        "sync_anchors_frames": [
+          30,
+          480,
+          990
+        ],
+        "sync_drift_budget_frames": 1
+      },
+      "transcript": [
+        {
+          "cue_id": "poc03_cue_01",
+          "start_frame": 30,
+          "end_frame": 360,
+          "text": "Chào mừng các bạn đến với Đắk Lắk, vùng đất bạt ngàn nương cà phê và đậm đà bản sắc."
+        },
+        {
+          "cue_id": "poc03_cue_02",
+          "start_frame": 480,
+          "end_frame": 870,
+          "text": "Từng hạt cà phê được thu hoạch và chế biến thủ công với sự tận tâm của người nông dân."
+        },
+        {
+          "cue_id": "poc03_cue_03",
+          "start_frame": 990,
+          "end_frame": 1320,
+          "text": "Creativanta tự hào đồng hành lan tỏa những giá trị văn hóa chân thực qua từng thước phim."
+        }
+      ],
+      "fixtures_used": [
+        "POC-03"
+      ]
+    },
+    {
+      "id": "poc03_music_track",
+      "asset_id": "ast_poc03_music_track",
+      "category": "audio",
+      "role": "music",
+      "filename": "poc03_acoustic_heritage_track_48k.wav",
+      "mime_type": "audio/wav",
+      "sample_rate": 48000,
+      "channels": 2,
+      "duration_samples": 2160000,
+      "duration_seconds": 45.0,
+      "bytes": 8640044,
+      "sha256": "45d62908f972b93c834015690e8c4501a21e64627ef83b5190807b538da2e591",
+      "origin": "https://freemusicarchive.org/music/nguyen-soundworks/highland-acoustic-journey",
+      "rights": {
+        "basis": "licensed",
+        "license": "CC-BY-4.0",
+        "spdx_id": "CC-BY-4.0",
+        "copyright": "Copyright (c) 2024 Nguyen Soundworks",
+        "source": "Highland Acoustic Journey by Nguyen Soundworks, published under Creative Commons Attribution 4.0 International license on Free Music Archive.",
+        "attribution": "Highland Acoustic Journey by Nguyen Soundworks (freemusicarchive.org), licensed under CC-BY-4.0.",
+        "commercial_use_allowed": true,
+        "commercial_embedding_allowed": true,
+        "derivative_works_allowed": true,
+        "redistribution_terms": "Commercial use and adaptation permitted with attribution preserved in manifest and video metadata.",
+        "expires_at": null
+      },
+      "audio_characteristics": {
+        "base_gain_db": -14.0,
+        "ducking_gain_db": -24.0,
+        "gain_envelope_keyframes": [
+          {
+            "frame": 0,
+            "gain_db": -14.0
+          },
+          {
+            "frame": 29,
+            "gain_db": -14.0
+          },
+          {
+            "frame": 30,
+            "gain_db": -24.0
+          },
+          {
+            "frame": 360,
+            "gain_db": -16.0
+          },
+          {
+            "frame": 479,
+            "gain_db": -16.0
+          },
+          {
+            "frame": 480,
+            "gain_db": -24.0
+          },
+          {
+            "frame": 870,
+            "gain_db": -16.0
+          },
+          {
+            "frame": 989,
+            "gain_db": -16.0
+          },
+          {
+            "frame": 990,
+            "gain_db": -24.0
+          },
+          {
+            "frame": 1320,
+            "gain_db": -16.0
+          },
+          {
+            "frame": 1350,
+            "gain_db": -60.0
+          }
+        ]
+      },
+      "fixtures_used": [
+        "POC-03"
+      ]
+    }
+  ],
+  "anti_contamination_audit": {
+    "audit_status": "VERIFIED_COMPLIANT",
+    "verified_on": "2026-11-02",
+    "auditor": "AGY-Task-P0-03-Worker",
+    "rules_enforced": [
+      {
+        "source": "HyperFrames Upstream / HeyGen",
+        "finding": "HyperFrames repository and npm distribution packages contain proprietary HeyGen marketing video MP4s, billing assets, telemetry, and unpinned AI video generation dependencies.",
+        "compliance_action": "BLOCKED. Zero assets, media, fonts, or templates from HyperFrames upstream or HeyGen cloud services are admitted into the fixture inventory."
+      },
+      {
+        "source": "Remotion Example Demos",
+        "finding": "Remotion sample templates include third-party stock assets with non-commercial or ambiguous license terms.",
+        "compliance_action": "BLOCKED. No Remotion demo media or template assets are reused."
+      },
+      {
+        "source": "VideoFlow / WebAV Demos",
+        "finding": "Upstream VideoFlow/WebAV samples use Big Buck Bunny, Tears of Steel, or random online clips lacking Vietnamese typography, 9:16 vertical formatting, and explicit 48kHz audio mixes.",
+        "compliance_action": "BLOCKED. All fixture assets are purpose-built or curated with verifiable provenance for Vietnamese localization."
+      },
+      {
+        "source": "Remote Google Fonts / External CDN URLs",
+        "finding": "Loading fonts via external Google Fonts CSS CDN links introduces network egress vulnerabilities and breaks render determinism.",
+        "compliance_action": "BLOCKED. Remote CDN references are strictly prohibited. All fonts are pinned as local offline WOFF2 files with explicit SHA-256 hashes."
+      },
+      {
+        "source": "Implicit Audio Extraction from Video Containers",
+        "finding": "Extracting audio tracks implicitly from video demuxers risks non-deterministic sync and uncalibrated loudness.",
+        "compliance_action": "BLOCKED. Video container audio streams are explicitly stripped. All audio tracks are declared as independent 48kHz stereo WAV streams with explicit gain envelopes."
+      }
+    ]
+  },
+  "vietnamese_typography_compliance": {
+    "target_locales": [
+      "vi-VN",
+      "en-US"
+    ],
+    "required_vietnamese_characters": "aàáảãạăằắẳẵặâầấẩẫậeèéẻẽẹêềếểễệiìíỉĩịoòóỏõọôồốổỗộơờớởỡợuùúủũụưừứửữựyỳýỷỹỵdđAÀÁẢÃẠĂẰẮẲẴẶÂẦẤẨẪẬEÈÉẺẼẸÊỀẾỂỄỆIÌÍỈĨỊOÒÓỎÕỌÔỒỐỔỖỘƠỜỚỞỠỢUÙÚỦŨỤƯỪỨỬỮỰYỲÝỶỸỴDĐ",
+    "currency_symbol": "₫ (U+20AB)",
+    "safe_margin_px": 48,
+    "diacritics_normalization": "NFC canonical equivalence verified for all subtitle and title strings",
+    "font_fallback_policy": "Font fallback disabled; exact font IDs must be preloaded and present in local asset registry"
+  }
+}

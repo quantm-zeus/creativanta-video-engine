@@ -30,7 +30,7 @@ Trong giai đoạn bootstrap:
 | --- | --- | --- | --- | --- | --- |
 | P0 | P0-01 | Supervisor | review | DOC-001 | Bootstrap backlog snapshot, validate docs & links, script [validate_repo.py](../scripts/validate_repo.py) |
 | P0 | P0-02 | C+B | review | P0-01 | Audit HyperFrames, Chromium, FFmpeg, fonts, SBOM và licenses; [P0-02 report](../evidence/P0-02/report.md) |
-| P0 | P0-03 | D | planned | P0-01 | Rights manifest cho assets/fonts/audio của 3 fixtures |
+| P0 | P0-03 | D | review | P0-01 | Rights manifest cho assets/fonts/audio của 3 fixtures; [P0-03 report](../evidence/P0-03/report.md) |
 | P0 | P0-04 | A+C | review | P0-01 | Contract/threat-model review: starter limits, transitions, entities, errors, lease/cancel/idempotency; [P0-04 report](../evidence/P0-04/report.md) |
 | P0 | P0-05 | Supervisor | review | P0-04 | Khởi tạo SQLite WAL state ledger `.agy/state.sqlite`, worktree policy, evidence template, synthetic recovery drill & credential redaction; [P0-05 report](../evidence/P0-05/report.md) |
 | P1 | P1-01 | C | planned | P0-02, P0-04, P0-05 | TS workspace, toolchain pin, Compose, local environment |
