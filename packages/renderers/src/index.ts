@@ -18,3 +18,4 @@ export * from './mp4/mp4-types.js';
 export * from './mp4/mp4-muxer.js';
 export * from './mp4/mp4-decoder.js';
 export * from './pipeline/render-pipeline.js';
+export * from './benchmark/index.js';

@@ -139,7 +139,7 @@ export function calculateGoldenFrameIndices(manifest: CanonicalCompilerManifest)
 /**
  * Builds an H.264 slice NAL unit carrying frame metadata, timestamps, and pixel digests.
  */
-function createH264FrameNal(
+export function createH264FrameNal(
   frameIndex: number,
   isKeyframe: boolean,
   checksumHex: string,

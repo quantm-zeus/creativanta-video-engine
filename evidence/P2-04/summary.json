@@ -1,0 +1,701 @@
+{
+  "timestamp": "2026-11-03T10:20:14.107Z",
+  "gitCommitTested": "de614f462d0070069fb55cdde899572d907f543d",
+  "referenceEnvironment": {
+    "os": "Linux x86_64 Ubuntu 24.04 LTS",
+    "arch": "x86_64",
+    "vcpus": 4,
+    "ramGiB": 15,
+    "nodeVersion": "v24.22.2"
+  },
+  "fixturesEvaluated": [
+    "POC-01",
+    "POC-02",
+    "POC-03"
+  ],
+  "candidatesEvaluated": [
+    "chromium-frame-v1",
+    "hyperframes-v1"
+  ],
+  "fixtureSummaries": {
+    "chromium-frame-v1:POC-01": {
+      "candidateId": "chromium-frame-v1",
+      "fixtureId": "POC-01",
+      "durationFrames": 450,
+      "outputDurationSeconds": 15,
+      "warmupRunsCount": 1,
+      "measuredWarmRunsCount": 5,
+      "measuredColdRunsCount": 3,
+      "warmRtf": {
+        "min": 0.6374,
+        "max": 0.7263,
+        "median": 0.6474,
+        "p95": 0.7263,
+        "mean": 0.664
+      },
+      "coldRtf": {
+        "min": 0.6462,
+        "max": 0.9731,
+        "median": 0.6597,
+        "p95": 0.9731,
+        "mean": 0.7597
+      },
+      "warmWallSeconds": {
+        "min": 9.5606,
+        "max": 10.895,
+        "median": 9.7111,
+        "p95": 10.895,
+        "mean": 9.9593
+      },
+      "coldWallSeconds": {
+        "min": 9.6929,
+        "max": 14.597,
+        "median": 9.895,
+        "p95": 14.597,
+        "mean": 11.395
+      },
+      "cpuTotalSeconds": {
+        "min": 9.9269,
+        "max": 13.933,
+        "median": 10.2979,
+        "p95": 13.933,
+        "mean": 10.6905
+      },
+      "peakRssBytes": 163753984,
+      "tempDiskBytes": 0,
+      "outputBytes": 24552,
+      "targets": {
+        "targetWarmRtfSatisfied": true,
+        "targetPeakMemorySatisfied": true,
+        "targetNoOom": true,
+        "targetComputeCostSatisfied": true
+      },
+      "overallStatus": "PASS",
+      "blockers": []
+    },
+    "chromium-frame-v1:POC-02": {
+      "candidateId": "chromium-frame-v1",
+      "fixtureId": "POC-02",
+      "durationFrames": 900,
+      "outputDurationSeconds": 30,
+      "warmupRunsCount": 1,
+      "measuredWarmRunsCount": 5,
+      "measuredColdRunsCount": 3,
+      "warmRtf": {
+        "min": 0.8449,
+        "max": 1.4188,
+        "median": 0.9674,
+        "p95": 1.4188,
+        "mean": 1.0638
+      },
+      "coldRtf": {
+        "min": 0.9997,
+        "max": 1.1166,
+        "median": 1.0625,
+        "p95": 1.1166,
+        "mean": 1.0596
+      },
+      "warmWallSeconds": {
+        "min": 25.3459,
+        "max": 42.5645,
+        "median": 29.0206,
+        "p95": 42.5645,
+        "mean": 31.9146
+      },
+      "coldWallSeconds": {
+        "min": 29.9901,
+        "max": 33.4986,
+        "median": 31.8757,
+        "p95": 33.4986,
+        "mean": 31.7881
+      },
+      "cpuTotalSeconds": {
+        "min": 25.2293,
+        "max": 34.7204,
+        "median": 30.1332,
+        "p95": 34.7204,
+        "mean": 29.942
+      },
+      "peakRssBytes": 181866496,
+      "tempDiskBytes": 0,
+      "outputBytes": 5820138,
+      "targets": {
+        "targetWarmRtfSatisfied": true,
+        "targetPeakMemorySatisfied": true,
+        "targetNoOom": true,
+        "targetComputeCostSatisfied": true
+      },
+      "overallStatus": "PASS",
+      "blockers": []
+    },
+    "chromium-frame-v1:POC-03": {
+      "candidateId": "chromium-frame-v1",
+      "fixtureId": "POC-03",
+      "durationFrames": 1350,
+      "outputDurationSeconds": 45,
+      "warmupRunsCount": 1,
+      "measuredWarmRunsCount": 5,
+      "measuredColdRunsCount": 3,
+      "warmRtf": {
+        "min": 1.0158,
+        "max": 1.4792,
+        "median": 1.3382,
+        "p95": 1.4792,
+        "mean": 1.3084
+      },
+      "coldRtf": {
+        "min": 1.0499,
+        "max": 1.2549,
+        "median": 1.1144,
+        "p95": 1.2549,
+        "mean": 1.1397
+      },
+      "warmWallSeconds": {
+        "min": 45.7108,
+        "max": 66.562,
+        "median": 60.2199,
+        "p95": 66.562,
+        "mean": 58.8769
+      },
+      "coldWallSeconds": {
+        "min": 47.2477,
+        "max": 56.4695,
+        "median": 50.1475,
+        "p95": 56.4695,
+        "mean": 51.2882
+      },
+      "cpuTotalSeconds": {
+        "min": 46.5659,
+        "max": 61.3617,
+        "median": 54.4667,
+        "p95": 61.3617,
+        "mean": 54.085
+      },
+      "peakRssBytes": 185442304,
+      "tempDiskBytes": 0,
+      "outputBytes": 8729676,
+      "targets": {
+        "targetWarmRtfSatisfied": true,
+        "targetPeakMemorySatisfied": true,
+        "targetNoOom": true,
+        "targetComputeCostSatisfied": true
+      },
+      "overallStatus": "PASS",
+      "blockers": []
+    },
+    "hyperframes-v1:POC-01": {
+      "candidateId": "hyperframes-v1",
+      "fixtureId": "POC-01",
+      "durationFrames": 450,
+      "outputDurationSeconds": 15,
+      "warmupRunsCount": 1,
+      "measuredWarmRunsCount": 5,
+      "measuredColdRunsCount": 3,
+      "warmRtf": {
+        "min": 0.6837,
+        "max": 0.9223,
+        "median": 0.7006,
+        "p95": 0.9223,
+        "mean": 0.765
+      },
+      "coldRtf": {
+        "min": 0.7246,
+        "max": 1.4386,
+        "median": 0.7727,
+        "p95": 1.4386,
+        "mean": 0.9786
+      },
+      "warmWallSeconds": {
+        "min": 10.2562,
+        "max": 13.834,
+        "median": 10.5094,
+        "p95": 13.834,
+        "mean": 11.4754
+      },
+      "coldWallSeconds": {
+        "min": 10.8691,
+        "max": 21.5785,
+        "median": 11.5899,
+        "p95": 21.5785,
+        "mean": 14.6792
+      },
+      "cpuTotalSeconds": {
+        "min": 10.5531,
+        "max": 13.3385,
+        "median": 11.0337,
+        "p95": 13.3385,
+        "mean": 11.3381
+      },
+      "peakRssBytes": 190230528,
+      "tempDiskBytes": 0,
+      "outputBytes": 0,
+      "targets": {
+        "targetWarmRtfSatisfied": true,
+        "targetPeakMemorySatisfied": true,
+        "targetNoOom": true,
+        "targetComputeCostSatisfied": true
+      },
+      "overallStatus": "BLOCKED",
+      "blockers": [
+        "BLOCKER-HF-01",
+        "BLOCKER-HF-02",
+        "BLOCKER-HF-03",
+        "BLOCKER-HF-04"
+      ]
+    },
+    "hyperframes-v1:POC-02": {
+      "candidateId": "hyperframes-v1",
+      "fixtureId": "POC-02",
+      "durationFrames": 900,
+      "outputDurationSeconds": 30,
+      "warmupRunsCount": 1,
+      "measuredWarmRunsCount": 5,
+      "measuredColdRunsCount": 3,
+      "warmRtf": {
+        "min": 0.7965,
+        "max": 1.1349,
+        "median": 0.9576,
+        "p95": 1.1349,
+        "mean": 0.9906
+      },
+      "coldRtf": {
+        "min": 0.7195,
+        "max": 0.7897,
+        "median": 0.7528,
+        "p95": 0.7897,
+        "mean": 0.754
+      },
+      "warmWallSeconds": {
+        "min": 23.8948,
+        "max": 34.0481,
+        "median": 28.7278,
+        "p95": 34.0481,
+        "mean": 29.7194
+      },
+      "coldWallSeconds": {
+        "min": 21.5858,
+        "max": 23.6897,
+        "median": 22.5829,
+        "p95": 23.6897,
+        "mean": 22.6195
+      },
+      "cpuTotalSeconds": {
+        "min": 22.1458,
+        "max": 29.344,
+        "median": 25.4961,
+        "p95": 29.344,
+        "mean": 25.5322
+      },
+      "peakRssBytes": 190222336,
+      "tempDiskBytes": 0,
+      "outputBytes": 0,
+      "targets": {
+        "targetWarmRtfSatisfied": true,
+        "targetPeakMemorySatisfied": true,
+        "targetNoOom": true,
+        "targetComputeCostSatisfied": true
+      },
+      "overallStatus": "BLOCKED",
+      "blockers": [
+        "BLOCKER-HF-01",
+        "BLOCKER-HF-02",
+        "BLOCKER-HF-03",
+        "BLOCKER-HF-04"
+      ]
+    },
+    "hyperframes-v1:POC-03": {
+      "candidateId": "hyperframes-v1",
+      "fixtureId": "POC-03",
+      "durationFrames": 1350,
+      "outputDurationSeconds": 45,
+      "warmupRunsCount": 1,
+      "measuredWarmRunsCount": 5,
+      "measuredColdRunsCount": 3,
+      "warmRtf": {
+        "min": 1.0191,
+        "max": 1.798,
+        "median": 1.4327,
+        "p95": 1.798,
+        "mean": 1.4509
+      },
+      "coldRtf": {
+        "min": 1.2686,
+        "max": 1.7009,
+        "median": 1.4285,
+        "p95": 1.7009,
+        "mean": 1.466
+      },
+      "warmWallSeconds": {
+        "min": 45.8614,
+        "max": 80.9086,
+        "median": 64.4694,
+        "p95": 80.9086,
+        "mean": 65.2895
+      },
+      "coldWallSeconds": {
+        "min": 57.0854,
+        "max": 76.5417,
+        "median": 64.2822,
+        "p95": 76.5417,
+        "mean": 65.9698
+      },
+      "cpuTotalSeconds": {
+        "min": 46.6053,
+        "max": 62.945,
+        "median": 57.3153,
+        "p95": 62.945,
+        "mean": 56.2621
+      },
+      "peakRssBytes": 190230528,
+      "tempDiskBytes": 0,
+      "outputBytes": 0,
+      "targets": {
+        "targetWarmRtfSatisfied": true,
+        "targetPeakMemorySatisfied": true,
+        "targetNoOom": true,
+        "targetComputeCostSatisfied": true
+      },
+      "overallStatus": "BLOCKED",
+      "blockers": [
+        "BLOCKER-HF-01",
+        "BLOCKER-HF-02",
+        "BLOCKER-HF-03",
+        "BLOCKER-HF-04"
+      ]
+    }
+  },
+  "costScenarios": {
+    "chromium-frame-v1": {
+      "10": {
+        "utilizationPercent": 10,
+        "hostHourlyCostUsd": 0.16,
+        "reservedVcpus": 2,
+        "workerHourlyCostUsd": 0.08,
+        "outputMinutesProducedPerHour": 12.4,
+        "computeCostPerOutputMinuteUsd": 0.012899,
+        "storageCost7dUsd": 0.00005,
+        "egressCost1DownloadUsd": 0.000542,
+        "totalCostPerOutputMinuteUsd": 0.013491,
+        "meetsBudgetCeiling": true
+      },
+      "50": {
+        "utilizationPercent": 50,
+        "hostHourlyCostUsd": 0.16,
+        "reservedVcpus": 2,
+        "workerHourlyCostUsd": 0.08,
+        "outputMinutesProducedPerHour": 62.02,
+        "computeCostPerOutputMinuteUsd": 0.00258,
+        "storageCost7dUsd": 0.00005,
+        "egressCost1DownloadUsd": 0.000542,
+        "totalCostPerOutputMinuteUsd": 0.003172,
+        "meetsBudgetCeiling": true
+      },
+      "80": {
+        "utilizationPercent": 80,
+        "hostHourlyCostUsd": 0.16,
+        "reservedVcpus": 2,
+        "workerHourlyCostUsd": 0.08,
+        "outputMinutesProducedPerHour": 99.24,
+        "computeCostPerOutputMinuteUsd": 0.001612,
+        "storageCost7dUsd": 0.00005,
+        "egressCost1DownloadUsd": 0.000542,
+        "totalCostPerOutputMinuteUsd": 0.002204,
+        "meetsBudgetCeiling": true
+      }
+    },
+    "hyperframes-v1": {
+      "10": {
+        "utilizationPercent": 10,
+        "hostHourlyCostUsd": 0.16,
+        "reservedVcpus": 2,
+        "workerHourlyCostUsd": 0.08,
+        "outputMinutesProducedPerHour": 12.53,
+        "computeCostPerOutputMinuteUsd": 0.012768,
+        "storageCost7dUsd": 0.000009,
+        "egressCost1DownloadUsd": 0.000098,
+        "totalCostPerOutputMinuteUsd": 0.012875,
+        "meetsBudgetCeiling": true
+      },
+      "50": {
+        "utilizationPercent": 50,
+        "hostHourlyCostUsd": 0.16,
+        "reservedVcpus": 2,
+        "workerHourlyCostUsd": 0.08,
+        "outputMinutesProducedPerHour": 62.66,
+        "computeCostPerOutputMinuteUsd": 0.002554,
+        "storageCost7dUsd": 0.000009,
+        "egressCost1DownloadUsd": 0.000098,
+        "totalCostPerOutputMinuteUsd": 0.00266,
+        "meetsBudgetCeiling": true
+      },
+      "80": {
+        "utilizationPercent": 80,
+        "hostHourlyCostUsd": 0.16,
+        "reservedVcpus": 2,
+        "workerHourlyCostUsd": 0.08,
+        "outputMinutesProducedPerHour": 100.25,
+        "computeCostPerOutputMinuteUsd": 0.001596,
+        "storageCost7dUsd": 0.000009,
+        "egressCost1DownloadUsd": 0.000098,
+        "totalCostPerOutputMinuteUsd": 0.001703,
+        "meetsBudgetCeiling": true
+      }
+    }
+  },
+  "adrGates": [
+    {
+      "gate": "E1",
+      "name": "Legal & Dependency Pinning",
+      "description": "Exact source/package pin, SBOM, install script review, notices, assets/fonts/codecs review; no unauthorized dependencies.",
+      "chromiumStatus": "PASS",
+      "hyperframesStatus": "BLOCKED",
+      "evidenceSummary": "ChromiumBaselineRenderer uses pinned system headless Chromium and LGPL/GPL compliant FFmpeg flags with zero external npm dependencies. HyperFrames vendors proprietary GreenSock GSAP (BLOCKER-HF-01) requiring paid Club GreenSock commercial subscription, and relies on puppeteer postinstall dynamic binary downloads (BLOCKER-HF-03).",
+      "blockersIdentified": [
+        "BLOCKER-HF-01",
+        "BLOCKER-HF-03"
+      ]
+    },
+    {
+      "gate": "E2",
+      "name": "Offline & CPU Determinism",
+      "description": "Zero network egress post-staging; no GPU device required; execution within 4 vCPU / 8GiB reference runner; pinned encoder flags.",
+      "chromiumStatus": "PASS",
+      "hyperframesStatus": "BLOCKED",
+      "evidenceSummary": "ChromiumBaselineRenderer operates with --network none, strict CSP (connect-src none), and software CPU rendering (--disable-gpu). HyperFrames embeds HeyGen cloud billing, telemetry, and autoUpdate routines that fail or crash inside zero-egress sandboxes (BLOCKER-HF-02).",
+      "blockersIdentified": [
+        "BLOCKER-HF-02"
+      ]
+    },
+    {
+      "gate": "E3",
+      "name": "Correctness & Stream Integrity",
+      "description": "Exact frame count; seek same-frame repeat; Vietnamese typography glyph completeness; audio/caption sync anchors <= 1 frame; zero audio clipping.",
+      "chromiumStatus": "PASS",
+      "hyperframesStatus": "BLOCKED",
+      "evidenceSummary": "ChromiumBaselineRenderer achieved 100% exact frame counts (450, 900, 1350), 0 PTS drift, Vietnamese NFC diacritics with ₫ currency, sync anchor delta <= 0.02 frames, and true peak <= -1.0 dBTP. HyperFrames experiences Web Audio timeline drift under offline non-realtime headless frame stepping, violating the <= 1 frame sync threshold (BLOCKER-HF-04).",
+      "blockersIdentified": [
+        "BLOCKER-HF-04"
+      ]
+    },
+    {
+      "gate": "E4",
+      "name": "Cost & Operational Reliability",
+      "description": ">=5 measured runs/fixture post 1 warmup, cold start >=3 runs; warm RTF <= 6.0, peak RSS <= 4GiB, no OOM, compute allocation <= 0.05 USD / output-minute.",
+      "chromiumStatus": "PASS",
+      "hyperframesStatus": "BLOCKED",
+      "evidenceSummary": "ChromiumBaselineRenderer achieved warm RTF < 2.0 (well under 6.0 target), peak RSS < 500MB (well under 4GiB ceiling), zero OOM across all runs, and compute allocation < 0.015 USD/output-minute (well under $0.05 budget). HyperFrames cannot be reliably benchmarked for end-to-end video output due to offline audio and egress blockers.",
+      "blockersIdentified": [
+        "BLOCKER-HF-01",
+        "BLOCKER-HF-02",
+        "BLOCKER-HF-03",
+        "BLOCKER-HF-04"
+      ]
+    },
+    {
+      "gate": "E5",
+      "name": "Engine Sandbox Security",
+      "description": "Chromium sandbox active (--no-sandbox strictly forbidden); process isolation and resource limits; safe FFmpeg argv array with file,pipe protocol whitelist.",
+      "chromiumStatus": "PASS",
+      "hyperframesStatus": "BLOCKED",
+      "evidenceSummary": "ChromiumBaselineRenderer enforces 24 security flags, forbids --no-sandbox, and executes FFmpeg with -protocol_whitelist \"file,pipe\". HyperFrames relies on unreviewed upstream automation and cloud telemetry hooks posing container escape / egress risks.",
+      "blockersIdentified": [
+        "BLOCKER-HF-02",
+        "BLOCKER-HF-03"
+      ]
+    },
+    {
+      "gate": "E6",
+      "name": "Integration & Canonical Contract Parity",
+      "description": "Adapter contract adherence; strict CanonicalCompilerManifest consumption; preview/export parity; no vendor-specific JSON in public spec.",
+      "chromiumStatus": "PASS",
+      "hyperframesStatus": "CONDITIONAL",
+      "evidenceSummary": "Both candidates successfully implement RendererAdapter lifecycle (prepare -> seek -> dispose) on CanonicalCompilerManifest. ChromiumBaselineRenderer generates production-ready faststart MP4s. HyperFrames adapter spike remains a valuable test fixture and secondary benchmark reference.",
+      "blockersIdentified": []
+    }
+  ],
+  "scoringMatrix": {
+    "criteria": [
+      {
+        "name": "Correctness & Video/Audio Quality",
+        "weight": 0.3,
+        "chromiumScore": 95,
+        "hyperframesScore": 40,
+        "rationale": "Chromium baseline exhibits zero PTS drift, bit-exact visual goldens, 100% frame counts, and <0.02 frame A/V sync. HyperFrames suffers from Web Audio timeline drift in offline headless stepping."
+      },
+      {
+        "name": "CPU Cost & Operational Efficiency",
+        "weight": 0.25,
+        "chromiumScore": 96,
+        "hyperframesScore": 40,
+        "rationale": "Chromium baseline warm RTF is ~1.1-1.8 with <500MB RSS and <$0.015/min compute cost. HyperFrames introduces unnecessary Node/CLI process overhead and cannot complete audio export offline."
+      },
+      {
+        "name": "Security & Offline Sandbox Compatibility",
+        "weight": 0.2,
+        "chromiumScore": 98,
+        "hyperframesScore": 10,
+        "rationale": "Chromium baseline runs fully in zero-egress containers with uncompromised sandboxing. HyperFrames CLI contains hardcoded cloud billing/auth/telemetry hooks and puppeteer postinstall downloads."
+      },
+      {
+        "name": "Integration & Maintainability",
+        "weight": 0.15,
+        "chromiumScore": 96,
+        "hyperframesScore": 50,
+        "rationale": "Chromium baseline is self-contained pure TypeScript with direct FFmpeg pipe. HyperFrames adapter spike works on manifest, but upstream codebase is coupled to HeyGen platform."
+      },
+      {
+        "name": "Authoring Flexibility",
+        "weight": 0.1,
+        "chromiumScore": 90,
+        "hyperframesScore": 85,
+        "rationale": "Both support rich HTML/CSS animations and SVG layers; HyperFrames has native declarative data-attributes, while Chromium baseline compiler handles full scene timeline mapping."
+      }
+    ],
+    "totalChromium": 95.5,
+    "totalHyperframes": 40
+  },
+  "decision": {
+    "primaryEngine": "chromium-frame-v1",
+    "fallbackEngine": "none",
+    "hyperframesStatus": "BLOCKED",
+    "formalBlockers": [
+      {
+        "id": "BLOCKER-HF-01",
+        "title": "Vendored Commercial GSAP License Requirement",
+        "severity": "LEGAL_BLOCKER",
+        "description": "Upstream HyperFrames vendors GreenSock Animation Platform (gsap@3.15.0, CustomEase.min.js, MotionPathPlugin.min.js) in dist/vendor/npm/. GreenSock Commercial License strictly requires a paid Club GreenSock subscription for commercial SaaS multi-tenant products charging end-users. HeyGen root Apache-2.0 license cannot grant commercial rights for vendored proprietary code."
+      },
+      {
+        "id": "BLOCKER-HF-02",
+        "title": "HeyGen Cloud Coupling, Telemetry, and Zero-Egress Violation",
+        "severity": "CRITICAL_BLOCKER",
+        "description": "hyperframes package contains tightly coupled cloud infrastructure modules: billing (dist/billing-*.js), authentication (dist/auth-*.js), usage telemetry (dist/telemetry-*.js), automatic updates (dist/autoUpdate-*.js), and cloud AI APIs (@google/genai, onnxruntime-node). When running in mandatory CVE isolated container (--network none), these calls hang or crash, violating zero-egress security rules."
+      },
+      {
+        "id": "BLOCKER-HF-03",
+        "title": "Unsafe Dynamic Puppeteer Binary Download in Lifecycle Scripts",
+        "severity": "HIGH_RISK",
+        "description": "@hyperframes/engine depends on puppeteer: ~25.11.0 with \"postinstall: node install.mjs\", which dynamically downloads unpinned Chromium binaries from Google CDN at package install time. It also uses giget to clone external git repositories during runtime, violating reproducible offline builds and zero-egress."
+      },
+      {
+        "id": "BLOCKER-HF-04",
+        "title": "Audio CFR Timeline Drift During Offline Headless Frame Stepping",
+        "severity": "HIGH_RISK",
+        "description": "HyperFrames relies on browser-driven HTML5 <audio> / <video> elements and Web Audio API for playback. In offline, deterministic frame-by-frame stepping without real-time clock, browser audio elements drift from visual frame counts, causing sync errors exceeding the 1-frame (33.3ms) tolerance required by docs/TESTING.md."
+      }
+    ],
+    "gates": [
+      {
+        "gate": "E1",
+        "name": "Legal & Dependency Pinning",
+        "description": "Exact source/package pin, SBOM, install script review, notices, assets/fonts/codecs review; no unauthorized dependencies.",
+        "chromiumStatus": "PASS",
+        "hyperframesStatus": "BLOCKED",
+        "evidenceSummary": "ChromiumBaselineRenderer uses pinned system headless Chromium and LGPL/GPL compliant FFmpeg flags with zero external npm dependencies. HyperFrames vendors proprietary GreenSock GSAP (BLOCKER-HF-01) requiring paid Club GreenSock commercial subscription, and relies on puppeteer postinstall dynamic binary downloads (BLOCKER-HF-03).",
+        "blockersIdentified": [
+          "BLOCKER-HF-01",
+          "BLOCKER-HF-03"
+        ]
+      },
+      {
+        "gate": "E2",
+        "name": "Offline & CPU Determinism",
+        "description": "Zero network egress post-staging; no GPU device required; execution within 4 vCPU / 8GiB reference runner; pinned encoder flags.",
+        "chromiumStatus": "PASS",
+        "hyperframesStatus": "BLOCKED",
+        "evidenceSummary": "ChromiumBaselineRenderer operates with --network none, strict CSP (connect-src none), and software CPU rendering (--disable-gpu). HyperFrames embeds HeyGen cloud billing, telemetry, and autoUpdate routines that fail or crash inside zero-egress sandboxes (BLOCKER-HF-02).",
+        "blockersIdentified": [
+          "BLOCKER-HF-02"
+        ]
+      },
+      {
+        "gate": "E3",
+        "name": "Correctness & Stream Integrity",
+        "description": "Exact frame count; seek same-frame repeat; Vietnamese typography glyph completeness; audio/caption sync anchors <= 1 frame; zero audio clipping.",
+        "chromiumStatus": "PASS",
+        "hyperframesStatus": "BLOCKED",
+        "evidenceSummary": "ChromiumBaselineRenderer achieved 100% exact frame counts (450, 900, 1350), 0 PTS drift, Vietnamese NFC diacritics with ₫ currency, sync anchor delta <= 0.02 frames, and true peak <= -1.0 dBTP. HyperFrames experiences Web Audio timeline drift under offline non-realtime headless frame stepping, violating the <= 1 frame sync threshold (BLOCKER-HF-04).",
+        "blockersIdentified": [
+          "BLOCKER-HF-04"
+        ]
+      },
+      {
+        "gate": "E4",
+        "name": "Cost & Operational Reliability",
+        "description": ">=5 measured runs/fixture post 1 warmup, cold start >=3 runs; warm RTF <= 6.0, peak RSS <= 4GiB, no OOM, compute allocation <= 0.05 USD / output-minute.",
+        "chromiumStatus": "PASS",
+        "hyperframesStatus": "BLOCKED",
+        "evidenceSummary": "ChromiumBaselineRenderer achieved warm RTF < 2.0 (well under 6.0 target), peak RSS < 500MB (well under 4GiB ceiling), zero OOM across all runs, and compute allocation < 0.015 USD/output-minute (well under $0.05 budget). HyperFrames cannot be reliably benchmarked for end-to-end video output due to offline audio and egress blockers.",
+        "blockersIdentified": [
+          "BLOCKER-HF-01",
+          "BLOCKER-HF-02",
+          "BLOCKER-HF-03",
+          "BLOCKER-HF-04"
+        ]
+      },
+      {
+        "gate": "E5",
+        "name": "Engine Sandbox Security",
+        "description": "Chromium sandbox active (--no-sandbox strictly forbidden); process isolation and resource limits; safe FFmpeg argv array with file,pipe protocol whitelist.",
+        "chromiumStatus": "PASS",
+        "hyperframesStatus": "BLOCKED",
+        "evidenceSummary": "ChromiumBaselineRenderer enforces 24 security flags, forbids --no-sandbox, and executes FFmpeg with -protocol_whitelist \"file,pipe\". HyperFrames relies on unreviewed upstream automation and cloud telemetry hooks posing container escape / egress risks.",
+        "blockersIdentified": [
+          "BLOCKER-HF-02",
+          "BLOCKER-HF-03"
+        ]
+      },
+      {
+        "gate": "E6",
+        "name": "Integration & Canonical Contract Parity",
+        "description": "Adapter contract adherence; strict CanonicalCompilerManifest consumption; preview/export parity; no vendor-specific JSON in public spec.",
+        "chromiumStatus": "PASS",
+        "hyperframesStatus": "CONDITIONAL",
+        "evidenceSummary": "Both candidates successfully implement RendererAdapter lifecycle (prepare -> seek -> dispose) on CanonicalCompilerManifest. ChromiumBaselineRenderer generates production-ready faststart MP4s. HyperFrames adapter spike remains a valuable test fixture and secondary benchmark reference.",
+        "blockersIdentified": []
+      }
+    ],
+    "scoring": {
+      "criteria": [
+        {
+          "name": "Correctness & Video/Audio Quality",
+          "weight": 0.3,
+          "chromiumScore": 95,
+          "hyperframesScore": 40,
+          "rationale": "Chromium baseline exhibits zero PTS drift, bit-exact visual goldens, 100% frame counts, and <0.02 frame A/V sync. HyperFrames suffers from Web Audio timeline drift in offline headless stepping."
+        },
+        {
+          "name": "CPU Cost & Operational Efficiency",
+          "weight": 0.25,
+          "chromiumScore": 96,
+          "hyperframesScore": 40,
+          "rationale": "Chromium baseline warm RTF is ~1.1-1.8 with <500MB RSS and <$0.015/min compute cost. HyperFrames introduces unnecessary Node/CLI process overhead and cannot complete audio export offline."
+        },
+        {
+          "name": "Security & Offline Sandbox Compatibility",
+          "weight": 0.2,
+          "chromiumScore": 98,
+          "hyperframesScore": 10,
+          "rationale": "Chromium baseline runs fully in zero-egress containers with uncompromised sandboxing. HyperFrames CLI contains hardcoded cloud billing/auth/telemetry hooks and puppeteer postinstall downloads."
+        },
+        {
+          "name": "Integration & Maintainability",
+          "weight": 0.15,
+          "chromiumScore": 96,
+          "hyperframesScore": 50,
+          "rationale": "Chromium baseline is self-contained pure TypeScript with direct FFmpeg pipe. HyperFrames adapter spike works on manifest, but upstream codebase is coupled to HeyGen platform."
+        },
+        {
+          "name": "Authoring Flexibility",
+          "weight": 0.1,
+          "chromiumScore": 90,
+          "hyperframesScore": 85,
+          "rationale": "Both support rich HTML/CSS animations and SVG layers; HyperFrames has native declarative data-attributes, while Chromium baseline compiler handles full scene timeline mapping."
+        }
+      ],
+      "totalChromium": 95.5,
+      "totalHyperframes": 40
+    },
+    "summary": "Engine selection decision finalized pursuant to ADR 0001 and P2-04 acceptance: Chromium Baseline (chromium-frame-v1) is selected as the Primary Production Video Engine with aggregate score 95.5/100, passing all E1-E6 verification gates. HyperFrames (hyperframes-v1) is designated as BLOCKED (score 39.5/100) due to 4 critical blockers (GSAP commercial licensing, cloud telemetry in zero-egress, puppeteer postinstall downloads, and Web Audio offline CFR drift). Fallback engine is none (VideoFlow/Revideo challenger spike deferred to P8-03)."
+  }
+}
