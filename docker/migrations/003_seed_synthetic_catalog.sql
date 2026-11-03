@@ -4,7 +4,7 @@
 -- ==============================================================================
 
 INSERT INTO system_catalog (key, category, value, visibility)
-VALUES 
+VALUES
   ('profile:mp4-720p-v1', 'profile', '{
     "id": "mp4-720p-v1",
     "description": "Standard 720p H.264 MP4 render (1280x720 landscape or 720x1280 portrait at 30fps)",

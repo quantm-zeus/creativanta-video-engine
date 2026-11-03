@@ -48,7 +48,7 @@ GRANT SELECT ON system_catalog TO cve_dispatcher, cve_ingest, cve_sender;
 
 export const SQL_003_SEED_SYNTHETIC_CATALOG = `-- Migration 003: Seed synthetic system catalog with baseline profiles and starter fonts
 INSERT INTO system_catalog (key, category, value, visibility)
-VALUES 
+VALUES
   ('profile:mp4-720p-v1', 'profile', '{
     "id": "mp4-720p-v1",
     "description": "Standard 720p H.264 MP4 render (1280x720 landscape or 720x1280 portrait at 30fps)",
