@@ -110,15 +110,15 @@
       },
       "mp4_artifact": {
         "path": "evidence/P2-02/poc02.mp4",
-        "sha256": "1415b22171431703ad52c10192a2088737a06fd39973b5326fd21a33f198fd9d",
-        "bytes": 5913256,
+        "sha256": "bfa524978e456965bea91fdcdebf9da116afe49d0b43d1c8e940e83b6a21773f",
+        "bytes": 5820138,
         "faststart": true,
         "major_brand": "isom"
       },
       "mp4_v2_artifact": {
         "path": "evidence/P2-02/poc02-v2.mp4",
-        "sha256": "3327510719f0b0b093f625a7cc40389f0d3eee6e9b2f151791e98b77092f9642",
-        "bytes": 5913256
+        "sha256": "ec1a026aacb8351c1ee70dc546526dce20eea7d9157302086d52523ea8ef47f1",
+        "bytes": 5820138
       },
       "decode_verification": {
         "status": "PASS",

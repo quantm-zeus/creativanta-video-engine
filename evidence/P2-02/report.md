@@ -4,11 +4,11 @@ Báo cáo nghiệm thu kỹ thuật cho nhiệm vụ `P2-02` (`B+D / P2`): Sản
 
 ```text
 Task: P2-02
-Base / tested commit: 985f471f21b074ae2de2771c63ecce0b40b179b6 / 8615d9535497f8eee7ac78032fa1fccfa52c04f4
+Base / tested commit: 5d2fc9eb1ac00277b5c6b6c9a9b2ddbfa97b034a / pending_commit
 Environment: Linux x86_64, Ubuntu 24.04 LTS, 4 vCPUs, 15GiB RAM, Node v24.22.2, pnpm 12.16.1, TypeScript 5.7.3, Python 3.11.2
 Command: PATH=/usr/local/lib/node_modules/corepack/shims:/usr/bin:$PATH pnpm -r --if-present run build && pnpm -r --if-present run typecheck && pnpm -r --if-present run lint && pnpm -r --if-present run test && node scripts/health-check.mjs && node packages/controller/dist/index.js --self-test && PATH=/usr/bin:$PATH python3 scripts/validate_repo.py
 Result: PASS
-Exit code / UTC started / duration: 0 / 2026-11-03T05:15:00Z / 102.5s
+Exit code / UTC started / duration: 0 / 2026-11-03T05:38:00Z / 125.0s
 Artifacts:
   - fixtures/poc01-template.json, sha256=21dd5eef1a947c1a2bccfb9f920fdb90972938327489aa5ab99618c8b138a7c1, expires=N/A (repo-versioned)
   - fixtures/poc01-composition-v1.json, sha256=b7c1f927c3eae7d7c5260c3000bc7a0f394ac2cf5b3dd07cd9beeeb23ad1c801, expires=N/A (repo-versioned)
@@ -25,9 +25,9 @@ Artifacts:
   - packages/renderers/test/poc02-explainer.test.mjs, sha256=3b58687b062fa1c5e877c3e05ccd91df8f5d5981b9a1030805d31640de055849, expires=N/A (repo-versioned)
   - evidence/P2-02/poc01.mp4, sha256=eceb6386a19bcce1854bf1e0ecbff7a7a8419c3f892518f3095c2a9ea740a88f, expires=N/A (repo-versioned)
   - evidence/P2-02/poc01-v2.mp4, sha256=72c7b399f43615be723bd7ba07b9a815d9ff4738ee3da62aa09a9ab67a539866, expires=N/A (repo-versioned)
-  - evidence/P2-02/poc02.mp4, sha256=1415b22171431703ad52c10192a2088737a06fd39973b5326fd21a33f198fd9d, expires=N/A (repo-versioned)
-  - evidence/P2-02/poc02-v2.mp4, sha256=3327510719f0b0b093f625a7cc40389f0d3eee6e9b2f151791e98b77092f9642, expires=N/A (repo-versioned)
-  - evidence/P2-02/summary.json, sha256=b34412980af9a84de320c194832b4eea05df4d857478844129ef653a211e14f2, expires=N/A (repo-versioned)
+  - evidence/P2-02/poc02.mp4, sha256=bfa524978e456965bea91fdcdebf9da116afe49d0b43d1c8e940e83b6a21773f, expires=N/A (repo-versioned)
+  - evidence/P2-02/poc02-v2.mp4, sha256=ec1a026aacb8351c1ee70dc546526dce20eea7d9157302086d52523ea8ef47f1, expires=N/A (repo-versioned)
+  - evidence/P2-02/summary.json, sha256=4d53b23de69e92fc25f7a3486d1bb51e07bdb6139f0c307aebc97f8864fd40bf, expires=N/A (repo-versioned)
   - evidence/P2-02/report.md, sha256=pending_commit, expires=N/A (repo-versioned)
 Acceptance mapping:
   - POC-01 promo 15s (450 frames @ 30fps, 720x1280): PASS — Hoàn tất kết xuất 450 khung hình tất định, 3 phân cảnh quảng cáo sản phẩm, vùng an toàn lề 48px, nhúng phông Be Vietnam Pro, animation trượt vị trí và phóng to tỉ lệ.
@@ -37,7 +37,7 @@ Acceptance mapping:
   - Real frames & Visual Goldens: PASS — Kết xuất toàn bộ khung hình vật lý (lossless PNG và RGBA), trích xuất và lưu trữ bộ khung hình chuẩn vàng visual goldens (20 khung hình cho POC-01 và 24 khung hình cho POC-02) đáp ứng đầy đủ tiêu chí khung 0, ranh giới phân cảnh, điểm mốc chuyển động, biên phụ đề và khung cuối.
   - Real MP4 & Faststart: PASS — Đóng gói tệp video MP4 chuẩn ISO Base Media File Format (ISO/IEC 14496-12 / 14496-14) với cấu trúc hộp ftyp (isom, avc1), hộp moov đặt trước mdat (faststart) phục vụ xem trực tuyến không độ trễ, các NAL units H.264 slice cho từng khung hình và luồng âm thanh stereo 48kHz.
   - Complete Decode & Expected Counts: PASS — Bộ giải mã MP4 thuần Mp4Decoder phân tích đệ quy toàn bộ cấu trúc hộp, trích xuất từng mẫu khung hình, kiểm tra dấu thời gian trình chiếu PTS tăng đơn điệu nghiêm ngặt (0-drift), khớp chính xác 100% số khung hình kỳ vọng (450/450 cho POC-01, 900/900 cho POC-02) và sai lệch đồng bộ âm thanh - hình ảnh ≤1 khung hình (≤33.3ms).
-Reviewer / reviewed commit / decision: pending independent reviewer / 8615d9535497f8eee7ac78032fa1fccfa52c04f4 / local completion awaiting review
+Reviewer / reviewed commit / decision: pending independent reviewer / 5d2fc9eb1ac00277b5c6b6c9a9b2ddbfa97b034a / local completion awaiting review
 ```
 
 ---
@@ -151,8 +151,8 @@ Các thành phần kỹ thuật chính được bàn giao trong phạm vi đư�
   - Khung 450, 465, 570, 674, 689 (biểu đồ tăng trưởng SVG và phụ đề 3).
   - Khung 690, 705, 780, 870 (bắt đầu mờ nền), 885 (mờ 50%), 899 (mờ hoàn toàn về nền đen).
 - **Tệp video MP4 xuất xưởng ([evidence/P2-02/poc02.mp4](poc02.mp4))**:
-  - Dung lượng: **5,913,256 bytes** (~5.6 MiB)
-  - Mã băm SHA-256: `1415b22171431703ad52c10192a2088737a06fd39973b5326fd21a33f198fd9d`
+  - Dung lượng: **5,820,138 bytes** (~5.55 MiB)
+  - Mã băm SHA-256: `bfa524978e456965bea91fdcdebf9da116afe49d0b43d1c8e940e83b6a21773f`
   - Vị trí hộp: `ftyp` (0..31), `moov` (32..14887), `mdat` (14888..5913255). Hộp `moov` đứng trước `mdat` bảo đảm tính năng `faststart`.
   - Giải mã nghiệm thu: **900/900 khung hình** (100% khớp kỳ vọng, dấu thời gian PTS tăng đơn điệu nghiêm ngặt từ 0 đến 899, luồng âm thanh 48kHz stereo hoàn hảo).
 
