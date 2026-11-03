@@ -4,7 +4,14 @@
  */
 
 import crypto from 'node:crypto';
-import { CompositionSpec, ErrorDetail } from '@creativanta/contracts';
+import {
+  CompositionSpec,
+  ErrorDetail,
+  SceneSpec,
+  compileComposition,
+  compareCompositionRevisions,
+  validateCompositionUnified,
+} from '@creativanta/contracts';
 import {
   ApiScope,
   decodeSignedCursor,
@@ -14,6 +21,14 @@ import {
 } from '../auth/api-key.js';
 import { SYSTEM_CATALOG_TENANT_ID } from './migration-runner.js';
 import { TenantConnectionPool, TenantTransactionContext } from './tenant-pool.js';
+import {
+  computeSceneContentHash,
+  inspectAndValidateBindings,
+  materializeCompositionFromTemplate,
+  resolveAndValidateVariables,
+  validateDefaultsAgainstSchema,
+  validateVariableSchema,
+} from '../templates/template-engine.js';
 
 export class ResourceNotFoundError extends Error {
   public readonly httpStatus = 404;
@@ -665,6 +680,101 @@ export class TenantRepository {
     });
   }
 
+  private validateTemplatePayloadInTx(
+    tx: TenantTransactionContext,
+    input: {
+      name: string;
+      variables_schema: Record<string, unknown>;
+      defaults: Record<string, unknown>;
+      composition_spec: Record<string, unknown>;
+      supported_locales: string[];
+    },
+  ): void {
+    const details: ErrorDetail[] = [];
+
+    if (
+      !input.name ||
+      typeof input.name !== 'string' ||
+      input.name.trim().length === 0 ||
+      input.name.length > 200
+    ) {
+      details.push({
+        pointer: '/name',
+        code: 'OUT_OF_RANGE',
+        message: 'Template name must be between 1 and 200 characters',
+      });
+    }
+
+    if (!Array.isArray(input.supported_locales) || input.supported_locales.length === 0) {
+      details.push({
+        pointer: '/supported_locales',
+        code: 'OUT_OF_RANGE',
+        message: 'Template supported_locales must be an array of at least 1 locale',
+      });
+    } else {
+      const allowedLocales = new Set(['vi-VN', 'en-US']);
+      for (let i = 0; i < input.supported_locales.length; i++) {
+        const loc = input.supported_locales[i]!;
+        if (!allowedLocales.has(loc)) {
+          details.push({
+            pointer: `/supported_locales/${i}`,
+            code: 'ENUM_MISMATCH',
+            message: `Locale '${loc}' is not supported (allowed: vi-VN, en-US)`,
+          });
+        }
+      }
+    }
+
+    // 1. Validate variable schema
+    details.push(...validateVariableSchema(input.variables_schema, '/variables_schema'));
+
+    // 2. Validate defaults against schema
+    details.push(...validateDefaultsAgainstSchema(input.variables_schema, input.defaults, '/defaults'));
+
+    // 3. Inspect bindings
+    const properties =
+      (input.variables_schema['properties'] as Record<string, unknown> | undefined) ?? {};
+    const declaredVars = new Set(Object.keys(properties));
+    const { errors: bindingErrors } = inspectAndValidateBindings(
+      input.composition_spec,
+      declaredVars,
+      '/composition_spec',
+    );
+    details.push(...bindingErrors);
+
+    if (details.length > 0) {
+      throw new BodyReferenceValidationError(details);
+    }
+
+    // 4. Materialize defaults into composition_spec and validate as pure Scene Spec 1.0
+    const defaultLocale = input.supported_locales[0] ?? 'vi-VN';
+    const materialized = materializeCompositionFromTemplate(
+      input.composition_spec,
+      input.defaults,
+      defaultLocale,
+    );
+
+    const unified = validateCompositionUnified(materialized, {
+      profile: 'mp4-720p-v1',
+    });
+    if (!unified.valid) {
+      details.push(
+        ...unified.all_errors.map((e) => ({
+          pointer: `/composition_spec${e.pointer === '/' ? '' : e.pointer}`,
+          code: e.code,
+          message: e.message,
+        })),
+      );
+    }
+
+    const refErrors = this.validateCompositionReferencesInTx(tx, materialized, '/composition_spec');
+    details.push(...refErrors);
+
+    if (details.length > 0) {
+      throw new BodyReferenceValidationError(details);
+    }
+  }
+
   public createTemplate(
     tenantId: string,
     input: {
@@ -688,6 +798,8 @@ export class TenantRepository {
     );
 
     return this.pool.withTransaction({ tenantId, role: 'cve_api' }, (tx) => {
+      this.validateTemplatePayloadInTx(tx, input);
+
       let sourceTenantId: string | null = null;
       let sourceTemplateId: string | null = null;
       let sourceRevision: number | null = null;
@@ -787,6 +899,8 @@ export class TenantRepository {
         );
       }
 
+      this.validateTemplatePayloadInTx(tx, input);
+
       const nextRevision = tpl.current_revision + 1;
       tx.updateScoped(
         'templates',
@@ -811,6 +925,239 @@ export class TenantRepository {
       });
 
       return { id: templateId, revision: nextRevision, source_digest: sourceDigest };
+    });
+  }
+
+  public forkTemplate(
+    tenantId: string,
+    sourceTemplateId: string,
+    input: {
+      source_revision?: number;
+      name?: string;
+      new_id?: string;
+      now?: Date;
+    } = {},
+  ): { id: string; revision: 1; source_digest: string } {
+    let revNum = input.source_revision;
+    if (!revNum) {
+      // Find source template to get its current revision
+      const list = this.listTemplates(tenantId, { limit: 100 });
+      const found = list.data.find((t) => t.id === sourceTemplateId);
+      if (!found) {
+        throw new ResourceNotFoundError(`Source template ${sourceTemplateId} not found`);
+      }
+      revNum = found.revision;
+    }
+
+    const srcRev = this.getTemplateRevision(tenantId, sourceTemplateId, revNum);
+    const newId = input.new_id ?? `tpl_${crypto.randomBytes(6).toString('hex')}`;
+    const newName = input.name ?? `Fork of ${srcRev.name}`;
+
+    return this.createTemplate(tenantId, {
+      id: newId,
+      name: newName,
+      variables_schema: srcRev.variables_schema,
+      defaults: srcRev.defaults,
+      composition_spec: srcRev.composition_spec,
+      supported_locales: srcRev.supported_locales,
+      source_template: {
+        id: sourceTemplateId,
+        revision: revNum,
+      },
+      now: input.now,
+    });
+  }
+
+  public instantiateTemplate(
+    tenantId: string,
+    templateId: string,
+    input: {
+      template_revision: number;
+      name: string;
+      variables: Record<string, unknown>;
+      locale: string;
+      now?: Date;
+    },
+  ): {
+    id: string;
+    revision: 1;
+    template: { id: string; revision: number };
+    schema_version: '1.0';
+    editable: boolean;
+  } {
+    const nowIso = (input.now ?? new Date()).toISOString();
+
+    if (
+      !input.name ||
+      typeof input.name !== 'string' ||
+      input.name.trim().length === 0 ||
+      input.name.length > 200
+    ) {
+      throw new BodyReferenceValidationError([
+        {
+          pointer: '/name',
+          code: 'OUT_OF_RANGE',
+          message: 'Composition name must be between 1 and 200 characters',
+        },
+      ]);
+    }
+
+    return this.pool.withTransaction({ tenantId, role: 'cve_api' }, (tx) => {
+      const rows = tx.selectScoped<{
+        tenant_id: string;
+        template_id: string;
+        revision: number;
+        name: string;
+        variables_schema: string;
+        defaults_json: string;
+        composition_spec: string;
+        supported_locales_json: string;
+      }>(
+        'template_revisions',
+        'template_id = ? AND revision = ?',
+        [templateId, input.template_revision],
+      );
+
+      const tpl =
+        rows.find((r) => r.tenant_id === tenantId) ??
+        rows.find((r) => r.tenant_id === SYSTEM_CATALOG_TENANT_ID);
+
+      if (!tpl) {
+        throw new ResourceNotFoundError(
+          `Template ${templateId} revision ${input.template_revision} not found`,
+        );
+      }
+
+      const supportedLocales = JSON.parse(tpl.supported_locales_json) as string[];
+      if (!supportedLocales.includes(input.locale)) {
+        throw new BodyReferenceValidationError([
+          {
+            pointer: '/locale',
+            code: 'UNSUPPORTED_LOCALE',
+            message: `Locale '${input.locale}' is not supported by template '${templateId}' (supported: ${supportedLocales.join(', ')})`,
+          },
+        ]);
+      }
+
+      const schemaObj = JSON.parse(tpl.variables_schema) as Record<string, unknown>;
+      const defaultsObj = JSON.parse(tpl.defaults_json) as Record<string, unknown>;
+      const rawSpec = JSON.parse(tpl.composition_spec) as Record<string, unknown>;
+
+      const varRes = resolveAndValidateVariables(schemaObj, defaultsObj, input.variables);
+      if (varRes.errors.length > 0) {
+        throw new BodyReferenceValidationError(varRes.errors);
+      }
+
+      const declaredVars = new Set(
+        Object.keys((schemaObj['properties'] as Record<string, unknown>) ?? {}),
+      );
+      const { bindings } = inspectAndValidateBindings(rawSpec, declaredVars, '/composition_spec');
+
+      const materializedSpec = materializeCompositionFromTemplate(
+        rawSpec,
+        varRes.resolved,
+        input.locale,
+      );
+
+      // Validate bound asset_id variables specifically for existence, readiness, and kind
+      const assetBindingErrors: ErrorDetail[] = [];
+      for (const b of bindings) {
+        if (b.field === 'content.asset_id') {
+          const resolvedAssetId = varRes.resolved[b.variableName];
+          if (typeof resolvedAssetId === 'string') {
+            const visibleAssets = tx.selectScoped<{
+              id: string;
+              kind: string;
+              status: string;
+            }>('assets', 'id = ?', [resolvedAssetId]);
+            const targetAsset = visibleAssets[0];
+            if (!targetAsset) {
+              assetBindingErrors.push({
+                pointer: `/variables/${b.variableName}`,
+                code: 'ASSET_NOT_FOUND',
+                message: `Asset '${resolvedAssetId}' was not found or is unauthorized`,
+              });
+            } else if (targetAsset.status !== 'ready') {
+              assetBindingErrors.push({
+                pointer: `/variables/${b.variableName}`,
+                code: 'ASSET_NOT_READY',
+                message: `Asset '${resolvedAssetId}' status is '${targetAsset.status}' (expected 'ready')`,
+              });
+            } else {
+              const scene = materializedSpec.scenes[b.sceneIndex];
+              const layer =
+                scene && 'layers' in scene && Array.isArray(scene.layers)
+                  ? scene.layers[b.layerIndex]
+                  : null;
+              if (layer && layer.type !== targetAsset.kind) {
+                assetBindingErrors.push({
+                  pointer: `/variables/${b.variableName}`,
+                  code: 'INVALID_ASSET_TYPE',
+                  message: `Asset '${resolvedAssetId}' of kind '${targetAsset.kind}' cannot be used in layer type '${layer.type}'`,
+                });
+              }
+            }
+          }
+        }
+      }
+      if (assetBindingErrors.length > 0) {
+        throw new BodyReferenceValidationError(assetBindingErrors);
+      }
+
+      const unified = validateCompositionUnified(materializedSpec, { profile: 'mp4-720p-v1' });
+      if (!unified.valid) {
+        throw new BodyReferenceValidationError(
+          unified.all_errors.map((e) => ({
+            pointer: `/spec${e.pointer === '/' ? '' : e.pointer}`,
+            code: e.code,
+            message: e.message,
+          })),
+        );
+      }
+
+      const refErrors = this.validateCompositionReferencesInTx(tx, materializedSpec, '/spec');
+      if (refErrors.length > 0) {
+        throw new BodyReferenceValidationError(refErrors);
+      }
+
+      const compId = `cmp_${crypto.randomBytes(6).toString('hex')}`;
+      const manifest = compileComposition(materializedSpec, { profile: 'mp4-720p-v1' });
+      const renderHash = manifest.render_hash;
+
+      tx.insertScoped('compositions', {
+        tenant_id: tenantId,
+        id: compId,
+        name: input.name,
+        current_revision: 1,
+        template_tenant_id: tpl.tenant_id,
+        template_id: tpl.template_id,
+        template_revision: tpl.revision,
+        editable: 1,
+        created_at: nowIso,
+        updated_at: nowIso,
+      });
+
+      tx.insertScoped('composition_revisions', {
+        tenant_id: tenantId,
+        composition_id: compId,
+        revision: 1,
+        schema_version: '1.0',
+        spec_json: JSON.stringify(materializedSpec),
+        render_hash: renderHash,
+        change_note: `Instantiated from template ${tpl.template_id}@${tpl.revision}`,
+        created_at: nowIso,
+      });
+
+      return {
+        id: compId,
+        revision: 1,
+        template: {
+          id: tpl.template_id,
+          revision: tpl.revision,
+        },
+        schema_version: '1.0',
+        editable: true,
+      };
     });
   }
 
@@ -934,13 +1281,30 @@ export class TenantRepository {
     },
   ): { id: string; revision: 1; name: string; render_hash: string; created_at: string } {
     const nowIso = (input.now ?? new Date()).toISOString();
-    const renderHash = computeSha256Hex(JSON.stringify(input.spec));
 
     return this.pool.withTransaction({ tenantId, role: 'cve_api' }, (tx) => {
-      const refErrors = this.validateCompositionReferencesInTx(tx, input.spec, '/spec');
-      if (refErrors.length > 0) {
-        throw new BodyReferenceValidationError(refErrors);
+      const allErrors: ErrorDetail[] = [];
+
+      const unified = validateCompositionUnified(input.spec, { profile: 'mp4-720p-v1' });
+      if (!unified.valid) {
+        allErrors.push(
+          ...unified.all_errors.map((e) => ({
+            pointer: `/spec${e.pointer === '/' ? '' : e.pointer}`,
+            code: e.code,
+            message: e.message,
+          })),
+        );
       }
+
+      const refErrors = this.validateCompositionReferencesInTx(tx, input.spec, '/spec');
+      allErrors.push(...refErrors);
+
+      if (allErrors.length > 0) {
+        throw new BodyReferenceValidationError(allErrors);
+      }
+
+      const manifest = compileComposition(input.spec, { profile: 'mp4-720p-v1' });
+      const renderHash = manifest.render_hash;
 
       tx.insertScoped('compositions', {
         tenant_id: tenantId,
@@ -1053,7 +1417,6 @@ export class TenantRepository {
     },
   ): { id: string; revision: number; render_hash: string; created_at: string } {
     const nowIso = (input.now ?? new Date()).toISOString();
-    const renderHash = computeSha256Hex(JSON.stringify(input.spec));
 
     return this.pool.withTransaction({ tenantId, role: 'cve_api' }, (tx) => {
       const comps = tx.selectScoped<{ id: string; current_revision: number }>(
@@ -1072,12 +1435,91 @@ export class TenantRepository {
         );
       }
 
-      const refErrors = this.validateCompositionReferencesInTx(tx, input.spec, '/spec');
-      if (refErrors.length > 0) {
-        throw new BodyReferenceValidationError(refErrors);
+      const baseRevs = tx.selectScoped<{
+        spec_json: string;
+        render_hash: string;
+      }>(
+        'composition_revisions',
+        'composition_id = ? AND revision = ?',
+        [compositionId, input.base_revision],
+      );
+      const baseRev = baseRevs[0];
+      if (!baseRev) {
+        throw new RevisionConflictError(
+          `Base revision ${input.base_revision} not found for composition ${compositionId}`,
+        );
+      }
+      const baseSpec = JSON.parse(baseRev.spec_json) as CompositionSpec;
+
+      // Scene revisions & immutability:
+      // Compare content hashes between base and new scenes.
+      // If content changed, enforce scene revision increment ("không tin revision client tự giữ thấp").
+      // If content unchanged, keep base scene revision.
+      const baseScenesMap = new Map<string, SceneSpec>();
+      for (const s of baseSpec.scenes ?? []) {
+        baseScenesMap.set(s.id, s);
+      }
+
+      for (const newScene of input.spec.scenes ?? []) {
+        const baseScene = baseScenesMap.get(newScene.id);
+        if (baseScene) {
+          const baseContentHash = computeSceneContentHash(baseScene);
+          const newContentHash = computeSceneContentHash(newScene);
+
+          if (baseContentHash === newContentHash) {
+            newScene.revision = baseScene.revision;
+          } else {
+            if (newScene.revision <= baseScene.revision) {
+              newScene.revision = baseScene.revision + 1;
+            }
+          }
+        } else {
+          if (!newScene.revision || newScene.revision < 1) {
+            newScene.revision = 1;
+          }
+        }
       }
 
       const nextRevision = comp.current_revision + 1;
+      const allErrors: ErrorDetail[] = [];
+
+      const compDiff = compareCompositionRevisions(
+        baseSpec,
+        input.spec,
+        comp.current_revision,
+        nextRevision,
+      );
+      if (!compDiff.valid) {
+        allErrors.push(
+          ...compDiff.errors.map((msg) => ({
+            pointer: '/spec/scenes',
+            code: 'SCENE_REVISION_INVALID',
+            message: msg,
+          })),
+        );
+      }
+
+      const unified = validateCompositionUnified(input.spec, { profile: 'mp4-720p-v1' });
+      if (!unified.valid) {
+        allErrors.push(
+          ...unified.all_errors.map((e) => ({
+            pointer: `/spec${e.pointer === '/' ? '' : e.pointer}`,
+            code: e.code,
+            message: e.message,
+          })),
+        );
+      }
+
+      const refErrors = this.validateCompositionReferencesInTx(tx, input.spec, '/spec');
+      allErrors.push(...refErrors);
+
+      if (allErrors.length > 0) {
+        throw new BodyReferenceValidationError(allErrors);
+      }
+
+      const manifest = compileComposition(input.spec, { profile: 'mp4-720p-v1' });
+      const renderHash = manifest.render_hash;
+
       tx.updateScoped(
         'compositions',
         { current_revision: nextRevision, updated_at: nowIso },
@@ -1085,16 +1527,30 @@ export class TenantRepository {
         [compositionId],
       );
 
-      tx.insertScoped('composition_revisions', {
-        tenant_id: tenantId,
-        composition_id: compositionId,
-        revision: nextRevision,
-        schema_version: '1.0',
-        spec_json: JSON.stringify(input.spec),
-        render_hash: renderHash,
-        change_note: input.change_note ?? null,
-        created_at: nowIso,
-      });
+      try {
+        tx.insertScoped('composition_revisions', {
+          tenant_id: tenantId,
+          composition_id: compositionId,
+          revision: nextRevision,
+          schema_version: '1.0',
+          spec_json: JSON.stringify(input.spec),
+          render_hash: renderHash,
+          change_note: input.change_note ?? null,
+          created_at: nowIso,
+        });
+      } catch (err) {
+        if (
+          err instanceof Error &&
+          (err.message.includes('UNIQUE constraint failed') ||
+            err.message.includes('unique constraint') ||
+            err.message.includes('duplicate key'))
+        ) {
+          throw new RevisionConflictError(
+            `Concurrent modification: revision ${nextRevision} already exists`,
+          );
+        }
+        throw err;
+      }
 
       return {
         id: compositionId,

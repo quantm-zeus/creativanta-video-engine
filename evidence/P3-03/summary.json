@@ -1,0 +1,112 @@
+{
+  "$schema": "creativanta.video-engine.p3-03-summary.v1",
+  "task_id": "P3-03",
+  "stream": "A+D",
+  "phase": "P3",
+  "base_commit": "0e8dbe04f1f99193f6c69a20476745bb07fecca6",
+  "commit": "a1eded86ca5ff49f5eb027b133013db8fbe4cfc9",
+  "template_catalog": {
+    "endpoints": [
+      {
+        "method": "GET",
+        "path": "/v1/templates",
+        "visibility_modes": ["curated", "tenant"],
+        "pagination": "HMAC-signed cursor (created_at DESC, id DESC)"
+      },
+      {
+        "method": "GET",
+        "path": "/v1/templates/{id}/revisions/{revision}",
+        "access": "curated_public readable by all tenants; tenant_private isolated to owner (404 on IDOR)"
+      },
+      {
+        "method": "POST",
+        "path": "/v1/templates",
+        "access": "templates:write required, revision 1 created, supports source_template provenance"
+      },
+      {
+        "method": "POST",
+        "path": "/v1/templates/{id}/revisions",
+        "access": "templates:write required, optimistic base_revision required (409 on stale)"
+      },
+      {
+        "method": "POST",
+        "path": "/v1/templates/{id}/instantiate",
+        "access": "compositions:write + templates:read required, materializes pure Scene Spec 1.0 composition"
+      },
+      {
+        "method": "POST",
+        "path": "/v1/templates/{id}/fork",
+        "access": "templates:write + templates:read required, convenience fork of curated or tenant template"
+      }
+    ],
+    "sentinel_catalog_protection": "Mutating system_catalog curated templates directly (POST /templates/tpl_promo_starter/revisions) is blocked with 404 NOT_FOUND"
+  },
+  "variable_schema_and_binding_rules": {
+    "name_pattern": "^[a-z][a-z0-9_]{0,63}$",
+    "max_variables_per_template": 64,
+    "max_variable_string_length": 10000,
+    "forbidden_constructs": ["remote $ref (http/https)", "executable defaults"],
+    "allowed_binding_positions": [
+      "scene.layers[i].content.text",
+      "scene.layers[i].content.asset_id",
+      "scene.layers[i].content.color",
+      "scene.layers[i].content.fill",
+      "scene.layers[i].content.font_size",
+      "scene.layers[i].box.x",
+      "scene.layers[i].box.y",
+      "scene.layers[i].box.width",
+      "scene.layers[i].box.height"
+    ],
+    "default_resolution_rule": "Defaults applied only when variable is absent in request; explicit null is NOT replaced by defaults",
+    "asset_binding_guards": "Asset must exist under tenant RLS scope, be in status ready, and match layer type (image vs video vs svg)"
+  },
+  "composition_revisions_and_concurrency": {
+    "optimistic_concurrency": "Enforces base_revision === current_revision in atomic transaction; stale revision returns HTTP 409 REVISION_CONFLICT",
+    "concurrency_race_protection": "Concurrent requests with same base_revision yield exactly one 201 Created and subsequent 409 REVISION_CONFLICT"
+  },
+  "immutable_scene_versions": {
+    "content_hash_tracking": "Computes SHA-256 canonical hash of scene content excluding revision field",
+    "auto_increment_on_edit": "When scene content is modified and client kept scene revision low, server automatically increments scene revision (không tin revision client tự giữ thấp)",
+    "unchanged_scene_stability": "When scene content is identical across composition revisions, scene revision remains unchanged",
+    "database_triggers": [
+      "trg_template_revisions_no_update blocks direct UPDATE/DELETE on template_revisions",
+      "trg_composition_revisions_no_update blocks direct UPDATE/DELETE on composition_revisions"
+    ]
+  },
+  "checks": [
+    {
+      "command": "PATH=/usr/local/lib/node_modules/corepack/shims:/home/whaleorcale/.local/bin:/usr/bin:$PATH pnpm build",
+      "exit_code": 0,
+      "result": "PASS"
+    },
+    {
+      "command": "PATH=/usr/local/lib/node_modules/corepack/shims:/home/whaleorcale/.local/bin:/usr/bin:$PATH pnpm typecheck",
+      "exit_code": 0,
+      "result": "PASS"
+    },
+    {
+      "command": "PATH=/usr/local/lib/node_modules/corepack/shims:/home/whaleorcale/.local/bin:/usr/bin:$PATH pnpm lint",
+      "exit_code": 0,
+      "result": "PASS"
+    },
+    {
+      "command": "PATH=/usr/local/lib/node_modules/corepack/shims:/home/whaleorcale/.local/bin:/usr/bin:$PATH pnpm test",
+      "exit_code": 0,
+      "result": "PASS"
+    },
+    {
+      "command": "node scripts/health-check.mjs",
+      "exit_code": 0,
+      "result": "PASS"
+    },
+    {
+      "command": "PATH=/usr/bin:$PATH python3 scripts/validate_repo.py",
+      "exit_code": 0,
+      "result": "PASS"
+    }
+  ],
+  "external_gates": [
+    "Independent reviewer sign-off on PR #13 / staging integration",
+    "Remote GitHub Actions CI execution on staging"
+  ]
+}

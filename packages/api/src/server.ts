@@ -470,14 +470,17 @@ export function createServer({
             ]);
             return;
           }
-          const id = `tpl_${crypto.randomBytes(6).toString('hex')}`;
+          const id =
+            typeof bodyRes.data['id'] === 'string' && bodyRes.data['id'].length > 0
+              ? bodyRes.data['id']
+              : `tpl_${crypto.randomBytes(6).toString('hex')}`;
           const created = repository.createTemplate(auth.tenantId, {
             id,
-            name: String(bodyRes.data['name'] ?? 'Template'),
+            name: String(bodyRes.data['name'] ?? ''),
             variables_schema: (bodyRes.data['variables_schema'] as Record<string, unknown>) ?? {},
             defaults: (bodyRes.data['defaults'] as Record<string, unknown>) ?? {},
             composition_spec: (bodyRes.data['composition_spec'] as Record<string, unknown>) ?? {},
-            supported_locales: (bodyRes.data['supported_locales'] as string[]) ?? ['vi-VN'],
+            supported_locales: (bodyRes.data['supported_locales'] as string[]) ?? [],
             source_template: bodyRes.data['source_template'] as { id: string; revision: number } | undefined,
           });
           res.writeHead(201);
@@ -511,17 +514,89 @@ export function createServer({
             sendError(res, bodyRes.status, bodyRes.code, bodyRes.message, requestId);
             return;
           }
+          if ('tenant_id' in bodyRes.data) {
+            sendError(res, 422, 'VALIDATION_FAILED', 'tenant_id is not permitted in request body', requestId, false, [
+              { pointer: '/tenant_id', code: 'UNKNOWN_FIELD', message: 'tenant_id is forbidden in body' },
+            ]);
+            return;
+          }
           const created = repository.createTemplateRevision(auth.tenantId, tplCreateRevMatch[1]!, {
-            base_revision: Number(bodyRes.data['base_revision'] ?? 1),
+            base_revision: Number(bodyRes.data['base_revision'] ?? 0),
             change_note: bodyRes.data['change_note'] ? String(bodyRes.data['change_note']) : undefined,
-            name: String(bodyRes.data['name'] ?? 'Template'),
+            name: String(bodyRes.data['name'] ?? ''),
             variables_schema: (bodyRes.data['variables_schema'] as Record<string, unknown>) ?? {},
             defaults: (bodyRes.data['defaults'] as Record<string, unknown>) ?? {},
             composition_spec: (bodyRes.data['composition_spec'] as Record<string, unknown>) ?? {},
-            supported_locales: (bodyRes.data['supported_locales'] as string[]) ?? ['vi-VN'],
+            supported_locales: (bodyRes.data['supported_locales'] as string[]) ?? [],
           });
           res.writeHead(201);
           res.end(JSON.stringify(created));
+          return;
+        }
+
+        // 4b. POST /v1/templates/{id}/instantiate
+        const tplInstantiateMatch = /^\/v1\/templates\/([^/]+)\/instantiate$/.exec(pathname);
+        if (tplInstantiateMatch && method === 'POST') {
+          const auth = authenticateAndAuthorize(['compositions:write', 'templates:read']);
+          if (!auth) return;
+          if (!verifyIdempotencyHeader()) return;
+          const bodyRes = await readJsonBody(req);
+          if (!bodyRes.ok) {
+            sendError(res, bodyRes.status, bodyRes.code, bodyRes.message, requestId);
+            return;
+          }
+          if ('tenant_id' in bodyRes.data) {
+            sendError(res, 422, 'VALIDATION_FAILED', 'tenant_id is not permitted in request body', requestId, false, [
+              { pointer: '/tenant_id', code: 'UNKNOWN_FIELD', message: 'tenant_id is forbidden in body' },
+            ]);
+            return;
+          }
+
+          const templateId = tplInstantiateMatch[1]!;
+          const templateRevision = Number(bodyRes.data['template_revision'] ?? 0);
+          const name = String(bodyRes.data['name'] ?? '');
+          const variables = (bodyRes.data['variables'] as Record<string, unknown> | undefined) ?? {};
+          const locale = String(bodyRes.data['locale'] ?? '');
+
+          const instantiated = repository.instantiateTemplate(auth.tenantId, templateId, {
+            template_revision: templateRevision,
+            name,
+            variables,
+            locale,
+          });
+
+          res.writeHead(201);
+          res.end(JSON.stringify(instantiated));
+          return;
+        }
+
+        // 4c. POST /v1/templates/{id}/fork
+        const tplForkMatch = /^\/v1\/templates\/([^/]+)\/fork$/.exec(pathname);
+        if (tplForkMatch && method === 'POST') {
+          const auth = authenticateAndAuthorize(['templates:write', 'templates:read']);
+          if (!auth) return;
+          if (!verifyIdempotencyHeader()) return;
+          const bodyRes = await readJsonBody(req);
+          if (!bodyRes.ok) {
+            sendError(res, bodyRes.status, bodyRes.code, bodyRes.message, requestId);
+            return;
+          }
+          if ('tenant_id' in bodyRes.data) {
+            sendError(res, 422, 'VALIDATION_FAILED', 'tenant_id is not permitted in request body', requestId, false, [
+              { pointer: '/tenant_id', code: 'UNKNOWN_FIELD', message: 'tenant_id is forbidden in body' },
+            ]);
+            return;
+          }
+
+          const templateId = tplForkMatch[1]!;
+          const forked = repository.forkTemplate(auth.tenantId, templateId, {
+            name: bodyRes.data['name'] ? String(bodyRes.data['name']) : undefined,
+            new_id: bodyRes.data['id'] ? String(bodyRes.data['id']) : undefined,
+            source_revision: bodyRes.data['revision'] ? Number(bodyRes.data['revision']) : undefined,
+          });
+
+          res.writeHead(201);
+          res.end(JSON.stringify(forked));
           return;
         }
 
@@ -560,7 +635,10 @@ export function createServer({
             ]);
             return;
           }
-          const compId = `cmp_${crypto.randomBytes(6).toString('hex')}`;
+          const compId =
+            typeof bodyRes.data['id'] === 'string' && bodyRes.data['id'].length > 0
+              ? bodyRes.data['id']
+              : `cmp_${crypto.randomBytes(6).toString('hex')}`;
           const created = repository.createComposition(auth.tenantId, {
             id: compId,
             name: String(bodyRes.data['name'] ?? 'Composition'),
