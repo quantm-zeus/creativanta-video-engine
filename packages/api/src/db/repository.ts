@@ -1108,16 +1108,19 @@ export class TenantRepository {
         this.quarantineStore.removeAsset(tenantId, assetId);
       }
 
-      // Cascade ASSET_REVOKED to any non-terminal jobs of this tenant referencing assetId
+      // Cascade ASSET_REVOKED to any non-terminal jobs of this tenant referencing assetId.
+      // Per docs/ARCHITECTURE.md:86 & AMB-003, `cancel_requested` only transitions to `canceled`,
+      // so exclude `cancel_requested` from ASSET_REVOKED overwrite.
       const nonTerminalJobs = tx.selectScoped<{
         id: string;
         state: string;
         state_version: number;
         lease_epoch: number;
+        active_attempt_id: string | null;
         snapshot_json: string;
       }>(
         'jobs',
-        "state NOT IN ('succeeded', 'failed', 'canceled')",
+        "state NOT IN ('succeeded', 'failed', 'canceled', 'cancel_requested')",
         [],
       );
 
@@ -1125,7 +1128,13 @@ export class TenantRepository {
       for (const job of nonTerminalJobs) {
         if (job.snapshot_json.includes(`"${assetId}"`)) {
           const nextStateVersion = job.state_version + 1;
-          const nextEpoch = job.lease_epoch + 1;
+          const nextEpoch = Number(job.lease_epoch) + 1;
+          const previousAttemptId = job.active_attempt_id;
+
+          if (previousAttemptId && this.quarantineStore) {
+            this.quarantineStore.cleanupAttemptTempDir(tenantId, job.id, previousAttemptId);
+          }
+
           tx.updateScoped(
             'jobs',
             {
@@ -4429,17 +4438,45 @@ export class TenantRepository {
             this.quarantineStore.removeAsset(ast.tenant_id, ast.id);
           }
 
-          // Cascade failure to any active jobs referencing this asset
+          // Cascade failure to any active jobs referencing this asset (excluding cancel_requested per AMB-003)
           const activeJobs = tx.selectScoped<{
             tenant_id: string;
             id: string;
             state_version: number;
             lease_epoch: number;
+            active_attempt_id: string | null;
             snapshot_json: string;
-          }>('jobs', "state NOT IN ('succeeded', 'failed', 'canceled') AND tenant_id = ?", [ast.tenant_id]);
+          }>(
+            'jobs',
+            "state NOT IN ('succeeded', 'failed', 'canceled', 'cancel_requested') AND tenant_id = ?",
+            [ast.tenant_id],
+          );
 
           for (const job of activeJobs) {
             if (job.snapshot_json.includes(`"${ast.id}"`)) {
+              if (job.active_attempt_id && this.quarantineStore) {
+                this.quarantineStore.cleanupAttemptTempDir(
+                  job.tenant_id,
+                  job.id,
+                  job.active_attempt_id,
+                );
+              }
+              if (job.active_attempt_id) {
+                tx.updateScoped(
+                  'job_attempts',
+                  {
+                    state: 'failed',
+                    ended_at: nowIso,
+                    error_json: JSON.stringify({
+                      code: 'ASSET_REVOKED',
+                      message: `Asset ${ast.id} expired per retention policy`,
+                      retryable: false,
+                    }),
+                  },
+                  'tenant_id = ? AND job_id = ? AND attempt_id = ?',
+                  [job.tenant_id, job.id, job.active_attempt_id],
+                );
+              }
               tx.updateScoped(
                 'jobs',
                 {
@@ -4458,6 +4495,12 @@ export class TenantRepository {
                   updated_at: nowIso,
                 },
                 'tenant_id = ? AND id = ?',
+                [job.tenant_id, job.id],
+              );
+              tx.updateScoped(
+                'usage_reservations',
+                { state: 'released', settled_at: nowIso },
+                "tenant_id = ? AND job_id = ? AND state = 'reserved'",
                 [job.tenant_id, job.id],
               );
             }
@@ -4511,5 +4554,40 @@ export class TenantRepository {
       artifactsExpired: artifactsExpiredCount,
       idempotencyRecordsPruned: idempotencyPrunedCount,
     };
+  }
+
+  /**
+   * Returns `${tenant_id}:${job_id}:${active_attempt_id}` keys for all active jobs with non-expired
+   * worker leases (`lease_expires_at > now`). Used by StorageTempSweeper so live lease temp outputs
+   * are never deleted (`don't delete live lease output`).
+   */
+  public getLiveLeasedAttemptKeys(now = new Date()): Set<string> {
+    const nowMs = now.getTime();
+    const db = this.pool.getDatabase();
+    const rows = db
+      .prepare(
+        `SELECT tenant_id, id, active_attempt_id, lease_expires_at
+         FROM jobs
+         WHERE state IN ('preparing', 'rendering', 'encoding', 'verifying', 'cancel_requested')
+           AND active_attempt_id IS NOT NULL`,
+      )
+      .all() as Array<{
+      tenant_id: string;
+      id: string;
+      active_attempt_id: string | null;
+      lease_expires_at: string | null;
+    }>;
+
+    const liveKeys = new Set<string>();
+    for (const row of rows) {
+      if (
+        row.active_attempt_id &&
+        row.lease_expires_at &&
+        Date.parse(row.lease_expires_at) > nowMs
+      ) {
+        liveKeys.add(`${row.tenant_id}:${row.id}:${row.active_attempt_id}`);
+      }
+    }
+    return liveKeys;
   }
 }

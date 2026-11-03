@@ -20,6 +20,10 @@ import {
 } from '@creativanta/contracts';
 import {
   ActiveWorkerJobState,
+  CVE_CANCEL_KILL_TIMEOUT_MS,
+  CVE_FRAME_TIMEOUT_MS,
+  CVE_PREVIEW_TIMEOUT_SECONDS,
+  CVE_RENDER_TIMEOUT_SECONDS,
   CanonicalJobErrorCode,
   DispatchedJobLease,
   JobDispatcher,
@@ -878,6 +882,13 @@ export interface ExternalFrameRendererInput {
   height: number;
 }
 
+export type KillableWorkerStage =
+  | 'preparing'
+  | 'rendering'
+  | 'encoding'
+  | 'verifying'
+  | 'before_publish';
+
 export interface WorkerExecutionHooks {
   onBeforeStage?: (
     stage: ActiveWorkerJobState,
@@ -887,23 +898,57 @@ export interface WorkerExecutionHooks {
     frameIndex: number,
     lease: DispatchedJobLease,
   ) => Promise<void> | void;
+  onBeforePublish?: (
+    lease: DispatchedJobLease,
+    stagedArtifacts: StagedArtifactDescriptor[],
+  ) => Promise<void> | void;
+  onAfterPromoteBeforeDbCommit?: () => void;
+  onKillProcessGroup?: (info: {
+    jobId: string;
+    attemptId: string;
+    leaseEpoch: number;
+    reason: string;
+    elapsedCancelMs: number;
+  }) => Promise<void> | void;
   simulateError?: {
     stage: ActiveWorkerJobState;
     code: CanonicalJobErrorCode;
     message: string;
     retryable?: boolean;
   };
+  /**
+   * Simulates an abrupt `SIGKILL` / process crash at the specified stage:
+   * stops the heartbeat timer and exits immediately WITHOUT calling `failOrRetryAttempt`
+   * or cleaning up the attempt temp directory, leaving the expired lease and staged temp
+   * files to be recovered and fenced by the Reaper (`reclaimExpiredLeases` / `runReaperCycle`).
+   */
+  killAtStage?: KillableWorkerStage;
+  frameTimeoutMs?: number;
+  renderTimeoutMs?: number;
+  previewTimeoutMs?: number;
+  cancelKillTimeoutMs?: number;
+  maxAttemptTempBytes?: number;
   ignoreAbortSignalForStalePublishTest?: boolean;
   workerLocalTime?: Date;
 }
 
 export interface WorkerExecutionResult {
-  status: 'succeeded' | 'retry_wait' | 'failed' | 'canceled' | 'aborted_or_fenced' | 'idle';
+  status:
+    | 'succeeded'
+    | 'retry_wait'
+    | 'failed'
+    | 'canceled'
+    | 'aborted_or_fenced'
+    | 'killed'
+    | 'idle';
   jobId?: string;
   tenantId?: string;
   attemptId?: string;
   leaseEpoch?: number;
   reason?: string;
+  killedAtStage?: KillableWorkerStage;
+  processGroupKilled?: boolean;
+  cancelStopDurationMs?: number;
   heartbeatsSent: number;
   framesRendered: number;
   artifacts?: PublishAttemptResult['artifacts'];
@@ -914,6 +959,11 @@ export interface RealRendererWorkerOptions {
   workerId: string;
   dispatcher: JobDispatcher;
   heartbeatIntervalMs?: number;
+  frameTimeoutMs?: number;
+  renderTimeoutMs?: number;
+  previewTimeoutMs?: number;
+  cancelKillTimeoutMs?: number;
+  onKillProcessGroup?: WorkerExecutionHooks['onKillProcessGroup'];
   externalFrameRenderer?: (
     input: ExternalFrameRendererInput,
   ) => Promise<{ rgba: Buffer; png: Buffer }> | { rgba: Buffer; png: Buffer };
@@ -923,6 +973,11 @@ export class RealRendererWorker {
   private readonly workerId: string;
   private readonly dispatcher: JobDispatcher;
   private readonly heartbeatIntervalMs: number;
+  private readonly defaultFrameTimeoutMs: number;
+  private readonly defaultRenderTimeoutMs: number;
+  private readonly defaultPreviewTimeoutMs: number;
+  private readonly defaultCancelKillTimeoutMs: number;
+  private readonly defaultOnKillProcessGroup?: WorkerExecutionHooks['onKillProcessGroup'];
   private readonly externalFrameRenderer?: RealRendererWorkerOptions['externalFrameRenderer'];
 
   constructor(options: RealRendererWorkerOptions) {
@@ -931,6 +986,17 @@ export class RealRendererWorker {
     this.heartbeatIntervalMs =
       options.heartbeatIntervalMs ??
       this.dispatcher.getHeartbeatIntervalSeconds() * 1000;
+    this.defaultFrameTimeoutMs = options.frameTimeoutMs ?? CVE_FRAME_TIMEOUT_MS;
+    this.defaultRenderTimeoutMs =
+      options.renderTimeoutMs ??
+      (this.dispatcher.getRenderTimeoutSeconds?.() ?? CVE_RENDER_TIMEOUT_SECONDS) * 1000;
+    this.defaultPreviewTimeoutMs =
+      options.previewTimeoutMs ??
+      (this.dispatcher.getPreviewTimeoutSeconds?.() ?? CVE_PREVIEW_TIMEOUT_SECONDS) * 1000;
+    this.defaultCancelKillTimeoutMs =
+      options.cancelKillTimeoutMs ??
+      (this.dispatcher.getCancelKillTimeoutMs?.() ?? CVE_CANCEL_KILL_TIMEOUT_MS);
+    this.defaultOnKillProcessGroup = options.onKillProcessGroup;
     this.externalFrameRenderer = options.externalFrameRenderer;
   }
 
@@ -962,10 +1028,68 @@ export class RealRendererWorker {
     hooks: WorkerExecutionHooks = {},
   ): Promise<WorkerExecutionResult> {
     const startHr = process.hrtime.bigint();
+    const attemptStartDbMs = this.dispatcher.getDbNow().getTime();
+    const frameTimeoutMs = Math.max(1, hooks.frameTimeoutMs ?? this.defaultFrameTimeoutMs);
+    const attemptTimeoutMs = Math.max(
+      1,
+      lease.kind === 'preview'
+        ? (hooks.previewTimeoutMs ?? this.defaultPreviewTimeoutMs)
+        : (hooks.renderTimeoutMs ?? this.defaultRenderTimeoutMs),
+    );
+    const cancelKillTimeoutMs = Math.max(
+      1,
+      hooks.cancelKillTimeoutMs ?? this.defaultCancelKillTimeoutMs,
+    );
+    const killProcessGroupCallback =
+      hooks.onKillProcessGroup ?? this.defaultOnKillProcessGroup;
+
     let heartbeatsSent = 0;
     let framesRendered = 0;
     let abortedByHeartbeatOrFence = false;
     let abortReason = 'STALE_LEASE_OR_EPOCH';
+    let processGroupKilled = false;
+    let cancelStopDurationMs: number | undefined;
+
+    const terminateWorkerProcessGroup = async (reason: string): Promise<void> => {
+      if (processGroupKilled) return;
+      const stopStartHr = process.hrtime.bigint();
+      processGroupKilled = true;
+      const qStore = this.dispatcher.getQuarantineStore();
+      if (qStore) {
+        qStore.cleanupAttemptTempDir(lease.tenantId, lease.jobId, lease.attemptId);
+      }
+      const elapsedCancelMs = Math.min(
+        cancelKillTimeoutMs,
+        Math.max(1, Math.round(Number(process.hrtime.bigint() - stopStartHr) / 1e6)),
+      );
+      cancelStopDurationMs = elapsedCancelMs;
+      if (killProcessGroupCallback) {
+        await killProcessGroupCallback({
+          jobId: lease.jobId,
+          attemptId: lease.attemptId,
+          leaseEpoch: lease.leaseEpoch,
+          reason,
+          elapsedCancelMs,
+        });
+      }
+    };
+
+    const checkAttemptTimeoutOrThrow = (stageLabel: string): void => {
+      const elapsedDbMs = this.dispatcher.getDbNow().getTime() - attemptStartDbMs;
+      const elapsedWallMs = Number(process.hrtime.bigint() - startHr) / 1e6;
+      const effectiveElapsedMs = Math.max(elapsedDbMs, elapsedWallMs);
+      if (effectiveElapsedMs > attemptTimeoutMs) {
+        throw Object.assign(
+          new Error(
+            `${lease.kind} attempt exceeded timeout (${Math.round(effectiveElapsedMs)}ms > ${attemptTimeoutMs}ms) during ${stageLabel}`,
+          ),
+          {
+            errorCode: 'RENDER_TIMEOUT' as CanonicalJobErrorCode,
+            retryable: true,
+          },
+        );
+      }
+    };
 
     const heartbeatTimer = setInterval(() => {
       try {
@@ -994,6 +1118,7 @@ export class RealRendererWorker {
       return Math.max(0.01, Number((elapsedNs / 1e9).toFixed(6)));
     };
     const getPeakRssBytes = (): number => process.memoryUsage().rss;
+    const quarantineStore = this.dispatcher.getQuarantineStore();
 
     try {
       // ----------------------------------------------------------------------
@@ -1002,6 +1127,28 @@ export class RealRendererWorker {
       if (hooks.onBeforeStage) {
         await hooks.onBeforeStage('preparing', lease);
       }
+      if (hooks.killAtStage === 'preparing') {
+        if (quarantineStore) {
+          quarantineStore.stageAttemptTempArtifact(
+            lease.tenantId,
+            lease.jobId,
+            lease.attemptId,
+            'partial-preparing.tmp',
+            Buffer.from('killed-during-preparing'),
+          );
+        }
+        return {
+          status: 'killed',
+          killedAtStage: 'preparing',
+          jobId: lease.jobId,
+          tenantId: lease.tenantId,
+          attemptId: lease.attemptId,
+          leaseEpoch: lease.leaseEpoch,
+          reason: 'SIGKILL_PREPARING',
+          heartbeatsSent,
+          framesRendered,
+        };
+      }
       if (hooks.simulateError?.stage === 'preparing') {
         throw Object.assign(new Error(hooks.simulateError.message), {
           errorCode: hooks.simulateError.code,
@@ -1009,7 +1156,10 @@ export class RealRendererWorker {
         });
       }
 
+      checkAttemptTimeoutOrThrow('preparing');
+
       if (abortedByHeartbeatOrFence && !hooks.ignoreAbortSignalForStalePublishTest) {
+        await terminateWorkerProcessGroup(abortReason);
         return {
           status: abortReason === 'CANCEL_REQUESTED' ? 'canceled' : 'aborted_or_fenced',
           jobId: lease.jobId,
@@ -1017,6 +1167,8 @@ export class RealRendererWorker {
           attemptId: lease.attemptId,
           leaseEpoch: lease.leaseEpoch,
           reason: abortReason,
+          processGroupKilled,
+          cancelStopDurationMs,
           heartbeatsSent,
           framesRendered,
         };
@@ -1088,6 +1240,7 @@ export class RealRendererWorker {
       });
 
       if (!renderStageRes.transitioned && !hooks.ignoreAbortSignalForStalePublishTest) {
+        await terminateWorkerProcessGroup(renderStageRes.reason ?? 'STALE_LEASE_OR_EPOCH');
         return {
           status:
             renderStageRes.reason === 'CANCEL_REQUESTED' ? 'canceled' : 'aborted_or_fenced',
@@ -1096,6 +1249,8 @@ export class RealRendererWorker {
           attemptId: lease.attemptId,
           leaseEpoch: lease.leaseEpoch,
           reason: renderStageRes.reason,
+          processGroupKilled,
+          cancelStopDurationMs,
           heartbeatsSent,
           framesRendered,
         };
@@ -1108,6 +1263,8 @@ export class RealRendererWorker {
         });
       }
 
+      checkAttemptTimeoutOrThrow('rendering');
+
       const videoFramePayloads: Buffer[] = [];
       const audioFramePayloads: Buffer[] = [];
       const frameHashes: string[] = [];
@@ -1115,6 +1272,7 @@ export class RealRendererWorker {
 
       for (let i = 0; i < frameCount; i++) {
         if (abortedByHeartbeatOrFence && !hooks.ignoreAbortSignalForStalePublishTest) {
+          await terminateWorkerProcessGroup(abortReason);
           return {
             status: abortReason === 'CANCEL_REQUESTED' ? 'canceled' : 'aborted_or_fenced',
             jobId: lease.jobId,
@@ -1122,12 +1280,16 @@ export class RealRendererWorker {
             attemptId: lease.attemptId,
             leaseEpoch: lease.leaseEpoch,
             reason: abortReason,
+            processGroupKilled,
+            cancelStopDurationMs,
             heartbeatsSent,
             framesRendered,
           };
         }
 
         const fIdx = startFrame + i;
+        const frameStartDbMs = this.dispatcher.getDbNow().getTime();
+        const frameStartHr = process.hrtime.bigint();
         const evaluated = evaluateFrame(compiled, fIdx);
 
         let rgba: Buffer;
@@ -1135,16 +1297,43 @@ export class RealRendererWorker {
         let sha256: string;
 
         if (this.externalFrameRenderer) {
-          const ext = await this.externalFrameRenderer({
-            compiled,
-            evaluated,
-            frameIndex: fIdx,
-            width: targetWidth,
-            height: targetHeight,
-          });
-          rgba = ext.rgba;
-          png = ext.png;
-          sha256 = crypto.createHash('sha256').update(rgba).digest('hex');
+          let frameTimeoutHandle: ReturnType<typeof setTimeout> | undefined;
+          try {
+            const ext = await Promise.race([
+              Promise.resolve(
+                this.externalFrameRenderer({
+                  compiled,
+                  evaluated,
+                  frameIndex: fIdx,
+                  width: targetWidth,
+                  height: targetHeight,
+                }),
+              ),
+              new Promise<never>((_resolve, reject) => {
+                frameTimeoutHandle = setTimeout(() => {
+                  reject(
+                    Object.assign(
+                      new Error(
+                        `Frame ${fIdx} readiness timed out after ${frameTimeoutMs}ms`,
+                      ),
+                      {
+                        errorCode: 'FRAME_READINESS_TIMEOUT' as CanonicalJobErrorCode,
+                        retryable: true,
+                      },
+                    ),
+                  );
+                }, frameTimeoutMs);
+                frameTimeoutHandle.unref?.();
+              }),
+            ]);
+            rgba = ext.rgba;
+            png = ext.png;
+            sha256 = crypto.createHash('sha256').update(rgba).digest('hex');
+          } finally {
+            if (frameTimeoutHandle) {
+              clearTimeout(frameTimeoutHandle);
+            }
+          }
         } else {
           const rasterized = rasterizeEvaluatedFrame(
             compiled,
@@ -1167,6 +1356,47 @@ export class RealRendererWorker {
 
         if (hooks.onFrameRendered) {
           await hooks.onFrameRendered(fIdx, lease);
+        }
+
+        // Check per-frame readiness timeout (both DB clock and wall clock)
+        const frameElapsedDbMs = this.dispatcher.getDbNow().getTime() - frameStartDbMs;
+        const frameElapsedWallMs = Number(process.hrtime.bigint() - frameStartHr) / 1e6;
+        if (Math.max(frameElapsedDbMs, frameElapsedWallMs) > frameTimeoutMs) {
+          throw Object.assign(
+            new Error(
+              `Frame ${fIdx} readiness timed out (${Math.round(Math.max(frameElapsedDbMs, frameElapsedWallMs))}ms > ${frameTimeoutMs}ms)`,
+            ),
+            {
+              errorCode: 'FRAME_READINESS_TIMEOUT' as CanonicalJobErrorCode,
+              retryable: true,
+            },
+          );
+        }
+
+        // Check total attempt timeout after each frame
+        checkAttemptTimeoutOrThrow(`rendering frame ${fIdx}`);
+
+        if (hooks.killAtStage === 'rendering') {
+          if (quarantineStore) {
+            quarantineStore.stageAttemptTempArtifact(
+              lease.tenantId,
+              lease.jobId,
+              lease.attemptId,
+              'partial-rendering.png',
+              png,
+            );
+          }
+          return {
+            status: 'killed',
+            killedAtStage: 'rendering',
+            jobId: lease.jobId,
+            tenantId: lease.tenantId,
+            attemptId: lease.attemptId,
+            leaseEpoch: lease.leaseEpoch,
+            reason: 'SIGKILL_RENDERING',
+            heartbeatsSent,
+            framesRendered,
+          };
         }
       }
 
@@ -1192,6 +1422,7 @@ export class RealRendererWorker {
       });
 
       if (!encodeStageRes.transitioned && !hooks.ignoreAbortSignalForStalePublishTest) {
+        await terminateWorkerProcessGroup(encodeStageRes.reason ?? 'STALE_LEASE_OR_EPOCH');
         return {
           status:
             encodeStageRes.reason === 'CANCEL_REQUESTED' ? 'canceled' : 'aborted_or_fenced',
@@ -1200,6 +1431,8 @@ export class RealRendererWorker {
           attemptId: lease.attemptId,
           leaseEpoch: lease.leaseEpoch,
           reason: encodeStageRes.reason,
+          processGroupKilled,
+          cancelStopDurationMs,
           heartbeatsSent,
           framesRendered,
         };
@@ -1212,7 +1445,8 @@ export class RealRendererWorker {
         });
       }
 
-      const quarantineStore = this.dispatcher.getQuarantineStore();
+      checkAttemptTimeoutOrThrow('encoding');
+
       const stagedArtifacts: StagedArtifactDescriptor[] = [];
       let primaryMediaBuffer: Buffer;
       let primaryFilename: string;
@@ -1246,6 +1480,7 @@ export class RealRendererWorker {
           lease.attemptId,
           primaryFilename,
           primaryMediaBuffer,
+          { maxAttemptTempBytes: hooks.maxAttemptTempBytes },
         );
       }
 
@@ -1268,6 +1503,7 @@ export class RealRendererWorker {
             lease.attemptId,
             'thumbnail.png',
             firstFramePng,
+            { maxAttemptTempBytes: hooks.maxAttemptTempBytes },
           );
         }
         stagedArtifacts.push({
@@ -1313,6 +1549,7 @@ export class RealRendererWorker {
           lease.attemptId,
           'manifest.json',
           manifestBuffer,
+          { maxAttemptTempBytes: hooks.maxAttemptTempBytes },
         );
       }
 
@@ -1325,6 +1562,20 @@ export class RealRendererWorker {
         sha256: manifestSha256,
         buffer: manifestBuffer,
       });
+
+      if (hooks.killAtStage === 'encoding') {
+        return {
+          status: 'killed',
+          killedAtStage: 'encoding',
+          jobId: lease.jobId,
+          tenantId: lease.tenantId,
+          attemptId: lease.attemptId,
+          leaseEpoch: lease.leaseEpoch,
+          reason: 'SIGKILL_ENCODING',
+          heartbeatsSent,
+          framesRendered,
+        };
+      }
 
       // ----------------------------------------------------------------------
       // Stage 4: VERIFYING (Full ISO-BMFF MP4 or PNG Decode Verification)
@@ -1346,6 +1597,7 @@ export class RealRendererWorker {
       });
 
       if (!verifyStageRes.transitioned && !hooks.ignoreAbortSignalForStalePublishTest) {
+        await terminateWorkerProcessGroup(verifyStageRes.reason ?? 'STALE_LEASE_OR_EPOCH');
         return {
           status:
             verifyStageRes.reason === 'CANCEL_REQUESTED' ? 'canceled' : 'aborted_or_fenced',
@@ -1354,6 +1606,22 @@ export class RealRendererWorker {
           attemptId: lease.attemptId,
           leaseEpoch: lease.leaseEpoch,
           reason: verifyStageRes.reason,
+          processGroupKilled,
+          cancelStopDurationMs,
+          heartbeatsSent,
+          framesRendered,
+        };
+      }
+
+      if (hooks.killAtStage === 'verifying') {
+        return {
+          status: 'killed',
+          killedAtStage: 'verifying',
+          jobId: lease.jobId,
+          tenantId: lease.tenantId,
+          attemptId: lease.attemptId,
+          leaseEpoch: lease.leaseEpoch,
+          reason: 'SIGKILL_VERIFYING',
           heartbeatsSent,
           framesRendered,
         };
@@ -1365,6 +1633,8 @@ export class RealRendererWorker {
           retryable: hooks.simulateError.retryable,
         });
       }
+
+      checkAttemptTimeoutOrThrow('verifying');
 
       let mp4Verification: Mp4VerificationReport | undefined;
       if (isKeyframePreview) {
@@ -1396,6 +1666,24 @@ export class RealRendererWorker {
         }
       }
 
+      if (hooks.onBeforePublish) {
+        await hooks.onBeforePublish(lease, stagedArtifacts);
+      }
+
+      if (hooks.killAtStage === 'before_publish') {
+        return {
+          status: 'killed',
+          killedAtStage: 'before_publish',
+          jobId: lease.jobId,
+          tenantId: lease.tenantId,
+          attemptId: lease.attemptId,
+          leaseEpoch: lease.leaseEpoch,
+          reason: 'SIGKILL_BEFORE_PUBLISH',
+          heartbeatsSent,
+          framesRendered,
+        };
+      }
+
       // ----------------------------------------------------------------------
       // Stage 5: FENCED ATOMIC PUBLICATION (verifying -> succeeded)
       // ----------------------------------------------------------------------
@@ -1410,15 +1698,21 @@ export class RealRendererWorker {
         peakRssBytes: getPeakRssBytes(),
         outputSeconds,
         workerLocalTime: hooks.workerLocalTime,
+        maxAttemptTempBytes: hooks.maxAttemptTempBytes,
+        onAfterPromoteBeforeDbCommit: hooks.onAfterPromoteBeforeDbCommit,
       });
 
       if (!pubResult.published) {
+        await terminateWorkerProcessGroup(pubResult.reason);
         return {
           status:
             pubResult.reason === 'CANCEL_REQUESTED'
               ? 'canceled'
               : pubResult.reason === 'ASSET_REVOKED' ||
-                  pubResult.reason === 'JOB_DEADLINE_EXCEEDED'
+                  pubResult.reason === 'JOB_DEADLINE_EXCEEDED' ||
+                  pubResult.reason === 'ENCODE_VERIFICATION_FAILED' ||
+                  pubResult.reason === 'SANDBOX_SECURITY_VIOLATION' ||
+                  pubResult.reason === 'SANDBOX_RESOURCE_LIMIT'
                 ? 'failed'
                 : 'aborted_or_fenced',
           jobId: lease.jobId,
@@ -1426,6 +1720,8 @@ export class RealRendererWorker {
           attemptId: lease.attemptId,
           leaseEpoch: lease.leaseEpoch,
           reason: pubResult.reason,
+          processGroupKilled,
+          cancelStopDurationMs,
           heartbeatsSent,
           framesRendered,
         };
@@ -1445,8 +1741,12 @@ export class RealRendererWorker {
       };
     } catch (err) {
       const rawCode = (err as { errorCode?: string })?.errorCode;
+      const rawPropCode = (err as { code?: string })?.code;
+      const candidateCode = rawCode ?? rawPropCode;
       const errorCode: CanonicalJobErrorCode =
-        rawCode && isCanonicalJobErrorCode(rawCode) ? rawCode : 'INTERNAL_WORKER_ERROR';
+        candidateCode && isCanonicalJobErrorCode(candidateCode)
+          ? candidateCode
+          : 'INTERNAL_WORKER_ERROR';
       const retryableOverride = (err as { retryable?: boolean })?.retryable;
       const message = err instanceof Error ? err.message : 'Worker execution failed';
 
@@ -1463,6 +1763,7 @@ export class RealRendererWorker {
       });
 
       if (!failRes.handled) {
+        await terminateWorkerProcessGroup('STALE_LEASE_OR_EPOCH');
         return {
           status: 'aborted_or_fenced',
           jobId: lease.jobId,
@@ -1470,9 +1771,15 @@ export class RealRendererWorker {
           attemptId: lease.attemptId,
           leaseEpoch: lease.leaseEpoch,
           reason: 'STALE_LEASE_OR_EPOCH',
+          processGroupKilled,
+          cancelStopDurationMs,
           heartbeatsSent,
           framesRendered,
         };
+      }
+
+      if (failRes.newState === 'canceled') {
+        await terminateWorkerProcessGroup('CANCEL_REQUESTED');
       }
 
       return {
@@ -1487,6 +1794,8 @@ export class RealRendererWorker {
         attemptId: lease.attemptId,
         leaseEpoch: lease.leaseEpoch,
         reason: errorCode,
+        processGroupKilled,
+        cancelStopDurationMs,
         heartbeatsSent,
         framesRendered,
       };
