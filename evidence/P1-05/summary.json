@@ -1,0 +1,86 @@
+{
+  "task": "P1-05",
+  "status": "implemented_local",
+  "timestamp": "2026-11-03T04:28:00Z",
+  "base_commit": "0f532f82d3c0294b5bba427e722aa074036e0897",
+  "tested_commit": "79a4dd67524ea4e3f8f4baf333e71870dddcf419",
+  "acceptance": {
+    "ci_jobs": "PASS",
+    "migration_smoke_harness": "PASS",
+    "secrets_redacted": "PASS",
+    "pinned_runners_cache": "PASS",
+    "evidence_format_standardized": "PASS",
+    "no_fake_render_pass": "PASS"
+  },
+  "checks": [
+    {
+      "name": "pnpm_build",
+      "command": "pnpm -r --if-present run build",
+      "exit_code": 0,
+      "result": "PASS"
+    },
+    {
+      "name": "pnpm_typecheck",
+      "command": "pnpm -r --if-present run typecheck",
+      "exit_code": 0,
+      "result": "PASS"
+    },
+    {
+      "name": "pnpm_lint",
+      "command": "pnpm -r --if-present run lint",
+      "exit_code": 0,
+      "result": "PASS"
+    },
+    {
+      "name": "pnpm_test",
+      "command": "pnpm -r --if-present run test",
+      "exit_code": 0,
+      "result": "PASS"
+    },
+    {
+      "name": "migration_smoke_harness",
+      "command": "node packages/contracts/dist/migration/cli.js --smoke",
+      "exit_code": 0,
+      "result": "PASS"
+    },
+    {
+      "name": "controller_self_test",
+      "command": "node packages/controller/dist/index.js --self-test",
+      "exit_code": 0,
+      "result": "PASS"
+    },
+    {
+      "name": "workspace_health_check",
+      "command": "node scripts/health-check.mjs",
+      "exit_code": 0,
+      "result": "PASS"
+    },
+    {
+      "name": "repo_validator",
+      "command": "python3 scripts/validate_repo.py",
+      "exit_code": 0,
+      "result": "PASS"
+    },
+    {
+      "name": "harness_unit_tests",
+      "command": "python3 -m unittest discover -s tooling/agent_harness/tests -v",
+      "exit_code": 0,
+      "result": "PASS"
+    },
+    {
+      "name": "task_ledger_unit_tests",
+      "command": "python3 -m unittest evidence/P0-05/test_task_ledger.py",
+      "exit_code": 0,
+      "result": "PASS"
+    }
+  ],
+  "external_gates": [
+    "Independent peer review sign-off and staging PR merge approval",
+    "G2 Milestone video rendering pipeline and MP4 fixtures (P2-01..P2-05)",
+    "P3-01 Full PostgreSQL 21-table production migration, RLS policies, and cross-tenant IDOR test suite"
+  ],
+  "remaining_scope": [
+    "P1 milestone completed upon P1-05 integration",
+    "Proceed to Milestone P2 (First useful POC, three real MP4 fixtures and engine decision)"
+  ]
+}

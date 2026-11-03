@@ -7,3 +7,4 @@ export * from './config/env.js';
 export * from './schemas/index.js';
 export * from './validation/index.js';
 export * from './compiler/index.js';
+export * from './migration/index.js';
