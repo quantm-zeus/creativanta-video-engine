@@ -3,8 +3,8 @@
   "task_id": "P5-02",
   "stream": "D+C",
   "phase": "P5",
-  "base_commit": "de614f462d0070069fb55cdde899572d907f543d",
-  "tested_commit": "a09a644b125ddf4ec385f6c37946612048634435",
+  "base_commit": "f0ca6fac1733c87a839be997c61c5dea65d9e534",
+  "tested_commit": "8a32554ecaf531f69680b8a75032e43303961696",
   "acceptance_ref": "docs/IMPLEMENTATION_PLAN.md: P5-02",
   "tts_configuration": {
     "default_flag": "CVE_TTS_PROVIDER=disabled",

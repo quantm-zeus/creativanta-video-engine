@@ -4,11 +4,11 @@ Báo cáo nghiệm thu kỹ thuật cho nhiệm vụ `P5-02` (`D+C / P5` — TTS
 
 ```text
 Task: P5-02
-Base / tested commit: de614f462d0070069fb55cdde899572d907f543d / a09a644b125ddf4ec385f6c37946612048634435
+Base / tested commit: f0ca6fac1733c87a839be997c61c5dea65d9e534 / 8a32554ecaf531f69680b8a75032e43303961696
 Environment: Linux x86_64, Debian 12 container, Node v24.22.2, pnpm 12.16.1, TypeScript 5.7.3, Python 3.11.2
 Command: ./node_modules/.bin/tsc -p packages/sdk/tsconfig.json && ./node_modules/.bin/tsc -p packages/templates/tsconfig.json && node --test packages/sdk/test/**/*.test.mjs && node --test packages/templates/test/**/*.test.mjs && node scripts/health-check.mjs && /usr/bin/python3 scripts/validate_repo.py
 Result: PASS
-Exit code / UTC started / duration: 0 / 2026-11-03T09:18:00Z / 14.5s
+Exit code / UTC started / duration: 0 / 2026-11-03T10:23:00Z / 14.5s
 Artifacts:
   - packages/sdk/src/tts/types.ts, sha256=9657464e2d5cb64fe9cdf69a2ff35f59e191eb5e3b95607f43cc931e024de192, expires=N/A (repo-versioned)
   - packages/sdk/src/tts/terms-registry.ts, sha256=ddc3f8b95c1b9ae1265292bae4ce9d4521f6a98e45c309aef671156ddfab6fc1, expires=N/A (repo-versioned)
@@ -24,10 +24,11 @@ Artifacts:
   - packages/templates/src/narrated-explainer.ts, sha256=ec7904f74f08c4145f706350d8148665afe50a5edeff3e740cde268e1899e2b5, expires=N/A (repo-versioned)
   - packages/templates/src/retail-promo.ts, sha256=a83495eb3f4a27910082b9014320cc157b205b68f23acc1c70e73fe9905cd341, expires=N/A (repo-versioned)
   - packages/templates/src/index.ts, sha256=958bc505b735aaa755473e83c6abfa943cdd1e1c04f45cf9437e666b2878777e, expires=N/A (repo-versioned)
+  - pnpm-lock.yaml, sha256=d94a9cd872e52a6377770e90cedb9ddbe6c4c0a7d5f611b4dc31c9d2dafbf246, expires=N/A (repo-versioned)
   - evidence/P5-02/samples/vi-vn-promo.wav, sha256=56f0688708aa816328ecedd14339706f42483ee7514d1b89008c2ca887e38970, expires=N/A (repo-versioned)
   - evidence/P5-02/samples/vi-vn-explainer.wav, sha256=bd387f262107c808fa8f088a47878f0447114bf1c851982f75eee2ffe20839db, expires=N/A (repo-versioned)
   - evidence/P5-02/samples/vi-vn-tone-stress.wav, sha256=1a6a3e663876b5bd22adaf5540025ed1939735b2a2eaf1b96fb648375fd4c87d, expires=N/A (repo-versioned)
-  - evidence/P5-02/summary.json, sha256=6f82b6e3ba22cefe63b1856e99e40219979ba2323bdc199da7c09b877bf3152b, expires=N/A (repo-versioned)
+  - evidence/P5-02/summary.json, sha256=4a14adafdf5ce611be16e72835a58013db7891b9b7d8a47e269b2321433cb525, expires=N/A (repo-versioned)
 Acceptance mapping:
   - TTS interface & synthesis: PASS — Triển khai interface TtsService với định dạng chuẩn 48kHz stereo 16-bit PCM WAV (khớp với docs/SCENE-SPEC.md và docs/TESTING.md), hỗ trợ điều chỉnh tốc độ speechRate (0.5..2.0) và cao độ pitch (-20..+20), chuẩn hóa Unicode NFC và phân tách âm tiết/dấu thanh tiếng Việt.
   - Content-addressable cache: PASS — Tính toán khóa đệm xác định SHA-256 từ (provider, model, voiceId, locale, format, rate, pitch, volume, targetFps, textSha256); phát hiện trùng lặp trả về kết quả đệm kèm cờ fromCache: true mà không cần gọi lại adapter tổng hợp; hỗ trợ cả MemoryTtsCache và FileTtsCache lưu đệm bền vững trên đĩa.
@@ -36,7 +37,7 @@ Acceptance mapping:
   - Terms review gate: PASS — Bộ đăng ký TermsReviewRegistry cưỡng chế kiểm tra điều khoản pháp lý, thương mại và sự đồng thuận của giọng nói trước khi cho phép kích hoạt bộ điều hợp; từ chối mọi yêu cầu tổng hợp với giọng đọc/nhà cung cấp chưa được duyệt với mã lỗi UNREVIEWED_PROVIDER_TERMS hoặc VOICE_CONSENT_UNVERIFIED.
   - Budget & timeout limiter: PASS — Giới hạn số ký tự tối đa mỗi yêu cầu (5000 ký tự) và hạn mức ký tự hàng tháng của từng tenant (chặn đứng với mã 429 TTS_BUDGET_EXCEEDED); kiểm soát thời gian thực thi bằng AbortSignal với thời hạn chờ mặc định 5000ms (chặn đứng với mã 504 TTS_TIMEOUT).
   - vi-VN quality samples: PASS — Sinh 3 tệp mẫu âm thanh thực tế trong evidence/P5-02/samples/ (eCommerce Promo 7.04s, Technical Explainer 9.08s, Phonetic Tone Stress 7.86s), kiểm toán toàn diện đặc tính âm học: 48kHz stereo, peak headroom compliant <= -1.0 dBTP, zero digital clipping, kiểm tra đầy đủ 6 thanh điệu tiếng Việt và ký hiệu tiền tệ ₫.
-Reviewer / reviewed commit / decision: pending independent reviewer / a09a644b125ddf4ec385f6c37946612048634435 / local completion awaiting review
+Reviewer / reviewed commit / decision: pending independent reviewer / 8a32554ecaf531f69680b8a75032e43303961696 / local completion awaiting review
 ```
 
 ---
@@ -98,13 +99,31 @@ Nhiệm vụ **P5-02** (`D+C / P5`) hiện thực hóa toàn diện hệ thống
 
 | # | Lệnh kiểm tra | Mã thoát | Kết quả | Ghi chú |
 |---|---|---|---|---|
-| 1 | `./node_modules/.bin/tsc -p packages/sdk/tsconfig.json` | `0` | `PASS` | Biên dịch TypeScript `@creativanta/sdk` sạch sẽ, sinh declarations `dist/` |
-| 2 | `./node_modules/.bin/tsc -p packages/templates/tsconfig.json` | `0` | `PASS` | Biên dịch TypeScript `@creativanta/templates` sạch sẽ, sinh declarations `dist/` |
-| 3 | `node --test packages/sdk/test/**/*.test.mjs` | `0` | `PASS` | 25 ca kiểm thử bao phủ toàn diện giao diện TTS, điều khoản, ngân sách, đệm và chất lượng tiếng Việt |
-| 4 | `node --test packages/templates/test/**/*.test.mjs` | `0` | `PASS` | 3 ca kiểm thử biên dịch bản mẫu và đối soát luồng âm thanh dự phòng upload fallback |
-| 5 | `node packages/sdk/scripts/generate-samples.mjs` | `0` | `PASS` | Khởi tạo 3 tệp âm thanh thực tế 48kHz stereo WAV trong `evidence/P5-02/samples/` |
-| 6 | `node scripts/health-check.mjs` | `0` | `PASS` | Xác nhận tính hợp lệ môi trường, endpoint API, cờ `CVE_TTS_PROVIDER=disabled` |
-| 7 | `/usr/bin/python3 scripts/validate_repo.py` | `0` | `PASS` | Kiểm tra toàn vẹn 16 tài liệu, 447 liên kết nội bộ, 16 khối JSON, và DAG 52 nhiệm vụ |
+| 1 | `pnpm install --frozen-lockfile` | `0` | `PASS` | Kiểm tra lockfile hợp lệ, không thiếu importer `packages/sdk` và `packages/templates` |
+| 2 | `pnpm -r --if-present lint` | `0` | `PASS` | Kiểm tra cú pháp và linting toàn diện 8 workspace packages |
+| 3 | `pnpm -r --if-present typecheck` | `0` | `PASS` | Kiểm tra hệ thống kiểu tĩnh TypeScript toàn diện 8 workspace packages |
+| 4 | `pnpm -r --if-present test` | `0` | `PASS` | Thực thi toàn bộ bộ kiểm thử đơn vị và tích hợp trong repo (contracts, api, controller, ingest, sdk, renderers, templates) |
+| 5 | `pnpm -r --if-present build` | `0` | `PASS` | Biên dịch toàn bộ mã nguồn TypeScript sang JavaScript/CJS/ESM |
+| 6 | `node packages/sdk/scripts/generate-samples.mjs` | `0` | `PASS` | Khởi tạo 3 tệp âm thanh thực tế 48kHz stereo WAV trong `evidence/P5-02/samples/` |
+| 7 | `node scripts/health-check.mjs` | `0` | `PASS` | Xác nhận tính hợp lệ môi trường, endpoint API, cờ `CVE_TTS_PROVIDER=disabled` |
+| 8 | `/usr/bin/python3 scripts/validate_repo.py` | `0` | `PASS` | Kiểm tra toàn vẹn 16 tài liệu, 503 liên kết nội bộ, 16 khối JSON, và DAG 52 nhiệm vụ |
+| 9 | `PATH=/usr/bin:$PATH python3 -m unittest discover -s tooling/agent_harness/tests -v` | `0` | `PASS` | 10 kiểm thử harness supervisor và CI gate pass |
+
+### 2.1. Phân tích và Khắc phục sự cố GitHub CI (PR #17):
+- **Hiện tượng:** Kiểm tra CI tại GitHub PR #17 thất bại tại bước `Validate project tests when available` (run ID: `41610320883`, job ID: `125830284156`).
+- **Nguyên nhân gốc (Root Cause):** Khảo sát bằng lệnh `gh run view 41610320883 --log-failed` phát hiện lỗi `ERR_PNPM_PACKAGE_MANAGER_NO_IMPORTER`: khi bổ sung gói `packages/sdk` và `packages/templates`, file khóa chuỗi cung ứng `pnpm-lock.yaml` chưa được cập nhật trường mục nhập tương ứng trong bảng `importers["packages/sdk"]` và `importers["packages/templates"]`, dẫn đến cờ an toàn bắt buộc `--frozen-lockfile` từ chối thực thi.
+- **Biện pháp xử lý:**
+  1. Tái đồng bộ file khóa nguyên vẹn không làm thay đổi các dependency đã ghim:
+     ```bash
+     corepack pnpm install --lockfile-only
+     ```
+  2. Xác minh tính hợp lệ với cờ đóng băng chuẩn xác của môi trường CI:
+     ```bash
+     corepack pnpm install --frozen-lockfile
+     ```
+     Kết quả: `Lockfile is up to date, resolution step is skipped` — hoàn tất với mã thoát `0` (`PASS`).
+  3. Tích hợp cập nhật mới nhất từ nhánh `origin/staging` (commit `f0ca6fac1733c87a839be997c61c5dea65d9e534` PR #18) vào `agy/p5-02`.
+  4. Biên dịch lại toàn bộ workspace (`pnpm -r build`) và xác nhận toàn bộ kiểm thử CI chạy thành công với mã thoát `0`.
 
 ---
 
