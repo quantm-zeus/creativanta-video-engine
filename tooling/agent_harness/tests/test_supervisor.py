@@ -83,6 +83,46 @@ class LifecycleTests(unittest.TestCase):
             self.s.dispatch()
         self.assertEqual(seen, ["P0-02"])
 
+    def test_two_independent_tasks_dispatch_in_parallel(self):
+        self.s.cfg["max_concurrent"] = 2
+        self.s.cfg["max_runs_per_24h"] = 24
+        dispatched = []
+        def fake_launch(key):
+            dispatched.append(key)
+            self.s.active[key] = object()
+            self.s.update(key, state="RUNNING")
+        with patch.object(self.s, "launch", side_effect=fake_launch):
+            self.s.dispatch()
+        self.assertEqual(dispatched, ["P0-02", "P0-03"])
+        self.assertEqual(len(self.s.active), 2)
+
+    def test_concurrency_limit_prevents_third_task(self):
+        self.s.cfg["max_concurrent"] = 2
+        self.s.cfg["max_runs_per_24h"] = 24
+        seen = []
+        def fake_launch(key):
+            seen.append(key)
+            self.s.active[key] = object()
+            self.s.update(key, state="RUNNING")
+        with patch.object(self.s, "launch", side_effect=fake_launch):
+            self.s.dispatch()
+            self.s.dispatch()
+        self.assertEqual(len(seen), 2)
+
+    def test_daily_budget_halts_new_launches(self):
+        self.s.cfg["max_concurrent"] = 2
+        self.s.cfg["max_runs_per_24h"] = 2
+        now = int(time.time())
+        self.s.db.execute("INSERT INTO events(ts,task_id,action,detail) VALUES(?,?,?,?)",
+                          (now, "P0-02", "STARTED", "test run 1"))
+        self.s.db.execute("INSERT INTO events(ts,task_id,action,detail) VALUES(?,?,?,?)",
+                          (now, "P0-03", "STARTED", "test run 2"))
+        self.s.db.commit()
+        seen = []
+        with patch.object(self.s, "launch", side_effect=lambda key: seen.append(key)):
+            self.s.dispatch()
+        self.assertEqual(seen, [])
+
     def test_restart_recovers_orphan(self):
         self.s.update("P0-02", state="RUNNING", attempts=1)
         self.s.db.close()

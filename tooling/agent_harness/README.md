@@ -17,6 +17,6 @@ The Docker restart policy is unless-stopped. The scheduler monitors its heartbea
 
 Task completion requires real evidence and a Git commit, GitHub PR, passing CI and integration into staging. Neither production nor main is updated by AGY. Some tasks require manual security, legal, or creative review.
 
-The config.json file controls the pause flag, agent models, concurrency, timeouts and daily invocation cap. The initial limit is one agent at a time. Do not delete data/ or .worktrees/ during troubleshooting.
+The config.json file controls the pause flag, agent models, concurrency, timeouts and daily invocation cap. The initial limit is two independent agents at a time; dependencies still gate starts. Do not delete data/ or .worktrees/ during troubleshooting.
 
 A running container or a green health check is not evidence that a product feature is implemented. Use the GitHub staging history, evidence reports and real video artifacts for feature progress.

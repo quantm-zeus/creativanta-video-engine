@@ -14,9 +14,9 @@ services:
       - no-new-privileges:true
     cap_drop:
       - ALL
-    pids_limit: 170
+    pids_limit: 240
     mem_limit: 4g
-    cpus: 1.5
+    cpus: 2.0
     environment:
       HOME: /home/whaleorcale
       XDG_CONFIG_HOME: /home/whaleorcale/.config
