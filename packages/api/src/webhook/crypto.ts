@@ -50,7 +50,7 @@ export function encryptSecretAtRest(plaintext: string, masterKey?: Buffer | stri
   const key = deriveMasterKey(masterKey);
   const iv = crypto.randomBytes(12);
   const cipher = crypto.createCipheriv('aes-256-gcm', key, iv);
-  
+
   const encrypted = Buffer.concat([
     cipher.update(plaintext, 'utf8'),
     cipher.final(),

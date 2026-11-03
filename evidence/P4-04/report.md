@@ -11,7 +11,7 @@ Result: PASS
 Exit code / UTC started / duration: 0 / 2026-11-03T18:27:00Z / 0.7s (P4-04 suite: 21/21 pass), 31.8s (full integration verification)
 Artifacts:
   - packages/api/src/webhook/types.ts, sha256=bc5192b61694c9b92c15b24b85c130ce407ba6d9120d9715f91421e3cba12f01, expires=N/A (repo-versioned)
-  - packages/api/src/webhook/crypto.ts, sha256=d27694328c7e5b34dac4da1074a82716a9ef1565f1edec5b2ddc27ff8c7be58c, expires=N/A (repo-versioned)
+  - packages/api/src/webhook/crypto.ts, sha256=d1b7652f907e584e1d4a00e896f0297997a2bf0254cc8790f3630f62cfa66540, expires=N/A (repo-versioned)
   - packages/api/src/webhook/http-client.ts, sha256=6bf2ad2e62372bcb24f00af9afcf44eb22da83f0c55e5cec0f953d93bedf89db, expires=N/A (repo-versioned)
   - packages/api/src/webhook/receiver-verifier.ts, sha256=6ca6be7ff3e6fc6c0e3284255808657c4c1ab9a1df501d5ecf2b673d3b66bd51, expires=N/A (repo-versioned)
   - packages/api/src/webhook/delivery-service.ts, sha256=b88fa3afe6c12109f9e4355c8b6034c26bb24a73bf4a78f746fc7f6c6ac79be1, expires=N/A (repo-versioned)
