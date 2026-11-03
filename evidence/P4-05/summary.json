@@ -1,0 +1,51 @@
+{
+  "$schema": "creativanta.video-engine.p4-05-summary.v1",
+  "task_id": "P4-05",
+  "stream": "A",
+  "phase": "P4",
+  "base_commit": "b86920a2e5d167f08d0e7226db99c824c2db4811",
+  "acceptance": "Usage ledger/reserve/settle/release/operational vs billable reports; repeated completion không double debit, canceled/failed units tách rõ",
+  "ledger_invariants": {
+    "immutability_trigger": "trg_usage_entries_no_update (append-only ledger, zero UPDATE permitted)",
+    "compensating_entries_supported": true,
+    "unique_constraint": "UNIQUE (tenant_id, job_id, meter, ledger_version)",
+    "reservation_states": [
+      "reserved",
+      "settled",
+      "released"
+    ],
+    "preview_exemption": {
+      "billable_output_minutes": 0,
+      "reason": "terminal_preview_exempt",
+      "operational_cpu_seconds_metered": true
+    },
+    "double_debit_protection": {
+      "lease_epoch_fencing": true,
+      "terminal_job_fencing": true,
+      "idempotent_replay_guarantee": true,
+      "concurrent_publication_race_resolved": true
+    },
+    "separation_of_units": {
+      "canceled_units_billable": 0,
+      "failed_units_billable": 0,
+      "canceled_operational_metered": true,
+      "failed_operational_metered": true,
+      "released_reservations_tracked": true
+    }
+  },
+  "reporting": {
+    "endpoint": "GET /v1/usage",
+    "reconcile_endpoint": "GET /v1/usage/reconcile",
+    "iso_validation": true,
+    "max_window_days": 31,
+    "operational_vs_billable_breakdown": true,
+    "reconciliation_discrepancy_detector": true
+  },
+  "tests": {
+    "file": "packages/api/test/p4-05-usage-ledger-reserve-settle-release.test.mjs",
+    "suites": 4,
+    "total": 11,
+    "passed": 11,
+    "failed": 0
+  }
+}
