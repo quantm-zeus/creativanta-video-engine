@@ -4,11 +4,11 @@ Báo cáo nghiệm thu kỹ thuật cho nhiệm vụ `P1-05` (`A+C / P1`): Thi�
 
 ```text
 Task: P1-05
-Base / tested commit: 0f532f82d3c0294b5bba427e722aa074036e0897 / 79a4dd67524ea4e3f8f4baf333e71870dddcf419
+Base / tested commit: 0f532f82d3c0294b5bba427e722aa074036e0897 / 74013317a8eecc237cb3ae1835568a5322f5065e
 Environment: Linux x86_64, Ubuntu 24.04 LTS, 4 vCPUs, 15GiB RAM, Node v24.22.2, pnpm 12.16.1, TypeScript 5.7.3, Python 3.12
 Command: PATH=/usr/local/lib/node_modules/corepack/shims:/usr/bin:$PATH pnpm build && pnpm typecheck && pnpm lint && pnpm test && node packages/contracts/dist/migration/cli.js --smoke && node packages/controller/dist/index.js --self-test && node scripts/health-check.mjs && PATH=/usr/bin:$PATH python3 scripts/validate_repo.py
 Result: PASS
-Exit code / UTC started / duration: 0 / 2026-11-03T04:26:00Z / 15.2s
+Exit code / UTC started / duration: 0 / 2026-11-03T04:35:00Z / 15.2s
 Artifacts:
   - .github/workflows/video-engine-ci.yml, sha256=809f4819efbb91ee042ab35a314802337cee52b42c00a6cf83bd11461a32f5d1, expires=N/A (repo-versioned)
   - docker/migrations/001_init_schema_migrations.sql, sha256=9071443efe4fe372e7a5ee7499df2ea6a69eac06140bb9ac896ffab4b9eb81f0, expires=N/A (repo-versioned)
@@ -22,7 +22,7 @@ Artifacts:
   - packages/contracts/src/migration/runner.ts, sha256=7e4c820d866e063738c073b180bf0f19bd55152e3de6d18ffab1a24696fcf4f4, expires=N/A (repo-versioned)
   - packages/contracts/src/migration/cli.ts, sha256=905a8862f25984d602e4aa82341e11d341f3af663568eaa244ff1b750aa69e54, expires=N/A (repo-versioned)
   - packages/contracts/test/migration.test.mjs, sha256=0565e95952ef9b3519a41b145a12d11efeab3b8aa02621a53087c59f9a8234dd, expires=N/A (repo-versioned)
-  - evidence/P1-05/summary.json, sha256=e642dae4ba2374ceef4d8ff602e4bdbb16c2dae35b8660b01cf7e4a3ce383231, expires=N/A (repo-versioned)
+  - evidence/P1-05/summary.json, sha256=fc7ec4de51a4b3f0df1bc7f37f18d770ea798192cbafdce7b00f73cd2e5db72e, expires=N/A (repo-versioned)
 Acceptance mapping:
   - CI jobs docs/contracts/lint/typecheck/unit: PASS — .github/workflows/video-engine-ci.yml phân tách 6 jobs độc lập, song song (docs, contracts, lint, typecheck, unit, migration) bao phủ 100% kiểm tra tài liệu, hợp đồng JSON Schema/OpenAPI, linting, typechecking nghiêm ngặt và toàn bộ unit/harness test suites
   - migration smoke harness: PASS — Triển khai đầy đủ gói di trú và kiểm tra khói cơ sở dữ liệu (docker/migrations/, packages/contracts/src/migration/), hỗ trợ giao thức PostgreSQL Wire Protocol v3.0 thuần TypeScript, kiểm định mã băm SHA-256 chống giả mạo, kiểm tra tính lũy đan (idempotency), thu hồi giao dịch (transactional rollback), kiểm định độ tương thích phiên bản schema cho probe /readyz và kiểm tra phân tách quyền 5 roles
