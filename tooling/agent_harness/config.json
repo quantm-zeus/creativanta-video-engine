@@ -8,6 +8,7 @@
   "max_attempts_per_task": 3,
   "max_runs_per_24h": 12,
   "ci_timeout_seconds": 10800,
+  "ci_missing_checks_timeout_seconds": 900,
   "paused": false,
   "models": {
     "regular": "gemini-3.8-flash-high",

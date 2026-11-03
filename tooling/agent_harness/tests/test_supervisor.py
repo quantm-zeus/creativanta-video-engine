@@ -100,6 +100,50 @@ class LifecycleTests(unittest.TestCase):
         self.s.finish("P0-02", FakeProcess(), int(time.time()), log)
         self.assertEqual(self.s.records()["P0-02"]["state"], "RETRY")
 
+    def test_failed_ci_queues_bounded_retry_not_permanent_block(self):
+        self.s.update("P0-02", state="CI_PENDING", attempts=1, pr=17,
+                      retry_after=0, started_at=int(time.time()))
+        failed = {"state": "OPEN", "baseRefName": "staging", "isDraft": False,
+                  "mergeable": "MERGEABLE",
+                  "statusCheckRollup": [{"name": "Validate Video Engine",
+                                        "status": "COMPLETED", "conclusion": "FAILURE"}]}
+        with patch.object(m, "execute", return_value=json.dumps(failed)):
+            self.s.reconcile_pr("P0-02")
+        row = self.s.records()["P0-02"]
+        self.assertEqual(row["state"], "RETRY")
+        self.assertGreater(row["retry_after"], time.time())
+        self.assertIn("CI failed", row["error"])
+
+    def test_conflicting_pr_retries_with_merge_instructions(self):
+        self.s.update("P0-02", state="CI_PENDING", attempts=1, pr=17,
+                      retry_after=0, started_at=int(time.time()))
+        conflicted = {"state": "OPEN", "baseRefName": "staging",
+                      "isDraft": False, "mergeable": "CONFLICTING",
+                      "statusCheckRollup": []}
+        with patch.object(m, "execute", return_value=json.dumps(conflicted)):
+            self.s.reconcile_pr("P0-02")
+        row = self.s.records()["P0-02"]
+        self.assertEqual(row["state"], "RETRY")
+        self.assertIn("origin/staging", row["error"])
+
+    def test_missing_ci_checks_is_bounded_and_retried(self):
+        self.s.cfg["ci_missing_checks_timeout_seconds"] = 5
+        self.s.update("P0-02", state="CI_PENDING", attempts=1, pr=17,
+                      retry_after=0, started_at=int(time.time()) - 100)
+        missing = {"state": "OPEN", "baseRefName": "staging",
+                   "isDraft": False, "mergeable": "MERGEABLE",
+                   "statusCheckRollup": []}
+        with patch.object(m, "execute", return_value=json.dumps(missing)):
+            self.s.reconcile_pr("P0-02")
+        row = self.s.records()["P0-02"]
+        self.assertEqual(row["state"], "RETRY")
+        self.assertIn("No GitHub CI checks", row["error"])
+
+    def test_max_attempts_stays_blocked(self):
+        self.s.update("P0-02", state="CI_PENDING", attempts=3)
+        self.s.retry("P0-02", "persistent failure")
+        self.assertEqual(self.s.records()["P0-02"]["state"], "BLOCKED")
+
     def test_status_snapshot_and_health(self):
         self.s.snapshot()
         status = json.loads((Path(self.tmp.name) / "data" / "status.json").read_text())

@@ -269,6 +269,10 @@ class Supervisor:
             'external_gates (array), remaining_scope (array), notes (string). '
             "Only implemented_local if acceptance met and real checks passed. "
             "Review report must be present in worktree and committed.\n"
+            "If previous issue mentions CI, PR or merge conflict: inspect PR checks, "
+            "fetch current staging, fix actual failing code and rerun relevant tests. "
+            "Never bypass, disable or rename the CI gate. "
+            "No new commits or missing proof means no progress.\\n"
             "Previous issue, if any: " + str(previous or "none")[:600] + "\n"
             "When complete, end your single AGY session. The supervisor dispatches the next task."
         )
@@ -329,6 +333,9 @@ class Supervisor:
         dirty = execute(["git", "status", "--porcelain"], work)
         if count < 1 or dirty:
             self.retry(task_id, "No committed changes or dirty worktree (ahead=%d)" % count)
+            return
+        if row["sha"] and sha == row["sha"]:
+            self.retry(task_id, "No new commit after previous CI/review feedback")
             return
         if not (work / "evidence" / task_id / "report.md").is_file():
             self.retry(task_id, "Missing committed evidence report")
@@ -399,20 +406,35 @@ class Supervisor:
         if data.get("state") != "OPEN" or data.get("isDraft"):
             self.update(task_id, state="BLOCKED", error="PR closed or draft")
             return
-        if time.time() - row["started_at"] > self.cfg.get("ci_timeout_seconds", 10800):
-            self.update(task_id, state="BLOCKED", error="CI pending past allowed time")
-            self.event(task_id, "BLOCKED", "CI timeout; explicit attention required")
+        if data.get("mergeable") == "CONFLICTING":
+            self.retry(task_id, "PR #" + str(row["pr"]) +
+                       " conflicts with staging. Merge origin/staging in task worktree, "
+                       "resolve carefully, rerun checks and push. Do not force-push.")
             return
-        verdict = ci_verdict(data.get("statusCheckRollup") or [])
+        checks = data.get("statusCheckRollup") or []
+        verdict = ci_verdict(checks)
         if verdict == "failed":
-            self.update(task_id, state="BLOCKED", error="CI failed, inspect PR #" + str(row["pr"]))
-            self.event(task_id, "BLOCKED", "GitHub CI failed")
+            self.retry(task_id, "GitHub CI failed for PR #" + str(row["pr"]) +
+                       ". Inspect gh pr checks and gh run view --log-failed; "
+                       "fix actual failure, run tests, commit new changes.")
+            return
+        opened = self.db.execute(
+            "SELECT MAX(ts) FROM events WHERE task_id=? AND action='PR_OPENED'",
+            (task_id,)).fetchone()[0] or row["started_at"]
+        elapsed = time.time() - opened
+        if not checks and elapsed > self.cfg.get("ci_missing_checks_timeout_seconds", 900):
+            self.retry(task_id, "No GitHub CI checks triggered for PR #" + str(row["pr"]) +
+                       ". Investigate workflow scope/path/trigger and update feature branch.")
+            return
+        if elapsed > self.cfg.get("ci_timeout_seconds", 10800):
+            self.retry(task_id, "CI remains pending beyond timeout for PR #" + str(row["pr"]) +
+                       ". Inspect GitHub runners and workflow before retrying.")
             return
         if verdict != "pass" or data.get("mergeable") == "UNKNOWN":
             self.update(task_id, retry_after=int(time.time()) + 45)
             return
         if data.get("mergeable") != "MERGEABLE":
-            self.update(task_id, state="BLOCKED", error="PR merge conflict")
+            self.retry(task_id, "Unexpected PR mergeability: " + str(data.get("mergeable")))
             return
         if task_id in HUMAN_REVIEW:
             self.update(task_id, state="REVIEW_REQUIRED",
