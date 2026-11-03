@@ -1,0 +1,109 @@
+{
+  "$schema": "creativanta.video-engine.compiler-summary.v1",
+  "task_id": "P1-03",
+  "stream": "B",
+  "phase": "P1",
+  "status": "implemented_local",
+  "evaluated_at": "2026-11-03T04:27:40.637Z",
+  "acceptance": "Semantic validator/canonical compiler manifest: frames/rational time, scene references/hash/defaults/revisions, capability errors; boundary/property tests",
+  "compiler": {
+    "version": "0.1.0",
+    "manifest_version": "1.0",
+    "validation_tiers": [
+      {
+        "tier": 1,
+        "name": "JSON Schema 2020-12",
+        "handler": "JsonSchemaValidator",
+        "error_http": 422,
+        "error_code": "VALIDATION_FAILED"
+      },
+      {
+        "tier": 2,
+        "name": "Semantic Validator",
+        "handler": "SemanticValidator",
+        "error_http": 422,
+        "error_code": "VALIDATION_FAILED"
+      },
+      {
+        "tier": 3,
+        "name": "Capability & Policy Validator",
+        "handler": "CapabilityValidator",
+        "error_http": 422,
+        "error_code": "UNSUPPORTED_CAPABILITY"
+      }
+    ],
+    "features": {
+      "rational_time_conversions": true,
+      "audio_zero_drift_segment_math": true,
+      "transition_alpha_interpolation": true,
+      "easing_functions": [
+        "linear",
+        "ease_in_quad",
+        "ease_out_quad",
+        "ease_in_out_quad"
+      ],
+      "rfc_8785_jcs_canonicalization": true,
+      "metadata_independent_spec_hash": true,
+      "scene_hash_revision_tracking": true,
+      "pure_frame_evaluator": true
+    }
+  },
+  "compiled_manifests": {
+    "minimal": {
+      "composition_id": "cmp_minimal",
+      "profile": "mp4-720p-v1",
+      "duration_frames": 150,
+      "duration_seconds": 5,
+      "spec_hash": "683a9041775e7b05b99d792f77da7354577d451abda21e1f827ec1f96b39f388",
+      "render_hash": "7fb673ca26bc7913a4198488966bd3bf1d3cb27053350fcf911a4d70983e750e",
+      "scenes_count": 1,
+      "layers_total": 1,
+      "audio_tracks_count": 0,
+      "subtitles_count": 0,
+      "fonts_count": 1,
+      "manifest_file": "evidence/P1-03/manifest-minimal.json"
+    },
+    "poc01": {
+      "composition_id": "cmp_poc01_promo",
+      "profile": "mp4-720p-v1",
+      "duration_frames": 450,
+      "duration_seconds": 15,
+      "spec_hash": "8775a56bd7ef8458464938d0b04521c116231256a8e07c0db7ad1091713de498",
+      "render_hash": "d8198ac1d58a959d0218a9a55ee8f52c9e44a549cc071b62ffbb50d5a1985d40",
+      "scenes_count": 3,
+      "layers_total": 7,
+      "audio_tracks_count": 0,
+      "subtitles_count": 0,
+      "fonts_count": 2,
+      "manifest_file": "evidence/P1-03/manifest-poc01.json"
+    },
+    "poc02": {
+      "composition_id": "cmp_poc02_explainer",
+      "profile": "mp4-720p-v1",
+      "duration_frames": 900,
+      "duration_seconds": 30,
+      "spec_hash": "13981dab4645ebd3a49235083d190240c093bf1a5683ee8dab73dcb43bdaad9e",
+      "render_hash": "023f8465a936b601b1fdada812a87c9b9a1edc4e2825217f6d9a48082e585534",
+      "scenes_count": 4,
+      "layers_total": 6,
+      "audio_tracks_count": 1,
+      "subtitles_count": 1,
+      "fonts_count": 2,
+      "manifest_file": "evidence/P1-03/manifest-poc02.json"
+    },
+    "poc03": {
+      "composition_id": "cmp_poc03_footage",
+      "profile": "mp4-720p-v1",
+      "duration_frames": 1350,
+      "duration_seconds": 45,
+      "spec_hash": "af1b2e3ae32ae21c254c765f9a72e7fa5174ca63b8dd71dae7b9cad4ff60ee8e",
+      "render_hash": "52efcaec5414e5a4d261c3fad6c77d810d7552ddcf99a959b846f2721c81ef42",
+      "scenes_count": 2,
+      "layers_total": 2,
+      "audio_tracks_count": 2,
+      "subtitles_count": 1,
+      "fonts_count": 1,
+      "manifest_file": "evidence/P1-03/manifest-poc03.json"
+    }
+  }
+}

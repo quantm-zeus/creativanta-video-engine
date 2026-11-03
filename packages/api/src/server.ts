@@ -5,9 +5,14 @@
 
 import http from 'node:http';
 import { URL } from 'node:url';
+import crypto from 'node:crypto';
 import {
   CveEnvConfig,
   CapabilitiesResponse,
+  CompositionSpec,
+  validateCompositionUnified,
+  compileComposition,
+  materializeCompositionDefaults,
 } from '@creativanta/contracts';
 
 export interface CreateServerOptions {
@@ -133,6 +138,140 @@ export function createServer({ config }: CreateServerOptions): http.Server {
       const caps = buildCapabilities(config);
       res.writeHead(200);
       res.end(JSON.stringify(caps));
+      return;
+    }
+
+    // Composition validation endpoint
+    if (pathname === '/v1/compositions/validate' && method === 'POST') {
+      let bodyStr = '';
+      let bytesCount = 0;
+      const MAX_BYTES = 1024 * 1024; // 1 MiB
+
+      req.on('data', (chunk: Buffer) => {
+        bytesCount += chunk.length;
+        if (bytesCount > MAX_BYTES) {
+          res.writeHead(413, { 'Content-Type': 'application/json' });
+          res.end(
+            JSON.stringify({
+              error: {
+                code: 'PAYLOAD_TOO_LARGE',
+                message: 'HTTP JSON payload exceeds 1 MiB limit',
+                request_id: `req_${crypto.randomUUID().slice(0, 8)}`,
+                retryable: false,
+              },
+            })
+          );
+          req.destroy();
+          return;
+        }
+        bodyStr += chunk.toString('utf-8');
+      });
+
+      req.on('end', () => {
+        if (bytesCount > MAX_BYTES) return;
+
+        let parsedBody: any;
+        try {
+          parsedBody = JSON.parse(bodyStr);
+        } catch {
+          res.writeHead(400, { 'Content-Type': 'application/json' });
+          res.end(
+            JSON.stringify({
+              error: {
+                code: 'MALFORMED_JSON',
+                message: 'Invalid JSON request body',
+                request_id: `req_${crypto.randomUUID().slice(0, 8)}`,
+                retryable: false,
+              },
+            })
+          );
+          return;
+        }
+
+        const spec = parsedBody?.spec;
+        const profile = parsedBody?.profile ?? 'mp4-720p-v1';
+
+        if (!spec || typeof spec !== 'object') {
+          res.writeHead(422, { 'Content-Type': 'application/json' });
+          res.end(
+            JSON.stringify({
+              error: {
+                code: 'VALIDATION_FAILED',
+                message: 'Missing or invalid spec property in body',
+                request_id: `req_${crypto.randomUUID().slice(0, 8)}`,
+                retryable: false,
+                details: [
+                  {
+                    pointer: '/spec',
+                    code: 'MISSING_REQUIRED_FIELD',
+                    message: "Required field 'spec' is missing or not an object",
+                  },
+                ],
+              },
+            })
+          );
+          return;
+        }
+
+        const unified = validateCompositionUnified(spec, {
+          profile,
+          capabilityOptions: {
+            customCodeEnabled: config.CVE_CUSTOM_CODE_ENABLED,
+          },
+        });
+
+        if (!unified.valid) {
+          const hasCapabilityError = unified.all_errors.some((e) => e.stage === 'capability');
+          const errorCode = hasCapabilityError ? 'UNSUPPORTED_CAPABILITY' : 'VALIDATION_FAILED';
+          const errorMessage = hasCapabilityError
+            ? 'Composition violates profile constraints or requested capability is disabled'
+            : 'Composition specification validation failed';
+
+          res.writeHead(422, { 'Content-Type': 'application/json' });
+          res.end(
+            JSON.stringify({
+              error: {
+                code: errorCode,
+                message: errorMessage,
+                request_id: `req_${crypto.randomUUID().slice(0, 8)}`,
+                retryable: false,
+                details: unified.all_errors.map((e) => ({
+                  pointer: `/spec${e.pointer === '/' ? '' : e.pointer}`,
+                  code: e.code,
+                  message: e.message,
+                })),
+              },
+            })
+          );
+          return;
+        }
+
+        const manifest = compileComposition(spec as CompositionSpec, {
+          profile,
+          compilerVersion: '0.1.0',
+        });
+
+        const normalizedSpec = materializeCompositionDefaults(spec as CompositionSpec);
+        const estMinutes = manifest.duration_seconds / 60;
+        const estCost = Math.round(estMinutes * 0.05 * 10000) / 10000;
+
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        res.end(
+          JSON.stringify({
+            valid: true,
+            normalized_spec: normalizedSpec,
+            render_hash: manifest.render_hash,
+            required_capabilities: manifest.required_capabilities,
+            estimate: {
+              output_seconds: manifest.duration_seconds,
+              estimated_cost: estCost,
+              currency: 'USD',
+              rate_version: '2026-11-02-v1',
+            },
+            warnings: unified.warnings,
+          })
+        );
+      });
       return;
     }
 

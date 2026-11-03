@@ -1,0 +1,111 @@
+{
+  "manifest_version": "1.0",
+  "compiler_version": "0.1.0",
+  "composition_id": "cmp_minimal",
+  "revision": 1,
+  "profile": "mp4-720p-v1",
+  "canvas": {
+    "width": 720,
+    "height": 1280,
+    "background": "#101828"
+  },
+  "fps": {
+    "num": 30,
+    "den": 1
+  },
+  "duration_frames": 150,
+  "duration_seconds": 5,
+  "seed": 42,
+  "locale": "vi-VN",
+  "direction": "ltr",
+  "spec_hash": "683a9041775e7b05b99d792f77da7354577d451abda21e1f827ec1f96b39f388",
+  "render_hash": "7fb673ca26bc7913a4198488966bd3bf1d3cb27053350fcf911a4d70983e750e",
+  "scenes": [
+    {
+      "id": "intro",
+      "revision": 1,
+      "scene_hash": "46ccd9162a0946604d05f1f10fc75505865cce5edc519a02b3ba01a241fe1c68",
+      "start_frame": 0,
+      "duration_frames": 150,
+      "end_frame": 150,
+      "engine": "html-v1",
+      "background": "#101828",
+      "transition_out": {
+        "type": "cut",
+        "duration_frames": 0
+      },
+      "layers": [
+        {
+          "id": "headline",
+          "type": "text",
+          "z_index": 1,
+          "global_start_frame": 0,
+          "global_end_frame": 150,
+          "local_start_frame": 0,
+          "local_duration_frames": 150,
+          "box": {
+            "x": 48,
+            "y": 400,
+            "width": 624,
+            "height": 240
+          },
+          "opacity": 1,
+          "transform": {
+            "translate_x": 0,
+            "translate_y": 0,
+            "scale_x": 1,
+            "scale_y": 1,
+            "rotate_deg": 0,
+            "origin_x": 0.5,
+            "origin_y": 0.5
+          },
+          "animations": [
+            {
+              "property": "opacity",
+              "easing": "linear",
+              "keyframes": [
+                {
+                  "frame": 0,
+                  "value": 0
+                },
+                {
+                  "frame": 15,
+                  "value": 1
+                }
+              ]
+            }
+          ],
+          "content": {
+            "text": "Sáng tạo mỗi ngày",
+            "font_id": "brand_regular",
+            "font_size": 54,
+            "color": "#FFFFFF",
+            "align": "center",
+            "max_lines": 3,
+            "overflow": "error",
+            "line_height": 1.2,
+            "min_font_size": 54
+          }
+        }
+      ]
+    }
+  ],
+  "audio_tracks": [],
+  "subtitles": [],
+  "fonts": [
+    {
+      "id": "brand_regular",
+      "asset_id": "ast_font_regular",
+      "sha256": "0000000000000000000000000000000000000000000000000000000000000000",
+      "family": "Noto Sans",
+      "weight": 400,
+      "style": "normal"
+    }
+  ],
+  "assets": {},
+  "required_capabilities": [
+    "engine:html-v1",
+    "profile:mp4-720p-v1"
+  ],
+  "compiled_at": "2026-11-03T04:27:40.619Z"
+}
