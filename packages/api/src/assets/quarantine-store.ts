@@ -283,6 +283,214 @@ export class QuarantineStore {
   }
 
   /**
+   * Stages an attempt-scoped temporary output file (`temp/tenant/<tenantId>/job/<jobId>/<attemptId>/<filename>`)
+   * prior to fenced publication (`verifying -> succeeded`).
+   */
+  public stageAttemptTempArtifact(
+    tenantId: string,
+    jobId: string,
+    attemptId: string,
+    filename: string,
+    data: Buffer,
+  ): {
+    tempKey: string;
+    tempFilePath: string;
+    bytes: number;
+    sha256: string;
+  } {
+    const cleanTenant = sanitizePathComponent(tenantId);
+    const cleanJob = sanitizePathComponent(jobId);
+    const cleanAttempt = sanitizePathComponent(attemptId);
+    const cleanFilename = sanitizePathComponent(filename);
+
+    const tempDir = path.join(
+      this.rootDir,
+      'temp',
+      'tenant',
+      cleanTenant,
+      'job',
+      cleanJob,
+      cleanAttempt,
+    );
+    if (!fs.existsSync(tempDir)) {
+      fs.mkdirSync(tempDir, { recursive: true });
+    }
+
+    const tempFilePath = path.join(tempDir, cleanFilename);
+    fs.writeFileSync(tempFilePath, data);
+    const sha256 = crypto.createHash('sha256').update(data).digest('hex');
+    const tempKey = `temp/tenant/${cleanTenant}/job/${cleanJob}/${cleanAttempt}/${cleanFilename}`;
+
+    return {
+      tempKey,
+      tempFilePath,
+      bytes: data.byteLength,
+      sha256,
+    };
+  }
+
+  /**
+   * Reads a previously staged attempt-scoped temporary artifact.
+   */
+  public getAttemptTempArtifact(
+    tenantId: string,
+    jobId: string,
+    attemptId: string,
+    filename: string,
+  ): {
+    buffer: Buffer;
+    tempFilePath: string;
+    bytes: number;
+    sha256: string;
+  } | null {
+    const cleanTenant = sanitizePathComponent(tenantId);
+    const cleanJob = sanitizePathComponent(jobId);
+    const cleanAttempt = sanitizePathComponent(attemptId);
+    const cleanFilename = sanitizePathComponent(filename);
+
+    const tempFilePath = path.join(
+      this.rootDir,
+      'temp',
+      'tenant',
+      cleanTenant,
+      'job',
+      cleanJob,
+      cleanAttempt,
+      cleanFilename,
+    );
+
+    if (!fs.existsSync(tempFilePath)) {
+      return null;
+    }
+
+    try {
+      const buffer = fs.readFileSync(tempFilePath);
+      const sha256 = crypto.createHash('sha256').update(buffer).digest('hex');
+      return {
+        buffer,
+        tempFilePath,
+        bytes: buffer.byteLength,
+        sha256,
+      };
+    } catch {
+      return null;
+    }
+  }
+
+  /**
+   * Promotes an attempt-scoped temporary artifact to permanent artifact storage
+   * (`tenant/<tenantId>/job/<jobId>/<attemptId>/<filename>`) during fenced publication.
+   */
+  public promoteAttemptArtifactToPermanent(
+    tenantId: string,
+    jobId: string,
+    attemptId: string,
+    filename: string,
+    fallbackBuffer?: Buffer,
+  ): {
+    storageKey: string;
+    absolutePath: string;
+    bytes: number;
+    sha256: string;
+  } {
+    const cleanTenant = sanitizePathComponent(tenantId);
+    const cleanJob = sanitizePathComponent(jobId);
+    const cleanAttempt = sanitizePathComponent(attemptId);
+    const cleanFilename = sanitizePathComponent(filename);
+
+    const staged = this.getAttemptTempArtifact(tenantId, jobId, attemptId, filename);
+    const buffer = staged?.buffer ?? fallbackBuffer;
+    if (!buffer) {
+      throw new QuarantineStorageError(
+        `Staged temporary artifact not found for ${tenantId}/${jobId}/${attemptId}/${filename}`,
+        'TEMP_ARTIFACT_NOT_FOUND',
+      );
+    }
+
+    const permDir = path.join(
+      this.rootDir,
+      'tenant',
+      cleanTenant,
+      'job',
+      cleanJob,
+      cleanAttempt,
+    );
+    if (!fs.existsSync(permDir)) {
+      fs.mkdirSync(permDir, { recursive: true });
+    }
+
+    const absolutePath = path.join(permDir, cleanFilename);
+    fs.writeFileSync(absolutePath, buffer);
+    const sha256 = crypto.createHash('sha256').update(buffer).digest('hex');
+    const storageKey = `tenant/${cleanTenant}/job/${cleanJob}/${cleanAttempt}/${cleanFilename}`;
+
+    if (staged && fs.existsSync(staged.tempFilePath)) {
+      try {
+        fs.unlinkSync(staged.tempFilePath);
+      } catch {
+        // ignore
+      }
+    }
+
+    return {
+      storageKey,
+      absolutePath,
+      bytes: buffer.byteLength,
+      sha256,
+    };
+  }
+
+  /**
+   * Cleans up the attempt-scoped temporary directory (`temp/tenant/<tenantId>/job/<jobId>/<attemptId>`).
+   */
+  public cleanupAttemptTempDir(tenantId: string, jobId: string, attemptId: string): void {
+    try {
+      const cleanTenant = sanitizePathComponent(tenantId);
+      const cleanJob = sanitizePathComponent(jobId);
+      const cleanAttempt = sanitizePathComponent(attemptId);
+      const tempDir = path.join(
+        this.rootDir,
+        'temp',
+        'tenant',
+        cleanTenant,
+        'job',
+        cleanJob,
+        cleanAttempt,
+      );
+      if (fs.existsSync(tempDir)) {
+        fs.rmSync(tempDir, { recursive: true, force: true });
+      }
+    } catch {
+      // ignore
+    }
+  }
+
+  /**
+   * Reads a published permanent artifact by its `storage_key`.
+   */
+  public getArtifactFileByStorageKey(
+    storageKey: string,
+  ): { buffer: Buffer; filePath: string } | null {
+    if (!storageKey || storageKey.includes('..') || storageKey.startsWith('/')) {
+      return null;
+    }
+    const parts = storageKey.split('/');
+    for (const part of parts) {
+      sanitizePathComponent(part);
+    }
+    const filePath = path.join(this.rootDir, ...parts);
+    if (!fs.existsSync(filePath)) {
+      return null;
+    }
+    try {
+      const buffer = fs.readFileSync(filePath);
+      return { buffer, filePath };
+    } catch {
+      return null;
+    }
+  }
+
+  /**
    * Cleans up all storage (useful for test resets).
    */
   public clearAll(): void {

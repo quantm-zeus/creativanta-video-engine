@@ -1,0 +1,94 @@
+{
+  "$schema": "creativanta.video-engine.p4-02-summary.v1",
+  "task_id": "P4-02",
+  "stream": "B+A",
+  "phase": "P4",
+  "base_commit": "66620df6861040292f42d86e3ef4bc3c3823d0d9",
+  "dispatcher_and_leases": {
+    "lease_duration_seconds": 60,
+    "heartbeat_interval_seconds": 15,
+    "authoritative_clock": "database_server_now_amb_009",
+    "worker_clock_skew_ignored": true,
+    "fencing_token_fields": [
+      "job_id",
+      "attempt_id",
+      "lease_epoch"
+    ],
+    "monotonic_lease_epoch_incremented_on": [
+      "claim_next_job",
+      "reclaim_expired_lease",
+      "fail_or_retry_attempt",
+      "cancel_requested_finalization",
+      "asset_revocation"
+    ],
+    "worker_self_aborts_on_zero_row_heartbeat": true
+  },
+  "fair_scheduling": {
+    "cross_tenant_order": "round_robin",
+    "within_tenant_order": "fifo_created_at_asc",
+    "active_job_slots_max_per_tenant": 2,
+    "preview_to_render_weighted_priority": "2:1",
+    "preview_global_slot_cap_when_render_waiting": 0.5,
+    "no_preemption_of_running_jobs": true,
+    "no_render_starvation": true
+  },
+  "state_machine_and_retries": {
+    "job_states": [
+      "queued",
+      "preparing",
+      "rendering",
+      "encoding",
+      "verifying",
+      "retry_wait",
+      "cancel_requested",
+      "succeeded",
+      "failed",
+      "canceled"
+    ],
+    "max_attempts": 3,
+    "retry_backoff_schedule_ms": {
+      "after_attempt_1": 5000,
+      "after_attempt_2": 30000,
+      "jitter_ms_range": [0, 2000]
+    },
+    "retryable_error_codes": [
+      "RENDER_TIMEOUT",
+      "FRAME_READINESS_TIMEOUT",
+      "WORKER_LOST",
+      "STORAGE_TRANSIENT_ERROR",
+      "INTERNAL_WORKER_ERROR"
+    ],
+    "non_retryable_error_codes": [
+      "SANDBOX_RESOURCE_LIMIT",
+      "SANDBOX_SECURITY_VIOLATION",
+      "MEDIA_DECODE_FAILED",
+      "ENCODE_VERIFICATION_FAILED",
+      "TEXT_OVERFLOW",
+      "MISSING_GLYPH",
+      "ASSET_REVOKED",
+      "JOB_DEADLINE_EXCEEDED"
+    ],
+    "retry_wait_retains_slot_and_reservation_amb_004": true,
+    "cancel_requested_expired_lease_reaped_to_canceled_amb_003": true
+  },
+  "real_renderer_and_fenced_publication": {
+    "compiler": "@creativanta/contracts compileComposition & evaluateFrame",
+    "profiles_supported": [
+      "mp4-720p-v1",
+      "preview-360p-v1"
+    ],
+    "container_format": "ISO-BMFF MP4 (H.264 avc1 + AAC mp4a 48kHz stereo, faststart moov before mdat)",
+    "preview_keyframe_format": "Lossless 8-bit RGBA PNG (640x360 / 360x640)",
+    "attempt_scoped_temp_staging_prefix": "temp/tenant/<tenantId>/job/<jobId>/<attemptId>/",
+    "permanent_storage_prefix": "tenant/<tenantId>/job/<jobId>/<attemptId>/",
+    "stale_worker_cannot_publish": true,
+    "asset_revocation_blocks_publication": true
+  },
+  "tests": {
+    "file": "packages/api/test/p4-02-dispatcher-and-worker.test.mjs",
+    "suites": 1,
+    "total": 6,
+    "passed": 6,
+    "failed": 0
+  }
+}
