@@ -10,6 +10,7 @@
   },
   "type": "module",
   "scripts": {
+    "prepare": "pnpm -r --if-present run build",
     "build": "pnpm -r --if-present run build",
     "typecheck": "pnpm -r --if-present run typecheck",
     "lint": "pnpm -r --if-present run lint",
