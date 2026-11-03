@@ -1152,6 +1152,47 @@ export class TenantRepository {
             "job_id = ? AND state = 'reserved'",
             [job.id],
           );
+          const existingEvents = tx.selectScoped<{ event_seq: number }>(
+            'job_events',
+            'job_id = ?',
+            [job.id],
+            'event_seq DESC',
+          );
+          const nextEventSeq = (existingEvents[0]?.event_seq ?? 0) + 1;
+          tx.insertScoped('job_events', {
+            tenant_id: tenantId,
+            job_id: job.id,
+            event_seq: nextEventSeq,
+            state: 'failed',
+            state_version: nextStateVersion,
+            event_type: 'job.failed',
+            payload_json: JSON.stringify({
+              stage: 'failed',
+              progress_percent: 0,
+              error_code: 'ASSET_REVOKED',
+              message: `Input asset ${assetId} was deleted by tenant`,
+            }),
+            created_at: nowIso,
+          });
+          tx.insertScoped('outbox', {
+            tenant_id: tenantId,
+            id: `out_${crypto.randomBytes(6).toString('hex')}`,
+            event_type: 'job.failed',
+            job_id: job.id,
+            state_version: nextStateVersion,
+            payload_json: JSON.stringify({
+              job_id: job.id,
+              state: 'failed',
+              state_version: nextStateVersion,
+              error: {
+                code: 'ASSET_REVOKED',
+                message: `Input asset ${assetId} was deleted by tenant`,
+                retryable: false,
+              },
+            }),
+            created_at: nowIso,
+            processed_at: null,
+          });
           revokedJobs.push(job.id);
         }
       }
@@ -3625,6 +3666,177 @@ export class TenantRepository {
         );
       }
       return tx.selectScoped('usage_reservations', '1=1', [], 'created_at ASC');
+    });
+  }
+
+  public listJobAttempts(
+    tenantId: string,
+    jobId: string,
+  ): Array<{
+    attempt_id: string;
+    job_id: string;
+    lease_epoch: number;
+    worker_id: string;
+    state: string;
+    started_at: string;
+    heartbeat_at: string;
+    lease_expires_at: string;
+    ended_at: string | null;
+    cpu_seconds: number | null;
+    peak_rss_bytes: number | null;
+    error: Record<string, unknown> | null;
+  }> {
+    return this.pool.withTransaction({ tenantId, role: 'cve_api' }, (tx) => {
+      const rows = tx.selectScoped<{
+        attempt_id: string;
+        job_id: string;
+        lease_epoch: number;
+        worker_id: string;
+        state: string;
+        started_at: string;
+        heartbeat_at: string;
+        lease_expires_at: string;
+        ended_at: string | null;
+        cpu_seconds: number | null;
+        peak_rss_bytes: number | null;
+        error_json: string | null;
+      }>('job_attempts', 'job_id = ?', [jobId], 'lease_epoch ASC');
+
+      return rows.map((r) => ({
+        attempt_id: r.attempt_id,
+        job_id: r.job_id,
+        lease_epoch: Number(r.lease_epoch),
+        worker_id: r.worker_id,
+        state: r.state,
+        started_at: r.started_at,
+        heartbeat_at: r.heartbeat_at,
+        lease_expires_at: r.lease_expires_at,
+        ended_at: r.ended_at,
+        cpu_seconds: r.cpu_seconds !== null ? Number(r.cpu_seconds) : null,
+        peak_rss_bytes: r.peak_rss_bytes !== null ? Number(r.peak_rss_bytes) : null,
+        error: r.error_json ? (JSON.parse(r.error_json) as Record<string, unknown>) : null,
+      }));
+    });
+  }
+
+  public listJobArtifacts(
+    tenantId: string,
+    jobId: string,
+  ): Array<{
+    id: string;
+    job_id: string;
+    attempt_id: string;
+    kind: string;
+    mime_type: string;
+    sha256: string;
+    bytes: number;
+    storage_key: string;
+    expires_at: string;
+    revoked_at: string | null;
+    created_at: string;
+  }> {
+    return this.pool.withTransaction({ tenantId, role: 'cve_api' }, (tx) => {
+      return tx.selectScoped(
+        'artifacts',
+        'job_id = ?',
+        [jobId],
+        'created_at ASC, id ASC',
+      );
+    });
+  }
+
+  public listOutboxEvents(
+    tenantId: string,
+    jobId?: string,
+  ): Array<{
+    id: string;
+    event_type: string;
+    job_id: string;
+    state_version: number;
+    payload: Record<string, unknown>;
+    created_at: string;
+    processed_at: string | null;
+  }> {
+    return this.pool.withTransaction({ tenantId, role: 'cve_api' }, (tx) => {
+      const rows = jobId
+        ? tx.selectScoped<{
+            id: string;
+            event_type: string;
+            job_id: string;
+            state_version: number;
+            payload_json: string;
+            created_at: string;
+            processed_at: string | null;
+          }>('outbox', 'job_id = ?', [jobId], 'state_version ASC, created_at ASC')
+        : tx.selectScoped<{
+            id: string;
+            event_type: string;
+            job_id: string;
+            state_version: number;
+            payload_json: string;
+            created_at: string;
+            processed_at: string | null;
+          }>('outbox', '1=1', [], 'created_at ASC, id ASC');
+
+      return rows.map((r) => ({
+        id: r.id,
+        event_type: r.event_type,
+        job_id: r.job_id,
+        state_version: Number(r.state_version),
+        payload: JSON.parse(r.payload_json) as Record<string, unknown>,
+        created_at: r.created_at,
+        processed_at: r.processed_at,
+      }));
+    });
+  }
+
+  public listUsageEntries(
+    tenantId: string,
+    jobId?: string,
+  ): Array<{
+    id: string;
+    job_id: string;
+    attempt_id: string | null;
+    usage_class: string;
+    meter: string;
+    ledger_version: number;
+    quantity: number;
+    rate_version: string;
+    reason: string | null;
+    created_at: string;
+  }> {
+    return this.pool.withTransaction({ tenantId, role: 'cve_api' }, (tx) => {
+      const rows = jobId
+        ? tx.selectScoped<{
+            id: string;
+            job_id: string;
+            attempt_id: string | null;
+            usage_class: string;
+            meter: string;
+            ledger_version: number;
+            quantity: number;
+            rate_version: string;
+            reason: string | null;
+            created_at: string;
+          }>('usage_entries', 'job_id = ?', [jobId], 'created_at ASC, ledger_version ASC')
+        : tx.selectScoped<{
+            id: string;
+            job_id: string;
+            attempt_id: string | null;
+            usage_class: string;
+            meter: string;
+            ledger_version: number;
+            quantity: number;
+            rate_version: string;
+            reason: string | null;
+            created_at: string;
+          }>('usage_entries', '1=1', [], 'created_at ASC, ledger_version ASC');
+
+      return rows.map((r) => ({
+        ...r,
+        ledger_version: Number(r.ledger_version),
+        quantity: Number(r.quantity),
+      }));
     });
   }
 
