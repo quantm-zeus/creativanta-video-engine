@@ -1,0 +1,109 @@
+{
+  "$schema": "creativanta.video-engine.contract-summary.v1",
+  "task_id": "P1-02",
+  "stream": "A",
+  "phase": "P1",
+  "status": "implemented_local",
+  "evaluated_at": "2026-11-03T04:15:00Z",
+  "acceptance": "Full JSON Schema 2020-12 + OpenAPI 3.1 + generated types/examples, expand mọi $defs fragment; unknown fields/invalid timing examples fail, valid fixture parse pass",
+  "json_schema_2020_12": {
+    "schema_file": "packages/contracts/schemas/scene.schema.json",
+    "expanded_schema_file": "packages/contracts/schemas/scene.expanded.schema.json",
+    "schema_id": "https://schemas.example.invalid/cve/composition/1.0",
+    "meta_schema": "https://json-schema.org/draft/2020-12/schema",
+    "sha256": "cb8914b52d0d61efaa59b61be86b676005723e662501e106f61e0afb4f43585a",
+    "expanded_sha256": "e0164c605ffdb0b561dd951e4f5ea3037a9230a2795fee832bd88ee6fbb9d661",
+    "closed_root": true,
+    "defs_count": 24,
+    "defs": [
+      "canvas",
+      "rationalFps",
+      "font",
+      "scene",
+      "bundle",
+      "transitionOut",
+      "layer",
+      "box",
+      "transform",
+      "animation",
+      "keyframe",
+      "layerContent",
+      "textContent",
+      "imageContent",
+      "videoContent",
+      "shapeContent",
+      "svgContent",
+      "audioTrack",
+      "gainKeyframe",
+      "subtitleTrack",
+      "subtitleCue",
+      "subtitleStyle",
+      "metadata",
+      "extensions"
+    ]
+  },
+  "openapi_3_1": {
+    "spec_file": "packages/contracts/schemas/openapi.json",
+    "version": "3.1.0",
+    "sha256": "0ee1515d35a3e3fe4d25a0daa60174b538d4637588451204139555818c57455b",
+    "total_endpoints": 32,
+    "unique_paths": 24,
+    "security_schemes": ["BearerAuth"],
+    "component_schemas_count": 41
+  },
+  "test_fixtures": {
+    "valid_fixtures": [
+      "minimal-valid.json",
+      "poc01-promo.json",
+      "poc02-explainer.json",
+      "poc03-footage.json",
+      "template-instantiate-request.json",
+      "job-create-render-request.json",
+      "job-create-preview-request.json"
+    ],
+    "invalid_fixtures": [
+      "invalid-unknown-root-field.json",
+      "invalid-unknown-layer-field.json",
+      "invalid-timing-duration-zero.json",
+      "invalid-timing-fps-float.json",
+      "invalid-timing-transition-cut.json",
+      "invalid-timing-transition-fade.json",
+      "invalid-box-negative.json",
+      "invalid-schema-version.json",
+      "invalid-locale.json",
+      "invalid-font-weight.json"
+    ]
+  },
+  "checks": [
+    {
+      "command": "PATH=/usr/local/lib/node_modules/corepack/shims:/usr/bin:$PATH pnpm -r --if-present run build",
+      "exit_code": 0,
+      "result": "PASS"
+    },
+    {
+      "command": "PATH=/usr/local/lib/node_modules/corepack/shims:/usr/bin:$PATH pnpm -r --if-present run typecheck",
+      "exit_code": 0,
+      "result": "PASS"
+    },
+    {
+      "command": "PATH=/usr/local/lib/node_modules/corepack/shims:/usr/bin:$PATH pnpm -r --if-present run lint",
+      "exit_code": 0,
+      "result": "PASS"
+    },
+    {
+      "command": "PATH=/usr/local/lib/node_modules/corepack/shims:/usr/bin:$PATH pnpm -r --if-present run test",
+      "exit_code": 0,
+      "result": "PASS"
+    },
+    {
+      "command": "node scripts/health-check.mjs",
+      "exit_code": 0,
+      "result": "PASS"
+    },
+    {
+      "command": "PATH=/usr/bin:$PATH python3 scripts/validate_repo.py",
+      "exit_code": 0,
+      "result": "PASS"
+    }
+  ]
+}

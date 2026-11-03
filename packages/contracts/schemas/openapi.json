@@ -1,0 +1,2726 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "Creativanta Video Engine REST API",
+    "version": "1.0.0",
+    "description": "Independent CPU-first code-driven Video-as-a-Service engine REST API v1 (docs/API.md)."
+  },
+  "servers": [
+    {
+      "url": "https://video.example.invalid/v1",
+      "description": "Production v1 gateway"
+    },
+    {
+      "url": "http://127.0.0.1:8080/v1",
+      "description": "Local development loopback"
+    }
+  ],
+  "security": [
+    {
+      "BearerAuth": []
+    }
+  ],
+  "paths": {
+    "/capabilities": {
+      "get": {
+        "summary": "Retrieve tenant capabilities, engine flags, profiles, and limits",
+        "operationId": "getCapabilities",
+        "responses": {
+          "200": {
+            "description": "Capabilities descriptor",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CapabilitiesResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Error401"
+          }
+        }
+      }
+    },
+    "/templates": {
+      "get": {
+        "summary": "List curated and tenant-owned video templates",
+        "operationId": "listTemplates",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/LimitQuery"
+          },
+          {
+            "$ref": "#/components/parameters/CursorQuery"
+          },
+          {
+            "name": "visibility",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": ["all", "curated", "tenant"]
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Paginated list of templates",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TemplateListResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Error401"
+          }
+        }
+      },
+      "post": {
+        "summary": "Create a new tenant template (revision 1)",
+        "operationId": "createTemplate",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/IdempotencyKeyHeader"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TemplateCreateRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Template revision 1 created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TemplateCreateResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/Error400"
+          },
+          "401": {
+            "$ref": "#/components/responses/Error401"
+          },
+          "409": {
+            "$ref": "#/components/responses/Error409"
+          },
+          "422": {
+            "$ref": "#/components/responses/Error422"
+          }
+        }
+      }
+    },
+    "/templates/{id}/revisions/{revision}": {
+      "get": {
+        "summary": "Get exact immutable template revision document",
+        "operationId": "getTemplateRevision",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "revision",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "minimum": 1
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Template revision detail",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TemplateDetail"
+                }
+              }
+            }
+          },
+          "404": {
+            "$ref": "#/components/responses/Error404"
+          }
+        }
+      }
+    },
+    "/templates/{id}/revisions": {
+      "post": {
+        "summary": "Create a new revision of an existing template",
+        "operationId": "createTemplateRevision",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "$ref": "#/components/parameters/IdempotencyKeyHeader"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TemplateRevisionCreateRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "New template revision created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TemplateCreateResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "$ref": "#/components/responses/Error409"
+          },
+          "422": {
+            "$ref": "#/components/responses/Error422"
+          }
+        }
+      }
+    },
+    "/templates/{id}/instantiate": {
+      "post": {
+        "summary": "Instantiate a video composition from template variables",
+        "operationId": "instantiateTemplate",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "$ref": "#/components/parameters/IdempotencyKeyHeader"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TemplateInstantiateRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Composition instantiated successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TemplateInstantiateResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "$ref": "#/components/responses/Error404"
+          },
+          "422": {
+            "$ref": "#/components/responses/Error422"
+          }
+        }
+      }
+    },
+    "/compositions": {
+      "post": {
+        "summary": "Create a new composition from full scene specification",
+        "operationId": "createComposition",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/IdempotencyKeyHeader"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CompositionCreateRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Composition created with revision 1",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CompositionCreateResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "$ref": "#/components/responses/Error422"
+          }
+        }
+      }
+    },
+    "/compositions/{id}": {
+      "get": {
+        "summary": "Get composition metadata and latest revision number",
+        "operationId": "getComposition",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Composition metadata",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CompositionSummary"
+                }
+              }
+            }
+          },
+          "404": {
+            "$ref": "#/components/responses/Error404"
+          }
+        }
+      }
+    },
+    "/compositions/{id}/revisions/{revision}": {
+      "get": {
+        "summary": "Get exact immutable composition revision document",
+        "operationId": "getCompositionRevision",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "revision",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "minimum": 1
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Composition revision detail",
+            "headers": {
+              "ETag": {
+                "schema": {
+                  "type": "string"
+                },
+                "description": "Hex SHA-256 of canonical scene spec"
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CompositionRevisionDetail"
+                }
+              }
+            }
+          },
+          "404": {
+            "$ref": "#/components/responses/Error404"
+          }
+        }
+      }
+    },
+    "/compositions/{id}/revisions": {
+      "post": {
+        "summary": "Create replacement revision of composition with optimistic concurrency",
+        "operationId": "createCompositionRevision",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "$ref": "#/components/parameters/IdempotencyKeyHeader"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CompositionRevisionCreateRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "New composition revision created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CompositionRevisionResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "$ref": "#/components/responses/Error409"
+          },
+          "422": {
+            "$ref": "#/components/responses/Error422"
+          }
+        }
+      }
+    },
+    "/compositions/validate": {
+      "post": {
+        "summary": "Preflight validation and cost/duration estimation for composition",
+        "operationId": "validateComposition",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CompositionValidationRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Composition validated successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CompositionValidationResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "$ref": "#/components/responses/Error422"
+          }
+        }
+      }
+    },
+    "/assets/uploads": {
+      "post": {
+        "summary": "Request signed upload grant for quarantine asset session",
+        "operationId": "requestAssetUpload",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/IdempotencyKeyHeader"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AssetUploadRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Quarantine upload grant created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AssetUploadResponse"
+                }
+              }
+            }
+          },
+          "413": {
+            "$ref": "#/components/responses/Error413"
+          },
+          "422": {
+            "$ref": "#/components/responses/Error422"
+          }
+        }
+      }
+    },
+    "/assets/{id}/upload-url": {
+      "post": {
+        "summary": "Refresh signed upload URL grant for open upload session",
+        "operationId": "refreshAssetUploadUrl",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "$ref": "#/components/parameters/IdempotencyKeyHeader"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Refreshed signed upload URL grant",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AssetRefreshUrlResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "$ref": "#/components/responses/Error404"
+          },
+          "409": {
+            "$ref": "#/components/responses/Error409"
+          }
+        }
+      }
+    },
+    "/assets/{id}/complete": {
+      "post": {
+        "summary": "Complete asset upload and trigger async probe/normalization",
+        "operationId": "completeAssetUpload",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "$ref": "#/components/parameters/IdempotencyKeyHeader"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AssetCompleteRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "202": {
+            "description": "Probe and normalization initiated",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AssetSummary"
+                }
+              }
+            }
+          },
+          "404": {
+            "$ref": "#/components/responses/Error404"
+          },
+          "409": {
+            "$ref": "#/components/responses/Error409"
+          }
+        }
+      }
+    },
+    "/assets/imports": {
+      "post": {
+        "summary": "Trigger asynchronous remote media import from allowlisted host",
+        "operationId": "importAsset",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/IdempotencyKeyHeader"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AssetImportRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "202": {
+            "description": "Remote import queued",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AssetSummary"
+                }
+              }
+            }
+          },
+          "422": {
+            "$ref": "#/components/responses/Error422"
+          }
+        }
+      }
+    },
+    "/assets/{id}": {
+      "get": {
+        "summary": "Get asset status and normalized metadata",
+        "operationId": "getAsset",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Asset detail",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AssetDetail"
+                }
+              }
+            }
+          },
+          "404": {
+            "$ref": "#/components/responses/Error404"
+          }
+        }
+      },
+      "delete": {
+        "summary": "Revoke asset admission and schedule deletion purge",
+        "operationId": "deleteAsset",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "202": {
+            "description": "Asset deletion scheduled and referenced jobs failed with ASSET_REVOKED",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AssetSummary"
+                }
+              }
+            }
+          },
+          "404": {
+            "$ref": "#/components/responses/Error404"
+          }
+        }
+      }
+    },
+    "/previews": {
+      "post": {
+        "summary": "Submit asynchronous preview job (single frame or clip)",
+        "operationId": "createPreviewJob",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/IdempotencyKeyHeader"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PreviewJobCreateRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "202": {
+            "description": "Preview job admitted into queue",
+            "headers": {
+              "Location": {
+                "schema": {
+                  "type": "string"
+                },
+                "description": "URL path to poll job status (/v1/jobs/{id})"
+              },
+              "Retry-After": {
+                "schema": {
+                  "type": "integer"
+                },
+                "description": "Suggested polling interval in seconds"
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JobSummary"
+                }
+              }
+            }
+          },
+          "409": {
+            "$ref": "#/components/responses/Error409"
+          },
+          "422": {
+            "$ref": "#/components/responses/Error422"
+          },
+          "429": {
+            "$ref": "#/components/responses/Error429"
+          }
+        }
+      }
+    },
+    "/render-jobs": {
+      "post": {
+        "summary": "Submit asynchronous full video render job",
+        "operationId": "createRenderJob",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/IdempotencyKeyHeader"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RenderJobCreateRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "202": {
+            "description": "Render job admitted into queue",
+            "headers": {
+              "Location": {
+                "schema": {
+                  "type": "string"
+                },
+                "description": "URL path to poll job status (/v1/jobs/{id})"
+              },
+              "Retry-After": {
+                "schema": {
+                  "type": "integer"
+                },
+                "description": "Suggested polling interval in seconds"
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JobSummary"
+                }
+              }
+            }
+          },
+          "409": {
+            "$ref": "#/components/responses/Error409"
+          },
+          "422": {
+            "$ref": "#/components/responses/Error422"
+          },
+          "429": {
+            "$ref": "#/components/responses/Error429"
+          }
+        }
+      }
+    },
+    "/jobs": {
+      "get": {
+        "summary": "List tenant render and preview jobs",
+        "operationId": "listJobs",
+        "parameters": [
+          {
+            "name": "kind",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": ["render", "preview"]
+            }
+          },
+          {
+            "name": "state",
+            "in": "query",
+            "schema": {
+              "$ref": "#/components/schemas/JobState"
+            }
+          },
+          {
+            "$ref": "#/components/parameters/LimitQuery"
+          },
+          {
+            "$ref": "#/components/parameters/CursorQuery"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Paginated list of jobs",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JobListResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Error401"
+          }
+        }
+      }
+    },
+    "/jobs/{id}": {
+      "get": {
+        "summary": "Get job state, progress, artifacts, and usage",
+        "operationId": "getJob",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Job details",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JobDetail"
+                }
+              }
+            }
+          },
+          "404": {
+            "$ref": "#/components/responses/Error404"
+          }
+        }
+      }
+    },
+    "/jobs/{id}/cancel": {
+      "post": {
+        "summary": "Request job cancellation",
+        "operationId": "cancelJob",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "$ref": "#/components/parameters/IdempotencyKeyHeader"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Job is already canceled",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JobCancelResponse"
+                }
+              }
+            }
+          },
+          "202": {
+            "description": "Cancellation request accepted and queued",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JobCancelResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "$ref": "#/components/responses/Error404"
+          },
+          "409": {
+            "description": "Job is already terminal (succeeded or failed)",
+            "$ref": "#/components/responses/Error409"
+          }
+        }
+      }
+    },
+    "/jobs/{id}/events": {
+      "get": {
+        "summary": "Get ordered historical event sequence for job",
+        "operationId": "getJobEvents",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "$ref": "#/components/parameters/LimitQuery"
+          },
+          {
+            "$ref": "#/components/parameters/CursorQuery"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Job event list",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JobEventListResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "$ref": "#/components/responses/Error404"
+          }
+        }
+      }
+    },
+    "/artifacts/{id}/download": {
+      "get": {
+        "summary": "Generate short-lived signed download URL for completed artifact",
+        "operationId": "getArtifactDownloadUrl",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Signed download grant",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ArtifactDownloadResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "$ref": "#/components/responses/Error404"
+          },
+          "410": {
+            "$ref": "#/components/responses/Error410"
+          }
+        }
+      }
+    },
+    "/webhook-endpoints": {
+      "post": {
+        "summary": "Register client HTTPS webhook endpoint",
+        "operationId": "registerWebhookEndpoint",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/IdempotencyKeyHeader"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/WebhookEndpointCreateRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Endpoint registered, signing secret shown once",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WebhookEndpointCreateResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "$ref": "#/components/responses/Error422"
+          }
+        }
+      }
+    },
+    "/webhook-endpoints/{id}/verify": {
+      "post": {
+        "summary": "Trigger challenge dispatch to activate webhook endpoint",
+        "operationId": "verifyWebhookEndpoint",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "$ref": "#/components/parameters/IdempotencyKeyHeader"
+          }
+        ],
+        "responses": {
+          "202": {
+            "description": "Challenge event dispatched",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WebhookVerifyResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "$ref": "#/components/responses/Error404"
+          }
+        }
+      }
+    },
+    "/webhook-endpoints/{id}": {
+      "get": {
+        "summary": "Get webhook endpoint status and summary (secret never revealed)",
+        "operationId": "getWebhookEndpoint",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Webhook endpoint details",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WebhookEndpointDetail"
+                }
+              }
+            }
+          },
+          "404": {
+            "$ref": "#/components/responses/Error404"
+          }
+        }
+      },
+      "delete": {
+        "summary": "Disable webhook endpoint and halt pending deliveries",
+        "operationId": "deleteWebhookEndpoint",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Webhook endpoint disabled"
+          },
+          "404": {
+            "$ref": "#/components/responses/Error404"
+          }
+        }
+      }
+    },
+    "/webhook-endpoints/{id}/rotate-secret": {
+      "post": {
+        "summary": "Rotate endpoint secret (new secret shown once, previous valid 24h)",
+        "operationId": "rotateWebhookSecret",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "$ref": "#/components/parameters/IdempotencyKeyHeader"
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "New secret generated",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WebhookRotateSecretResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "$ref": "#/components/responses/Error404"
+          }
+        }
+      }
+    },
+    "/webhook-deliveries": {
+      "get": {
+        "summary": "List webhook delivery attempts and statuses",
+        "operationId": "listWebhookDeliveries",
+        "parameters": [
+          {
+            "name": "job_id",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "$ref": "#/components/parameters/LimitQuery"
+          },
+          {
+            "$ref": "#/components/parameters/CursorQuery"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Paginated delivery history",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WebhookDeliveryListResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/webhook-deliveries/{id}/replay": {
+      "post": {
+        "summary": "Replay webhook delivery with same event ID",
+        "operationId": "replayWebhookDelivery",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "$ref": "#/components/parameters/IdempotencyKeyHeader"
+          }
+        ],
+        "responses": {
+          "202": {
+            "description": "Delivery replay scheduled",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WebhookDeliveryReplayResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "$ref": "#/components/responses/Error404"
+          },
+          "410": {
+            "$ref": "#/components/responses/Error410"
+          }
+        }
+      }
+    },
+    "/usage": {
+      "get": {
+        "summary": "Query settled and operational usage units across bounded window",
+        "operationId": "getUsage",
+        "parameters": [
+          {
+            "name": "from",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "date-time"
+            }
+          },
+          {
+            "name": "to",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "date-time"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Usage ledger summary",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UsageResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/Error400"
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "securitySchemes": {
+      "BearerAuth": {
+        "type": "http",
+        "scheme": "bearer",
+        "description": "Tenant API key (high-entropy 32 bytes)"
+      }
+    },
+    "parameters": {
+      "IdempotencyKeyHeader": {
+        "name": "Idempotency-Key",
+        "in": "header",
+        "required": true,
+        "schema": {
+          "type": "string",
+          "pattern": "^[A-Za-z0-9._:-]{1,128}$"
+        },
+        "description": "Client idempotency key for safe retries (1-128 chars)"
+      },
+      "RequestIdHeader": {
+        "name": "X-Request-Id",
+        "in": "header",
+        "schema": {
+          "type": "string",
+          "maxLength": 64
+        },
+        "description": "Correlation request ID"
+      },
+      "LimitQuery": {
+        "name": "limit",
+        "in": "query",
+        "schema": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 100,
+          "default": 20
+        },
+        "description": "Number of items per page (1 to 100)"
+      },
+      "CursorQuery": {
+        "name": "cursor",
+        "in": "query",
+        "schema": {
+          "type": "string"
+        },
+        "description": "Opaque pagination cursor"
+      }
+    },
+    "responses": {
+      "Error400": {
+        "description": "Bad Request",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/ErrorResponse"
+            }
+          }
+        }
+      },
+      "Error401": {
+        "description": "Unauthenticated",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/ErrorResponse"
+            }
+          }
+        }
+      },
+      "Error403": {
+        "description": "Insufficient Scope or Tenant Suspended",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/ErrorResponse"
+            }
+          }
+        }
+      },
+      "Error404": {
+        "description": "Resource Not Found",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/ErrorResponse"
+            }
+          }
+        }
+      },
+      "Error409": {
+        "description": "Conflict or Idempotency State",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/ErrorResponse"
+            }
+          }
+        }
+      },
+      "Error410": {
+        "description": "Gone or Expired",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/ErrorResponse"
+            }
+          }
+        }
+      },
+      "Error413": {
+        "description": "Payload Too Large",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/ErrorResponse"
+            }
+          }
+        }
+      },
+      "Error422": {
+        "description": "Validation Failed or Unsupported Capability",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/ErrorResponse"
+            }
+          }
+        }
+      },
+      "Error429": {
+        "description": "Rate Limited or Quota Exceeded",
+        "headers": {
+          "Retry-After": {
+            "schema": {
+              "type": "integer"
+            },
+            "description": "Seconds to wait before retrying"
+          }
+        },
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/ErrorResponse"
+            }
+          }
+        }
+      },
+      "Error503": {
+        "description": "Service Unavailable",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/ErrorResponse"
+            }
+          }
+        }
+      }
+    },
+    "schemas": {
+      "ErrorResponse": {
+        "type": "object",
+        "required": ["error"],
+        "properties": {
+          "error": {
+            "type": "object",
+            "required": ["code", "message", "request_id", "retryable"],
+            "properties": {
+              "code": {
+                "type": "string",
+                "enum": [
+                  "MALFORMED_JSON",
+                  "IDEMPOTENCY_KEY_REQUIRED",
+                  "INVALID_IDEMPOTENCY_KEY",
+                  "INVALID_CURSOR",
+                  "INVALID_QUERY_PARAM",
+                  "UNAUTHENTICATED",
+                  "INSUFFICIENT_SCOPE",
+                  "TENANT_SUSPENDED",
+                  "NOT_FOUND",
+                  "REVISION_CONFLICT",
+                  "IDEMPOTENCY_CONFLICT",
+                  "IDEMPOTENCY_IN_PROGRESS",
+                  "ASSET_NOT_READY",
+                  "JOB_TERMINAL",
+                  "WEBHOOK_NOT_VERIFIED",
+                  "ARTIFACT_EXPIRED",
+                  "INPUT_EXPIRED",
+                  "DELIVERY_EXPIRED",
+                  "ASSET_DELETED",
+                  "PAYLOAD_TOO_LARGE",
+                  "VALIDATION_FAILED",
+                  "UNSUPPORTED_CAPABILITY",
+                  "ASSET_POLICY_REJECTED",
+                  "RATE_LIMITED",
+                  "QUOTA_EXCEEDED",
+                  "SERVICE_UNAVAILABLE"
+                ]
+              },
+              "message": {
+                "type": "string"
+              },
+              "request_id": {
+                "type": "string"
+              },
+              "retryable": {
+                "type": "boolean"
+              },
+              "details": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/components/schemas/ErrorDetail"
+                }
+              }
+            }
+          }
+        }
+      },
+      "ErrorDetail": {
+        "type": "object",
+        "required": ["pointer", "code", "message"],
+        "properties": {
+          "pointer": {
+            "type": "string"
+          },
+          "code": {
+            "type": "string"
+          },
+          "message": {
+            "type": "string"
+          }
+        }
+      },
+      "JobKind": {
+        "type": "string",
+        "enum": ["render", "preview"]
+      },
+      "JobState": {
+        "type": "string",
+        "enum": [
+          "queued",
+          "preparing",
+          "rendering",
+          "encoding",
+          "verifying",
+          "retry_wait",
+          "cancel_requested",
+          "succeeded",
+          "failed",
+          "canceled"
+        ]
+      },
+      "CapabilitiesResponse": {
+        "type": "object",
+        "required": [
+          "api_version",
+          "scene_schema_versions",
+          "engines",
+          "profiles",
+          "limits",
+          "features",
+          "policy_version"
+        ],
+        "properties": {
+          "api_version": {
+            "type": "string"
+          },
+          "scene_schema_versions": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "engines": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "boolean"
+            }
+          },
+          "profiles": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "object"
+            }
+          },
+          "limits": {
+            "type": "object",
+            "required": [
+              "max_duration_frames",
+              "max_scenes",
+              "max_layers_per_scene",
+              "max_audio_tracks",
+              "max_subtitles",
+              "max_fonts",
+              "max_upload_bytes"
+            ],
+            "properties": {
+              "max_duration_frames": {
+                "type": "integer"
+              },
+              "max_scenes": {
+                "type": "integer"
+              },
+              "max_layers_per_scene": {
+                "type": "integer"
+              },
+              "max_audio_tracks": {
+                "type": "integer"
+              },
+              "max_subtitles": {
+                "type": "integer"
+              },
+              "max_fonts": {
+                "type": "integer"
+              },
+              "max_upload_bytes": {
+                "type": "integer"
+              }
+            }
+          },
+          "features": {
+            "type": "object",
+            "required": ["remote_import", "custom_code", "authoring_adapter", "tts"],
+            "properties": {
+              "remote_import": {
+                "type": "boolean"
+              },
+              "custom_code": {
+                "type": "boolean"
+              },
+              "authoring_adapter": {
+                "type": "boolean"
+              },
+              "tts": {
+                "type": "boolean"
+              }
+            }
+          },
+          "policy_version": {
+            "type": "string"
+          }
+        }
+      },
+      "TemplateSummary": {
+        "type": "object",
+        "required": ["id", "revision", "name", "visibility", "created_at"],
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "revision": {
+            "type": "integer"
+          },
+          "name": {
+            "type": "string"
+          },
+          "visibility": {
+            "type": "string",
+            "enum": ["curated", "tenant"]
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "TemplateDetail": {
+        "type": "object",
+        "required": [
+          "id",
+          "revision",
+          "name",
+          "variables_schema",
+          "defaults",
+          "composition_spec",
+          "supported_locales",
+          "source_digest"
+        ],
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "revision": {
+            "type": "integer"
+          },
+          "name": {
+            "type": "string"
+          },
+          "variables_schema": {
+            "type": "object"
+          },
+          "defaults": {
+            "type": "object"
+          },
+          "composition_spec": {
+            "type": "object"
+          },
+          "supported_locales": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "source_digest": {
+            "type": "string"
+          }
+        }
+      },
+      "TemplateListResponse": {
+        "type": "object",
+        "required": ["data", "next_cursor"],
+        "properties": {
+          "data": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/TemplateSummary"
+            }
+          },
+          "next_cursor": {
+            "type": ["string", "null"]
+          }
+        }
+      },
+      "TemplateCreateRequest": {
+        "type": "object",
+        "required": [
+          "name",
+          "variables_schema",
+          "defaults",
+          "composition_spec",
+          "supported_locales"
+        ],
+        "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 200
+          },
+          "variables_schema": {
+            "type": "object"
+          },
+          "defaults": {
+            "type": "object"
+          },
+          "composition_spec": {
+            "type": "object"
+          },
+          "supported_locales": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "enum": ["vi-VN", "en-US"]
+            }
+          },
+          "source_template": {
+            "type": "object",
+            "required": ["id", "revision"],
+            "properties": {
+              "id": {
+                "type": "string"
+              },
+              "revision": {
+                "type": "integer"
+              }
+            }
+          }
+        }
+      },
+      "TemplateRevisionCreateRequest": {
+        "type": "object",
+        "required": [
+          "base_revision",
+          "change_note",
+          "name",
+          "variables_schema",
+          "defaults",
+          "composition_spec",
+          "supported_locales"
+        ],
+        "properties": {
+          "base_revision": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "change_note": {
+            "type": "string",
+            "maxLength": 1000
+          },
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 200
+          },
+          "variables_schema": {
+            "type": "object"
+          },
+          "defaults": {
+            "type": "object"
+          },
+          "composition_spec": {
+            "type": "object"
+          },
+          "supported_locales": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "enum": ["vi-VN", "en-US"]
+            }
+          }
+        }
+      },
+      "TemplateCreateResponse": {
+        "type": "object",
+        "required": ["id", "revision", "source_digest"],
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "revision": {
+            "type": "integer"
+          },
+          "source_digest": {
+            "type": "string"
+          }
+        }
+      },
+      "TemplateInstantiateRequest": {
+        "type": "object",
+        "required": ["template_revision", "name", "variables", "locale"],
+        "properties": {
+          "template_revision": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 200
+          },
+          "variables": {
+            "type": "object"
+          },
+          "locale": {
+            "type": "string",
+            "enum": ["vi-VN", "en-US"]
+          }
+        }
+      },
+      "TemplateInstantiateResponse": {
+        "type": "object",
+        "required": ["id", "revision", "template", "schema_version", "editable"],
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "revision": {
+            "type": "integer"
+          },
+          "template": {
+            "type": "object",
+            "required": ["id", "revision"],
+            "properties": {
+              "id": {
+                "type": "string"
+              },
+              "revision": {
+                "type": "integer"
+              }
+            }
+          },
+          "schema_version": {
+            "type": "string",
+            "const": "1.0"
+          },
+          "editable": {
+            "type": "boolean"
+          }
+        }
+      },
+      "CompositionCreateRequest": {
+        "type": "object",
+        "required": ["name", "spec"],
+        "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 200
+          },
+          "spec": {
+            "type": "object"
+          }
+        }
+      },
+      "CompositionCreateResponse": {
+        "type": "object",
+        "required": ["id", "revision", "name", "created_at"],
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "revision": {
+            "type": "integer"
+          },
+          "name": {
+            "type": "string"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "CompositionSummary": {
+        "type": "object",
+        "required": ["id", "current_revision", "name", "created_at"],
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "current_revision": {
+            "type": "integer"
+          },
+          "name": {
+            "type": "string"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "CompositionRevisionDetail": {
+        "type": "object",
+        "required": ["id", "revision", "spec", "render_hash", "created_at"],
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "revision": {
+            "type": "integer"
+          },
+          "spec": {
+            "type": "object"
+          },
+          "render_hash": {
+            "type": "string"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "CompositionRevisionCreateRequest": {
+        "type": "object",
+        "required": ["base_revision", "spec"],
+        "properties": {
+          "base_revision": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "change_note": {
+            "type": "string",
+            "maxLength": 1000
+          },
+          "spec": {
+            "type": "object"
+          }
+        }
+      },
+      "CompositionRevisionResponse": {
+        "type": "object",
+        "required": ["id", "revision", "render_hash", "created_at"],
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "revision": {
+            "type": "integer"
+          },
+          "render_hash": {
+            "type": "string"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "CompositionValidationRequest": {
+        "type": "object",
+        "required": ["spec"],
+        "properties": {
+          "spec": {
+            "type": "object"
+          },
+          "profile": {
+            "type": "string",
+            "enum": ["mp4-720p-v1", "preview-360p-v1"]
+          },
+          "base_composition_id": {
+            "type": "string"
+          },
+          "base_revision": {
+            "type": "integer"
+          }
+        }
+      },
+      "CompositionValidationResponse": {
+        "type": "object",
+        "required": [
+          "valid",
+          "normalized_spec",
+          "render_hash",
+          "required_capabilities",
+          "estimate",
+          "warnings"
+        ],
+        "properties": {
+          "valid": {
+            "type": "boolean"
+          },
+          "normalized_spec": {
+            "type": "object"
+          },
+          "render_hash": {
+            "type": "string"
+          },
+          "required_capabilities": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "estimate": {
+            "type": "object",
+            "required": ["output_seconds", "estimated_cost", "currency", "rate_version"],
+            "properties": {
+              "output_seconds": {
+                "type": "number"
+              },
+              "estimated_cost": {
+                "type": "number"
+              },
+              "currency": {
+                "type": "string"
+              },
+              "rate_version": {
+                "type": "string"
+              }
+            }
+          },
+          "warnings": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        }
+      },
+      "AssetUploadRequest": {
+        "type": "object",
+        "required": ["filename", "mime_type", "bytes", "sha256", "rights"],
+        "properties": {
+          "filename": {
+            "type": "string",
+            "maxLength": 255
+          },
+          "mime_type": {
+            "type": "string",
+            "enum": [
+              "image/jpeg",
+              "image/png",
+              "image/webp",
+              "image/svg+xml",
+              "video/mp4",
+              "audio/mpeg",
+              "audio/wav",
+              "font/ttf",
+              "font/otf",
+              "font/woff2"
+            ]
+          },
+          "bytes": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 104857600
+          },
+          "sha256": {
+            "type": "string",
+            "pattern": "^[0-9a-f]{64}$"
+          },
+          "rights": {
+            "type": "object",
+            "required": ["basis", "source", "attribution"],
+            "properties": {
+              "basis": {
+                "type": "string",
+                "enum": ["owned", "licensed", "public_domain"]
+              },
+              "source": {
+                "type": "string",
+                "maxLength": 500
+              },
+              "attribution": {
+                "type": "string",
+                "maxLength": 500
+              },
+              "expires_at": {
+                "type": ["string", "null"],
+                "format": "date-time"
+              }
+            }
+          }
+        }
+      },
+      "AssetUploadResponse": {
+        "type": "object",
+        "required": [
+          "asset_id",
+          "upload_method",
+          "upload_url",
+          "required_headers",
+          "expires_at",
+          "max_bytes"
+        ],
+        "properties": {
+          "asset_id": {
+            "type": "string"
+          },
+          "upload_method": {
+            "type": "string",
+            "const": "PUT"
+          },
+          "upload_url": {
+            "type": "string"
+          },
+          "required_headers": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "string"
+            }
+          },
+          "expires_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "max_bytes": {
+            "type": "integer"
+          }
+        }
+      },
+      "AssetRefreshUrlResponse": {
+        "type": "object",
+        "required": ["upload_url", "expires_at", "required_headers"],
+        "properties": {
+          "upload_url": {
+            "type": "string"
+          },
+          "expires_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "required_headers": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "string"
+            }
+          }
+        }
+      },
+      "AssetCompleteRequest": {
+        "type": "object",
+        "required": ["sha256"],
+        "properties": {
+          "sha256": {
+            "type": "string",
+            "pattern": "^[0-9a-f]{64}$"
+          }
+        }
+      },
+      "AssetImportRequest": {
+        "type": "object",
+        "required": ["url", "expected_sha256", "rights"],
+        "properties": {
+          "url": {
+            "type": "string",
+            "format": "uri"
+          },
+          "expected_sha256": {
+            "type": "string",
+            "pattern": "^[0-9a-f]{64}$"
+          },
+          "rights": {
+            "type": "object",
+            "required": ["basis", "source", "attribution"],
+            "properties": {
+              "basis": {
+                "type": "string",
+                "enum": ["owned", "licensed", "public_domain"]
+              },
+              "source": {
+                "type": "string"
+              },
+              "attribution": {
+                "type": "string"
+              }
+            }
+          }
+        }
+      },
+      "AssetSummary": {
+        "type": "object",
+        "required": ["id", "status"],
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string",
+            "enum": ["uploading", "processing", "ready", "rejected", "deleted"]
+          }
+        }
+      },
+      "AssetDetail": {
+        "type": "object",
+        "required": ["id", "status", "filename", "mime_type", "bytes", "sha256", "created_at"],
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string",
+            "enum": ["uploading", "processing", "ready", "rejected", "deleted"]
+          },
+          "filename": {
+            "type": "string"
+          },
+          "mime_type": {
+            "type": "string"
+          },
+          "bytes": {
+            "type": "integer"
+          },
+          "sha256": {
+            "type": "string"
+          },
+          "metadata": {
+            "type": "object"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "PreviewJobCreateRequest": {
+        "type": "object",
+        "required": ["composition_id", "revision", "mode", "profile"],
+        "properties": {
+          "composition_id": {
+            "type": "string"
+          },
+          "revision": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "mode": {
+            "type": "string",
+            "enum": ["frame", "clip"]
+          },
+          "frame_index": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "start_frame": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "duration_frames": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 300
+          },
+          "profile": {
+            "type": "string",
+            "const": "preview-360p-v1"
+          },
+          "webhook_endpoint_id": {
+            "type": "string"
+          }
+        }
+      },
+      "RenderJobCreateRequest": {
+        "type": "object",
+        "required": ["composition_id", "revision", "profile"],
+        "properties": {
+          "composition_id": {
+            "type": "string"
+          },
+          "revision": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "profile": {
+            "type": "string",
+            "enum": ["mp4-720p-v1"]
+          },
+          "webhook_endpoint_id": {
+            "type": "string"
+          },
+          "client_reference": {
+            "type": "string",
+            "maxLength": 128
+          },
+          "metadata": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "string"
+            }
+          }
+        }
+      },
+      "JobSummary": {
+        "type": "object",
+        "required": [
+          "id",
+          "kind",
+          "state",
+          "state_version",
+          "composition_id",
+          "revision",
+          "profile",
+          "created_at",
+          "status_url"
+        ],
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "kind": {
+            "$ref": "#/components/schemas/JobKind"
+          },
+          "state": {
+            "$ref": "#/components/schemas/JobState"
+          },
+          "state_version": {
+            "type": "integer"
+          },
+          "composition_id": {
+            "type": "string"
+          },
+          "revision": {
+            "type": "integer"
+          },
+          "profile": {
+            "type": "string"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "status_url": {
+            "type": "string"
+          }
+        }
+      },
+      "JobDetail": {
+        "type": "object",
+        "required": [
+          "id",
+          "kind",
+          "state",
+          "state_version",
+          "stage",
+          "progress",
+          "attempt",
+          "max_attempts",
+          "composition_id",
+          "revision",
+          "profile",
+          "artifacts",
+          "usage",
+          "created_at"
+        ],
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "kind": {
+            "$ref": "#/components/schemas/JobKind"
+          },
+          "state": {
+            "$ref": "#/components/schemas/JobState"
+          },
+          "state_version": {
+            "type": "integer"
+          },
+          "stage": {
+            "type": "string"
+          },
+          "progress": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 1
+          },
+          "attempt": {
+            "type": "integer"
+          },
+          "max_attempts": {
+            "type": "integer"
+          },
+          "composition_id": {
+            "type": "string"
+          },
+          "revision": {
+            "type": "integer"
+          },
+          "profile": {
+            "type": "string"
+          },
+          "artifacts": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ArtifactDetail"
+            }
+          },
+          "usage": {
+            "type": "object",
+            "properties": {
+              "output_seconds": {
+                "type": "number"
+              },
+              "cpu_seconds": {
+                "type": "number"
+              },
+              "billable_output_minutes": {
+                "type": "number"
+              }
+            }
+          },
+          "error": {
+            "type": ["object", "null"]
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "completed_at": {
+            "type": ["string", "null"],
+            "format": "date-time"
+          }
+        }
+      },
+      "ArtifactDetail": {
+        "type": "object",
+        "required": ["id", "kind", "mime_type"],
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "kind": {
+            "type": "string",
+            "enum": ["video", "manifest", "thumbnail", "captions", "quality_report"]
+          },
+          "mime_type": {
+            "type": "string"
+          }
+        }
+      },
+      "ArtifactDownloadResponse": {
+        "type": "object",
+        "required": ["url", "expires_at", "sha256", "bytes"],
+        "properties": {
+          "url": {
+            "type": "string"
+          },
+          "expires_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "sha256": {
+            "type": "string"
+          },
+          "bytes": {
+            "type": "integer"
+          }
+        }
+      },
+      "JobCancelResponse": {
+        "type": "object",
+        "required": ["id", "state", "state_version"],
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "state": {
+            "$ref": "#/components/schemas/JobState"
+          },
+          "state_version": {
+            "type": "integer"
+          }
+        }
+      },
+      "JobEvent": {
+        "type": "object",
+        "required": ["event_seq", "job_id", "timestamp", "state"],
+        "properties": {
+          "event_seq": {
+            "type": "integer"
+          },
+          "job_id": {
+            "type": "string"
+          },
+          "timestamp": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "state": {
+            "$ref": "#/components/schemas/JobState"
+          },
+          "stage": {
+            "type": "string"
+          },
+          "progress_percent": {
+            "type": "number"
+          },
+          "message": {
+            "type": "string"
+          }
+        }
+      },
+      "JobListResponse": {
+        "type": "object",
+        "required": ["data", "next_cursor"],
+        "properties": {
+          "data": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/JobSummary"
+            }
+          },
+          "next_cursor": {
+            "type": ["string", "null"]
+          }
+        }
+      },
+      "JobEventListResponse": {
+        "type": "object",
+        "required": ["data", "next_cursor"],
+        "properties": {
+          "data": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/JobEvent"
+            }
+          },
+          "next_cursor": {
+            "type": ["string", "null"]
+          }
+        }
+      },
+      "WebhookEndpointCreateRequest": {
+        "type": "object",
+        "required": ["url", "events"],
+        "properties": {
+          "url": {
+            "type": "string",
+            "format": "uri"
+          },
+          "events": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "enum": [
+                "job.queued",
+                "job.started",
+                "job.succeeded",
+                "job.failed",
+                "job.canceled"
+              ]
+            }
+          }
+        }
+      },
+      "WebhookEndpointCreateResponse": {
+        "type": "object",
+        "required": ["id", "url", "state", "signing_secret", "events", "created_at"],
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "url": {
+            "type": "string"
+          },
+          "state": {
+            "type": "string",
+            "enum": ["pending_verification", "active", "disabled"]
+          },
+          "signing_secret": {
+            "type": "string",
+            "description": "HMAC signing secret, shown only once on registration"
+          },
+          "events": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "WebhookVerifyResponse": {
+        "type": "object",
+        "required": ["id", "status"],
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string",
+            "const": "challenge_dispatched"
+          }
+        }
+      },
+      "WebhookEndpointDetail": {
+        "type": "object",
+        "required": ["id", "url", "state", "events", "created_at"],
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "url": {
+            "type": "string"
+          },
+          "state": {
+            "type": "string",
+            "enum": ["pending_verification", "active", "disabled"]
+          },
+          "events": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "last_delivery_at": {
+            "type": ["string", "null"],
+            "format": "date-time"
+          }
+        }
+      },
+      "WebhookRotateSecretResponse": {
+        "type": "object",
+        "required": ["id", "new_signing_secret", "previous_valid_until"],
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "new_signing_secret": {
+            "type": "string"
+          },
+          "previous_valid_until": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "WebhookDeliverySummary": {
+        "type": "object",
+        "required": [
+          "id",
+          "endpoint_id",
+          "event_id",
+          "event_type",
+          "attempt",
+          "status",
+          "created_at"
+        ],
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "endpoint_id": {
+            "type": "string"
+          },
+          "event_id": {
+            "type": "string"
+          },
+          "event_type": {
+            "type": "string"
+          },
+          "attempt": {
+            "type": "integer"
+          },
+          "status": {
+            "type": "string",
+            "enum": ["queued", "delivered", "failed", "dead_letter"]
+          },
+          "http_status": {
+            "type": ["integer", "null"]
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "WebhookDeliveryListResponse": {
+        "type": "object",
+        "required": ["data", "next_cursor"],
+        "properties": {
+          "data": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/WebhookDeliverySummary"
+            }
+          },
+          "next_cursor": {
+            "type": ["string", "null"]
+          }
+        }
+      },
+      "WebhookDeliveryReplayResponse": {
+        "type": "object",
+        "required": ["delivery_id", "event_id", "status"],
+        "properties": {
+          "delivery_id": {
+            "type": "string"
+          },
+          "event_id": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string",
+            "const": "queued"
+          }
+        }
+      },
+      "UsageResponse": {
+        "type": "object",
+        "required": [
+          "from",
+          "to",
+          "operational_attempts",
+          "billable_output_minutes",
+          "estimated_cost",
+          "currency"
+        ],
+        "properties": {
+          "from": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "to": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "operational_attempts": {
+            "type": "integer"
+          },
+          "billable_output_minutes": {
+            "type": "number"
+          },
+          "estimated_cost": {
+            "type": "number"
+          },
+          "currency": {
+            "type": "string",
+            "default": "USD"
+          }
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,62 @@
+{
+  "schema_version": "1.0",
+  "canvas": {
+    "width": 720,
+    "height": 1280,
+    "background": "#101828"
+  },
+  "fps": {
+    "num": 30,
+    "den": 1
+  },
+  "duration_frames": 150,
+  "seed": 42,
+  "locale": "vi-VN",
+  "direction": "ltr",
+  "fonts": [
+    {
+      "id": "brand_regular",
+      "asset_id": "ast_font_regular",
+      "sha256": "0000000000000000000000000000000000000000000000000000000000000000",
+      "family": "Noto Sans",
+      "weight": 400,
+      "style": "normal"
+    }
+  ],
+  "scenes": [
+    {
+      "id": "intro",
+      "revision": 1,
+      "start_frame": 0,
+      "duration_frames": 150,
+      "engine": "html-v1",
+      "layers": [
+        {
+          "id": "headline",
+          "type": "text",
+          "start_frame": 0,
+          "duration_frames": 150,
+          "z_index": 1,
+          "box": {
+            "x": 48,
+            "y": 400,
+            "width": -100,
+            "height": 240
+          },
+          "content": {
+            "text": "Sáng tạo",
+            "font_id": "brand_regular",
+            "font_size": 54,
+            "color": "#FFFFFF"
+          }
+        }
+      ],
+      "transition_out": {
+        "type": "cut",
+        "duration_frames": 0
+      }
+    }
+  ],
+  "audio_tracks": [],
+  "subtitles": []
+}

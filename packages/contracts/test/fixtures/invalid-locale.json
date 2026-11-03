@@ -1,0 +1,33 @@
+{
+  "schema_version": "1.0",
+  "canvas": {
+    "width": 720,
+    "height": 1280,
+    "background": "#101828"
+  },
+  "fps": {
+    "num": 30,
+    "den": 1
+  },
+  "duration_frames": 150,
+  "seed": 42,
+  "locale": "fr-FR",
+  "direction": "ltr",
+  "fonts": [],
+  "scenes": [
+    {
+      "id": "intro",
+      "revision": 1,
+      "start_frame": 0,
+      "duration_frames": 150,
+      "engine": "html-v1",
+      "layers": [],
+      "transition_out": {
+        "type": "cut",
+        "duration_frames": 0
+      }
+    }
+  ],
+  "audio_tracks": [],
+  "subtitles": []
+}
