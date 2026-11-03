@@ -1,0 +1,337 @@
+{
+  "$schema": "creativanta.video-engine.migrations-manifest.v1",
+  "task_id": "P3-01",
+  "stream": "A",
+  "phase": "P3",
+  "schema_version": "2026-11-03-v1",
+  "system_catalog_sentinel_tenant_id": "00000000-0000-0000-0000-000000000000",
+  "rls_context_setting": "SET LOCAL app.current_tenant_id = '<tenant_uuid>'",
+  "migrations": [
+    {
+      "version": "0001",
+      "name": "tenant_foundation",
+      "description": "21 canonical tenant entities, composite tenant_id PKs/FKs, 5 segregated DB service roles, transaction-local FORCE ROW LEVEL SECURITY, and immutability triggers",
+      "up_file": "0001_tenant_foundation.up.sql",
+      "up_sha256": "0e40b7b08c0dbcafba03bab072c6909b015e3f1127312105db615fbf6be69bcd",
+      "down_file": "0001_tenant_foundation.down.sql",
+      "down_sha256": "f63b1e71801f4af73d53ab31c395ae4e99628b8876ce0263b1739d0a4626cde2"
+    },
+    {
+      "version": "0002",
+      "name": "seed_system_catalog",
+      "description": "Seed sentinel tenant 00000000-0000-0000-0000-000000000000 (system_catalog) with starter-v1 policy, OFL-1.1 Vietnamese fonts, and curated public starter template",
+      "up_file": "0002_seed_system_catalog.up.sql",
+      "up_sha256": "36433c3ab4a1be546ab572015b266bf50ffd4125ec9d976ad25b1196d9a9ae9f",
+      "down_file": "0002_seed_system_catalog.down.sql",
+      "down_sha256": "53ad7a1afaad8d76d128af7e18a4cc4193f68fb47f313ca6b502689da26b0156"
+    }
+  ],
+  "db_roles": [
+    {
+      "role": "cve_migrator",
+      "purpose": "Schema DDL migrations and seeding immutable system_catalog templates/fonts",
+      "bypasses_rls": true
+    },
+    {
+      "role": "cve_api",
+      "purpose": "HTTP control plane CRUD scoped by transaction-local tenant RLS; read-only access to curated_public rows in system_catalog",
+      "bypasses_rls": false
+    },
+    {
+      "role": "cve_dispatcher",
+      "purpose": "Job queue claim, lease renewal, reaper recovery, and fenced publication across tenants",
+      "bypasses_rls": false
+    },
+    {
+      "role": "cve_ingest",
+      "purpose": "Quarantine asset probe, normalization, SVG sanitization, and transition to ready/rejected",
+      "bypasses_rls": false
+    },
+    {
+      "role": "cve_sender",
+      "purpose": "Transactional outbox reader and webhook delivery writer",
+      "bypasses_rls": false
+    }
+  ],
+  "tables": [
+    {
+      "table": "tenants",
+      "group": "identity",
+      "primary_key": ["id"],
+      "foreign_keys": [],
+      "unique_indexes": [],
+      "rls_enabled": true,
+      "rls_forced": true,
+      "immutable": false,
+      "supports_system_catalog": true
+    },
+    {
+      "table": "api_keys",
+      "group": "identity",
+      "primary_key": ["tenant_id", "id"],
+      "foreign_keys": [
+        {"columns": ["tenant_id"], "ref_table": "tenants", "ref_columns": ["id"]},
+        {"columns": ["tenant_id", "rotated_from_key_id"], "ref_table": "api_keys", "ref_columns": ["tenant_id", "id"]}
+      ],
+      "unique_indexes": [["key_prefix"]],
+      "rls_enabled": true,
+      "rls_forced": true,
+      "immutable": false,
+      "supports_system_catalog": false
+    },
+    {
+      "table": "policies",
+      "group": "identity",
+      "primary_key": ["tenant_id", "policy_version"],
+      "foreign_keys": [
+        {"columns": ["tenant_id"], "ref_table": "tenants", "ref_columns": ["id"]}
+      ],
+      "unique_indexes": [],
+      "rls_enabled": true,
+      "rls_forced": true,
+      "immutable": false,
+      "supports_system_catalog": true
+    },
+    {
+      "table": "templates",
+      "group": "templates",
+      "primary_key": ["tenant_id", "id"],
+      "foreign_keys": [
+        {"columns": ["tenant_id"], "ref_table": "tenants", "ref_columns": ["id"]},
+        {"columns": ["source_template_tenant_id", "source_template_id", "source_template_revision"], "ref_table": "template_revisions", "ref_columns": ["tenant_id", "template_id", "revision"]}
+      ],
+      "unique_indexes": [],
+      "rls_enabled": true,
+      "rls_forced": true,
+      "immutable": false,
+      "supports_system_catalog": true
+    },
+    {
+      "table": "template_revisions",
+      "group": "templates",
+      "primary_key": ["tenant_id", "template_id", "revision"],
+      "foreign_keys": [
+        {"columns": ["tenant_id", "template_id"], "ref_table": "templates", "ref_columns": ["tenant_id", "id"]}
+      ],
+      "unique_indexes": [],
+      "rls_enabled": true,
+      "rls_forced": true,
+      "immutable": true,
+      "supports_system_catalog": true
+    },
+    {
+      "table": "compositions",
+      "group": "compositions",
+      "primary_key": ["tenant_id", "id"],
+      "foreign_keys": [
+        {"columns": ["tenant_id"], "ref_table": "tenants", "ref_columns": ["id"]},
+        {"columns": ["template_tenant_id", "template_id", "template_revision"], "ref_table": "template_revisions", "ref_columns": ["tenant_id", "template_id", "revision"]}
+      ],
+      "unique_indexes": [],
+      "rls_enabled": true,
+      "rls_forced": true,
+      "immutable": false,
+      "supports_system_catalog": false
+    },
+    {
+      "table": "composition_revisions",
+      "group": "compositions",
+      "primary_key": ["tenant_id", "composition_id", "revision"],
+      "foreign_keys": [
+        {"columns": ["tenant_id", "composition_id"], "ref_table": "compositions", "ref_columns": ["tenant_id", "id"]}
+      ],
+      "unique_indexes": [],
+      "rls_enabled": true,
+      "rls_forced": true,
+      "immutable": true,
+      "supports_system_catalog": false
+    },
+    {
+      "table": "assets",
+      "group": "assets",
+      "primary_key": ["tenant_id", "id"],
+      "foreign_keys": [
+        {"columns": ["tenant_id"], "ref_table": "tenants", "ref_columns": ["id"]}
+      ],
+      "unique_indexes": [],
+      "rls_enabled": true,
+      "rls_forced": true,
+      "immutable": false,
+      "supports_system_catalog": true
+    },
+    {
+      "table": "asset_versions",
+      "group": "assets",
+      "primary_key": ["tenant_id", "asset_id", "version"],
+      "foreign_keys": [
+        {"columns": ["tenant_id", "asset_id"], "ref_table": "assets", "ref_columns": ["tenant_id", "id"]}
+      ],
+      "unique_indexes": [],
+      "rls_enabled": true,
+      "rls_forced": true,
+      "immutable": true,
+      "supports_system_catalog": true
+    },
+    {
+      "table": "scene_bundles",
+      "group": "scene_bundles",
+      "primary_key": ["tenant_id", "id"],
+      "foreign_keys": [
+        {"columns": ["tenant_id"], "ref_table": "tenants", "ref_columns": ["id"]}
+      ],
+      "unique_indexes": [],
+      "rls_enabled": true,
+      "rls_forced": true,
+      "immutable": false,
+      "supports_system_catalog": false
+    },
+    {
+      "table": "scene_bundle_revisions",
+      "group": "scene_bundles",
+      "primary_key": ["tenant_id", "bundle_id", "revision"],
+      "foreign_keys": [
+        {"columns": ["tenant_id", "bundle_id"], "ref_table": "scene_bundles", "ref_columns": ["tenant_id", "id"]}
+      ],
+      "unique_indexes": [],
+      "rls_enabled": true,
+      "rls_forced": true,
+      "immutable": true,
+      "supports_system_catalog": false
+    },
+    {
+      "table": "jobs",
+      "group": "jobs",
+      "primary_key": ["tenant_id", "id"],
+      "foreign_keys": [
+        {"columns": ["tenant_id"], "ref_table": "tenants", "ref_columns": ["id"]},
+        {"columns": ["tenant_id", "composition_id", "composition_revision"], "ref_table": "composition_revisions", "ref_columns": ["tenant_id", "composition_id", "revision"]},
+        {"columns": ["tenant_id", "webhook_endpoint_id"], "ref_table": "webhook_endpoints", "ref_columns": ["tenant_id", "id"]}
+      ],
+      "unique_indexes": [],
+      "rls_enabled": true,
+      "rls_forced": true,
+      "immutable": false,
+      "supports_system_catalog": false
+    },
+    {
+      "table": "job_attempts",
+      "group": "jobs",
+      "primary_key": ["tenant_id", "job_id", "attempt_id"],
+      "foreign_keys": [
+        {"columns": ["tenant_id", "job_id"], "ref_table": "jobs", "ref_columns": ["tenant_id", "id"]}
+      ],
+      "unique_indexes": [["tenant_id", "job_id", "lease_epoch"]],
+      "rls_enabled": true,
+      "rls_forced": true,
+      "immutable": false,
+      "supports_system_catalog": false
+    },
+    {
+      "table": "job_events",
+      "group": "jobs",
+      "primary_key": ["tenant_id", "job_id", "event_seq"],
+      "foreign_keys": [
+        {"columns": ["tenant_id", "job_id"], "ref_table": "jobs", "ref_columns": ["tenant_id", "id"]}
+      ],
+      "unique_indexes": [],
+      "rls_enabled": true,
+      "rls_forced": true,
+      "immutable": true,
+      "supports_system_catalog": false
+    },
+    {
+      "table": "artifacts",
+      "group": "artifacts",
+      "primary_key": ["tenant_id", "id"],
+      "foreign_keys": [
+        {"columns": ["tenant_id", "job_id"], "ref_table": "jobs", "ref_columns": ["tenant_id", "id"]},
+        {"columns": ["tenant_id", "job_id", "attempt_id"], "ref_table": "job_attempts", "ref_columns": ["tenant_id", "job_id", "attempt_id"]}
+      ],
+      "unique_indexes": [["tenant_id", "job_id", "kind"]],
+      "rls_enabled": true,
+      "rls_forced": true,
+      "immutable": false,
+      "supports_system_catalog": false
+    },
+    {
+      "table": "idempotency_records",
+      "group": "idempotency",
+      "primary_key": ["tenant_id", "method", "normalized_path", "key"],
+      "foreign_keys": [
+        {"columns": ["tenant_id"], "ref_table": "tenants", "ref_columns": ["id"]}
+      ],
+      "unique_indexes": [],
+      "rls_enabled": true,
+      "rls_forced": true,
+      "immutable": false,
+      "supports_system_catalog": false
+    },
+    {
+      "table": "outbox",
+      "group": "webhooks",
+      "primary_key": ["tenant_id", "id"],
+      "foreign_keys": [
+        {"columns": ["tenant_id", "job_id"], "ref_table": "jobs", "ref_columns": ["tenant_id", "id"]}
+      ],
+      "unique_indexes": [],
+      "rls_enabled": true,
+      "rls_forced": true,
+      "immutable": false,
+      "supports_system_catalog": false
+    },
+    {
+      "table": "webhook_endpoints",
+      "group": "webhooks",
+      "primary_key": ["tenant_id", "id"],
+      "foreign_keys": [
+        {"columns": ["tenant_id"], "ref_table": "tenants", "ref_columns": ["id"]}
+      ],
+      "unique_indexes": [],
+      "rls_enabled": true,
+      "rls_forced": true,
+      "immutable": false,
+      "supports_system_catalog": false
+    },
+    {
+      "table": "webhook_deliveries",
+      "group": "webhooks",
+      "primary_key": ["tenant_id", "id"],
+      "foreign_keys": [
+        {"columns": ["tenant_id", "endpoint_id"], "ref_table": "webhook_endpoints", "ref_columns": ["tenant_id", "id"]},
+        {"columns": ["tenant_id", "outbox_event_id"], "ref_table": "outbox", "ref_columns": ["tenant_id", "id"]},
+        {"columns": ["tenant_id", "job_id"], "ref_table": "jobs", "ref_columns": ["tenant_id", "id"]}
+      ],
+      "unique_indexes": [],
+      "rls_enabled": true,
+      "rls_forced": true,
+      "immutable": false,
+      "supports_system_catalog": false
+    },
+    {
+      "table": "usage_reservations",
+      "group": "usage",
+      "primary_key": ["tenant_id", "job_id"],
+      "foreign_keys": [
+        {"columns": ["tenant_id", "job_id"], "ref_table": "jobs", "ref_columns": ["tenant_id", "id"]}
+      ],
+      "unique_indexes": [],
+      "rls_enabled": true,
+      "rls_forced": true,
+      "immutable": false,
+      "supports_system_catalog": false
+    },
+    {
+      "table": "usage_entries",
+      "group": "usage",
+      "primary_key": ["tenant_id", "id"],
+      "foreign_keys": [
+        {"columns": ["tenant_id", "job_id"], "ref_table": "jobs", "ref_columns": ["tenant_id", "id"]}
+      ],
+      "unique_indexes": [["tenant_id", "job_id", "meter", "ledger_version"]],
+      "rls_enabled": true,
+      "rls_forced": true,
+      "immutable": true,
+      "supports_system_catalog": false
+    }
+  ]
+}
