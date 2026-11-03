@@ -469,11 +469,9 @@ class Supervisor:
         if self.cfg.get("paused", False):
             return
         now = int(time.time())
-        runs_today = self.db.execute(
-            "SELECT COUNT(*) FROM events WHERE action='STARTED' AND ts>=?",
-            (now - 86400,)).fetchone()[0]
-        allowed = min(self.cfg["max_concurrent"] - len(self.active),
-                      self.cfg["max_runs_per_24h"] - runs_today)
+        # No artificial daily start quota: upstream AGY availability is independent.
+        # Limit concurrent work and per-task retries, not legitimate progress.
+        allowed = max(0, self.cfg["max_concurrent"] - len(self.active))
         if allowed <= 0:
             return
         rows = self.records()
