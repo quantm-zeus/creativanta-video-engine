@@ -4,7 +4,7 @@ Báo cáo nghiệm thu kỹ thuật cho nhiệm vụ `P2-02` (`B+D / P2`): Sản
 
 ```text
 Task: P2-02
-Base / tested commit: 985f471f21b074ae2de2771c63ecce0b40b179b6 / pending_commit
+Base / tested commit: 985f471f21b074ae2de2771c63ecce0b40b179b6 / 8615d9535497f8eee7ac78032fa1fccfa52c04f4
 Environment: Linux x86_64, Ubuntu 24.04 LTS, 4 vCPUs, 15GiB RAM, Node v24.22.2, pnpm 12.16.1, TypeScript 5.7.3, Python 3.11.2
 Command: PATH=/usr/local/lib/node_modules/corepack/shims:/usr/bin:$PATH pnpm -r --if-present run build && pnpm -r --if-present run typecheck && pnpm -r --if-present run lint && pnpm -r --if-present run test && node scripts/health-check.mjs && node packages/controller/dist/index.js --self-test && PATH=/usr/bin:$PATH python3 scripts/validate_repo.py
 Result: PASS
@@ -37,7 +37,7 @@ Acceptance mapping:
   - Real frames & Visual Goldens: PASS — Kết xuất toàn bộ khung hình vật lý (lossless PNG và RGBA), trích xuất và lưu trữ bộ khung hình chuẩn vàng visual goldens (20 khung hình cho POC-01 và 24 khung hình cho POC-02) đáp ứng đầy đủ tiêu chí khung 0, ranh giới phân cảnh, điểm mốc chuyển động, biên phụ đề và khung cuối.
   - Real MP4 & Faststart: PASS — Đóng gói tệp video MP4 chuẩn ISO Base Media File Format (ISO/IEC 14496-12 / 14496-14) với cấu trúc hộp ftyp (isom, avc1), hộp moov đặt trước mdat (faststart) phục vụ xem trực tuyến không độ trễ, các NAL units H.264 slice cho từng khung hình và luồng âm thanh stereo 48kHz.
   - Complete Decode & Expected Counts: PASS — Bộ giải mã MP4 thuần Mp4Decoder phân tích đệ quy toàn bộ cấu trúc hộp, trích xuất từng mẫu khung hình, kiểm tra dấu thời gian trình chiếu PTS tăng đơn điệu nghiêm ngặt (0-drift), khớp chính xác 100% số khung hình kỳ vọng (450/450 cho POC-01, 900/900 cho POC-02) và sai lệch đồng bộ âm thanh - hình ảnh ≤1 khung hình (≤33.3ms).
-Reviewer / reviewed commit / decision: pending independent reviewer / 985f471f21b074ae2de2771c63ecce0b40b179b6 / local completion awaiting review
+Reviewer / reviewed commit / decision: pending independent reviewer / 8615d9535497f8eee7ac78032fa1fccfa52c04f4 / local completion awaiting review
 ```
 
 ---
