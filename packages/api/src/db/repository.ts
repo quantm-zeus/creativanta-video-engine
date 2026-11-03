@@ -52,6 +52,17 @@ import {
   calculateJobReservation,
   validatePreviewBoundsAgainstComposition,
 } from '../admission/job-admission.js';
+import {
+  encryptSecretAtRest,
+  generateWebhookSecret,
+} from '../webhook/crypto.js';
+import {
+  MAX_DELIVERY_DEADLINE_MS,
+  MAX_REPLAYS_PER_DAY,
+  WEBHOOK_REPLAY_RETENTION_MS,
+  WebhookDeliveryRecord,
+  WebhookEndpointRecord,
+} from '../webhook/types.js';
 
 export class ResourceNotFoundError extends Error {
   public readonly httpStatus = 404;
@@ -115,6 +126,38 @@ export class IdempotencyInProgressError extends Error {
   }
 }
 
+export class DeliveryExpiredError extends Error {
+  public readonly httpStatus = 410;
+  public readonly code = 'DELIVERY_EXPIRED';
+
+  constructor(message = 'Webhook delivery expired (replay retention is 7 days from event creation)') {
+    super(message);
+    this.name = 'DeliveryExpiredError';
+  }
+}
+
+export class ReplayQuotaExceededError extends Error {
+  public readonly httpStatus = 429;
+  public readonly code = 'QUOTA_EXCEEDED';
+  public readonly retryAfterSeconds: number;
+
+  constructor(message = 'Daily replay quota exceeded for delivery (maximum 5 replays per day)', retryAfterSeconds = 86400) {
+    super(message);
+    this.name = 'ReplayQuotaExceededError';
+    this.retryAfterSeconds = retryAfterSeconds;
+  }
+}
+
+export class ChallengeExpiredError extends Error {
+  public readonly httpStatus = 410;
+  public readonly code = 'CHALLENGE_EXPIRED';
+
+  constructor(message = 'Webhook challenge has expired (validity is 10 minutes)') {
+    super(message);
+    this.name = 'ChallengeExpiredError';
+  }
+}
+
 export function computeSha256Hex(input: string): string {
   return crypto.createHash('sha256').update(input, 'utf8').digest('hex');
 }
@@ -138,6 +181,7 @@ export class TenantRepository {
   private readonly revocationStore: StorageGrantRevocationStore;
   private readonly baseUrl: string;
   private readonly tenantImportAllowlists = new Map<string, string[]>();
+  private readonly masterKey?: Buffer | string;
 
   constructor(
     pool: TenantConnectionPool,
@@ -146,6 +190,7 @@ export class TenantRepository {
       quarantineStore?: QuarantineStore;
       revocationStore?: StorageGrantRevocationStore;
       baseUrl?: string;
+      masterKey?: Buffer | string;
     },
   ) {
     this.pool = pool;
@@ -153,6 +198,7 @@ export class TenantRepository {
     this.quarantineStore = options.quarantineStore;
     this.revocationStore = options.revocationStore ?? defaultGrantRevocationStore;
     this.baseUrl = options.baseUrl ?? (process.env['CVE_PUBLIC_BASE_URL'] || 'http://127.0.0.1:8080/v1');
+    this.masterKey = options.masterKey;
   }
 
   public getPool(): TenantConnectionPool {
@@ -3799,6 +3845,21 @@ export class TenantRepository {
     });
   }
 
+  public getOutboxEvents(
+    tenantId: string,
+    jobId?: string,
+  ): Array<{
+    id: string;
+    event_type: string;
+    job_id: string;
+    state_version: number;
+    payload: Record<string, unknown>;
+    created_at: string;
+    processed_at: string | null;
+  }> {
+    return this.listOutboxEvents(tenantId, jobId);
+  }
+
   public listUsageEntries(
     tenantId: string,
     jobId?: string,
@@ -3875,6 +3936,101 @@ export class TenantRepository {
   ): { id: string; state: 'active' } {
     this.setWebhookEndpointState(tenantId, endpointId, 'active', now);
     return { id: endpointId, state: 'active' };
+  }
+
+  public initiateWebhookChallenge(
+    tenantId: string,
+    endpointId: string,
+    now = new Date(),
+  ): { challengeToken: string; expiresAt: string } {
+    const challengeToken = crypto.randomBytes(32).toString('hex');
+    const challengeHash = crypto.createHash('sha256').update(challengeToken).digest('hex');
+    const expiresAt = new Date(now.getTime() + 10 * 60 * 1000).toISOString();
+
+    this.pool.withTransaction({ tenantId, role: 'cve_api' }, (tx) => {
+      const rows = tx.selectScoped<{ id: string; state: string }>(
+        'webhook_endpoints',
+        'id = ?',
+        [endpointId],
+      );
+      const ep = rows[0];
+      if (!ep) {
+        throw new ResourceNotFoundError(`Webhook endpoint ${endpointId} not found`);
+      }
+      if (ep.state === 'disabled') {
+        throw new WebhookNotVerifiedError(`Webhook endpoint ${endpointId} is disabled`);
+      }
+
+      tx.updateScoped(
+        'webhook_endpoints',
+        {
+          challenge_token_hash: challengeHash,
+          challenge_expires_at: expiresAt,
+          updated_at: now.toISOString(),
+        },
+        'id = ?',
+        [endpointId],
+      );
+    });
+
+    return { challengeToken, expiresAt };
+  }
+
+  public confirmWebhookChallenge(
+    tenantId: string,
+    endpointId: string,
+    echoedChallenge: string,
+    now = new Date(),
+  ): { id: string; state: 'active' } {
+    const nowIso = now.toISOString();
+
+    return this.pool.withTransaction({ tenantId, role: 'cve_api' }, (tx) => {
+      const rows = tx.selectScoped<{
+        id: string;
+        state: string;
+        challenge_token_hash: string | null;
+        challenge_expires_at: string | null;
+      }>('webhook_endpoints', 'id = ?', [endpointId]);
+
+      const ep = rows[0];
+      if (!ep) {
+        throw new ResourceNotFoundError(`Webhook endpoint ${endpointId} not found`);
+      }
+      if (ep.state === 'disabled') {
+        throw new WebhookNotVerifiedError(`Webhook endpoint ${endpointId} is disabled`);
+      }
+      if (!ep.challenge_token_hash || !ep.challenge_expires_at) {
+        throw new WebhookNotVerifiedError(`Webhook endpoint ${endpointId} has no pending challenge`);
+      }
+      if (now.getTime() > Date.parse(ep.challenge_expires_at)) {
+        throw new ChallengeExpiredError(`Webhook challenge for ${endpointId} has expired`);
+      }
+
+      const expectedHash = ep.challenge_token_hash;
+      const actualHash = crypto.createHash('sha256').update(echoedChallenge).digest('hex');
+
+      const expectedBuf = Buffer.from(expectedHash, 'utf8');
+      const actualBuf = Buffer.from(actualHash, 'utf8');
+      const isMatch = expectedBuf.length === actualBuf.length && crypto.timingSafeEqual(expectedBuf, actualBuf);
+
+      if (!isMatch) {
+        throw new WebhookNotVerifiedError('Challenge token verification failed: challenge does not match');
+      }
+
+      tx.updateScoped(
+        'webhook_endpoints',
+        {
+          state: 'active',
+          challenge_token_hash: null,
+          challenge_expires_at: null,
+          updated_at: nowIso,
+        },
+        'id = ?',
+        [endpointId],
+      );
+
+      return { id: endpointId, state: 'active' };
+    });
   }
 
   public registerSceneBundle(
@@ -4076,8 +4232,11 @@ export class TenantRepository {
     created_at: string;
   } {
     const nowIso = (input.now ?? new Date()).toISOString();
-    const signingSecret = `whsec_${crypto.randomBytes(32).toString('hex')}`;
-    const secretCiphertext = `enc:v1:${computeSha256Hex(signingSecret)}`;
+    const signingSecret = generateWebhookSecret();
+    const secretCiphertext = encryptSecretAtRest(signingSecret, this.masterKey);
+    const events = (input.events && input.events.length > 0)
+      ? input.events
+      : ['job.succeeded', 'job.failed', 'job.canceled'];
 
     this.pool.withTransaction({ tenantId, role: 'cve_api' }, (tx) => {
       tx.insertScoped('webhook_endpoints', {
@@ -4085,7 +4244,7 @@ export class TenantRepository {
         id: input.id,
         url: input.url,
         state: 'pending_verification',
-        events_filter_json: JSON.stringify(input.events),
+        events_filter_json: JSON.stringify(events),
         active_key_id: 'whk_1',
         secret_ciphertext: secretCiphertext,
         prev_key_id: null,
@@ -4104,7 +4263,7 @@ export class TenantRepository {
       url: input.url,
       state: 'pending_verification',
       signing_secret: signingSecret,
-      events: [...input.events],
+      events: [...events],
       created_at: nowIso,
     };
   }
@@ -4119,6 +4278,13 @@ export class TenantRepository {
     events: string[];
     created_at: string;
     last_delivery_at: string | null;
+    delivery_summary?: {
+      total: number;
+      delivered: number;
+      queued: number;
+      failed: number;
+      dead_letter: number;
+    };
   } {
     return this.pool.withTransaction({ tenantId, role: 'cve_api' }, (tx) => {
       const rows = tx.selectScoped<{
@@ -4135,6 +4301,24 @@ export class TenantRepository {
         throw new ResourceNotFoundError(`Webhook endpoint ${endpointId} not found`);
       }
 
+      const deliveries = tx.selectScoped<{ state: string }>(
+        'webhook_deliveries',
+        'endpoint_id = ?',
+        [endpointId],
+      );
+
+      let delivered = 0;
+      let queued = 0;
+      let failed = 0;
+      let dead_letter = 0;
+
+      for (const d of deliveries) {
+        if (d.state === 'delivered') delivered++;
+        else if (d.state === 'queued') queued++;
+        else if (d.state === 'failed') failed++;
+        else if (d.state === 'dead_letter') dead_letter++;
+      }
+
       return {
         id: ep.id,
         url: ep.url,
@@ -4142,6 +4326,301 @@ export class TenantRepository {
         events: JSON.parse(ep.events_filter_json) as string[],
         created_at: ep.created_at,
         last_delivery_at: ep.last_delivery_at,
+        delivery_summary: {
+          total: deliveries.length,
+          delivered,
+          queued,
+          failed,
+          dead_letter,
+        },
+      };
+    });
+  }
+
+  public rotateWebhookSecret(
+    tenantId: string,
+    endpointId: string,
+    now = new Date(),
+  ): {
+    id: string;
+    active_key_id: string;
+    signing_secret: string;
+    prev_key_id: string;
+    prev_secret_expires_at: string;
+  } {
+    const nowIso = now.toISOString();
+    const prevSecretExpiresAt = new Date(now.getTime() + 24 * 3600 * 1000).toISOString(); // 24h grace period
+    const newSigningSecret = generateWebhookSecret();
+    const newSecretCiphertext = encryptSecretAtRest(newSigningSecret, this.masterKey);
+
+    return this.pool.withTransaction({ tenantId, role: 'cve_api' }, (tx) => {
+      const rows = tx.selectScoped<WebhookEndpointRecord>(
+        'webhook_endpoints',
+        'id = ?',
+        [endpointId],
+      );
+      const ep = rows[0];
+      if (!ep) {
+        throw new ResourceNotFoundError(`Webhook endpoint ${endpointId} not found`);
+      }
+      if (ep.state === 'disabled') {
+        throw new WebhookNotVerifiedError(`Webhook endpoint ${endpointId} is disabled`);
+      }
+
+      const match = /^whk_(\d+)$/.exec(ep.active_key_id);
+      const nextNum = match ? parseInt(match[1]!, 10) + 1 : 2;
+      const nextKeyId = `whk_${nextNum}`;
+
+      tx.updateScoped(
+        'webhook_endpoints',
+        {
+          active_key_id: nextKeyId,
+          secret_ciphertext: newSecretCiphertext,
+          prev_key_id: ep.active_key_id,
+          prev_secret_ciphertext: ep.secret_ciphertext,
+          prev_secret_expires_at: prevSecretExpiresAt,
+          updated_at: nowIso,
+        },
+        'id = ?',
+        [endpointId],
+      );
+
+      return {
+        id: endpointId,
+        active_key_id: nextKeyId,
+        signing_secret: newSigningSecret,
+        prev_key_id: ep.active_key_id,
+        prev_secret_expires_at: prevSecretExpiresAt,
+      };
+    });
+  }
+
+  public deleteWebhookEndpoint(
+    tenantId: string,
+    endpointId: string,
+    now = new Date(),
+  ): void {
+    const nowIso = now.toISOString();
+    this.pool.withTransaction({ tenantId, role: 'cve_api' }, (tx) => {
+      const updated = tx.updateScoped(
+        'webhook_endpoints',
+        { state: 'disabled', updated_at: nowIso },
+        'id = ?',
+        [endpointId],
+      );
+      if (updated === 0) {
+        throw new ResourceNotFoundError(`Webhook endpoint ${endpointId} not found`);
+      }
+
+      // "Endpoint bị xóa thì không gửi tiếp": cancel all queued deliveries for this endpoint
+      tx.updateScoped(
+        'webhook_deliveries',
+        { state: 'dead_letter', updated_at: nowIso },
+        'endpoint_id = ? AND state = ?',
+        [endpointId, 'queued'],
+      );
+    });
+  }
+
+  public listWebhookDeliveries(
+    tenantId: string,
+    options: {
+      jobId?: string;
+      endpointId?: string;
+      state?: string;
+      limit?: number;
+      cursor?: string;
+    } = {},
+  ): {
+    data: Array<{
+      id: string;
+      endpoint_id: string;
+      outbox_event_id: string;
+      job_id: string;
+      state: string;
+      attempt_count: number;
+      next_attempt_at: string | null;
+      deadline_at: string;
+      last_http_status: number | null;
+      replay_count_today: number;
+      created_at: string;
+      updated_at: string;
+    }>;
+    next_cursor: string | null;
+  } {
+    const limit = Math.min(Math.max(options.limit ?? 20, 1), 100);
+
+    return this.pool.withTransaction({ tenantId, role: 'cve_api' }, (tx) => {
+      const clauses: string[] = ['1=1'];
+      const params: any[] = [];
+
+      if (options.jobId) {
+        clauses.push('job_id = ?');
+        params.push(options.jobId);
+      }
+      if (options.endpointId) {
+        clauses.push('endpoint_id = ?');
+        params.push(options.endpointId);
+      }
+      if (options.state) {
+        clauses.push('state = ?');
+        params.push(options.state);
+      }
+
+      const rows = tx.selectScoped<WebhookDeliveryRecord>(
+        'webhook_deliveries',
+        clauses.join(' AND '),
+        params,
+        'created_at DESC, id DESC',
+      );
+
+      const pageRows = rows.slice(0, limit);
+      return {
+        data: pageRows.map((r) => ({
+          id: r.id,
+          endpoint_id: r.endpoint_id,
+          outbox_event_id: r.outbox_event_id,
+          job_id: r.job_id,
+          state: r.state,
+          attempt_count: Number(r.attempt_count),
+          next_attempt_at: r.next_attempt_at,
+          deadline_at: r.deadline_at,
+          last_http_status: r.last_http_status !== null ? Number(r.last_http_status) : null,
+          replay_count_today: Number(r.replay_count_today),
+          created_at: r.created_at,
+          updated_at: r.updated_at,
+        })),
+        next_cursor: null,
+      };
+    });
+  }
+
+  public getWebhookDelivery(
+    tenantId: string,
+    deliveryId: string,
+  ): {
+    id: string;
+    endpoint_id: string;
+    outbox_event_id: string;
+    job_id: string;
+    state: string;
+    attempt_count: number;
+    next_attempt_at: string | null;
+    deadline_at: string;
+    last_http_status: number | null;
+    replay_count_today: number;
+    created_at: string;
+    updated_at: string;
+  } {
+    return this.pool.withTransaction({ tenantId, role: 'cve_api' }, (tx) => {
+      const rows = tx.selectScoped<WebhookDeliveryRecord>(
+        'webhook_deliveries',
+        'id = ?',
+        [deliveryId],
+      );
+      const delivery = rows[0];
+      if (!delivery) {
+        throw new ResourceNotFoundError(`Webhook delivery ${deliveryId} not found`);
+      }
+      return {
+        id: delivery.id,
+        endpoint_id: delivery.endpoint_id,
+        outbox_event_id: delivery.outbox_event_id,
+        job_id: delivery.job_id,
+        state: delivery.state,
+        attempt_count: Number(delivery.attempt_count),
+        next_attempt_at: delivery.next_attempt_at,
+        deadline_at: delivery.deadline_at,
+        last_http_status: delivery.last_http_status !== null ? Number(delivery.last_http_status) : null,
+        replay_count_today: Number(delivery.replay_count_today),
+        created_at: delivery.created_at,
+        updated_at: delivery.updated_at,
+      };
+    });
+  }
+
+  public replayWebhookDelivery(
+    tenantId: string,
+    deliveryId: string,
+    now = new Date(),
+  ): {
+    id: string;
+    state: 'queued';
+    replay_count_today: number;
+    outbox_event_id: string;
+  } {
+    const nowMs = now.getTime();
+    const nowIso = now.toISOString();
+
+    return this.pool.withTransaction({ tenantId, role: 'cve_api' }, (tx) => {
+      const deliveries = tx.selectScoped<WebhookDeliveryRecord>(
+        'webhook_deliveries',
+        'id = ?',
+        [deliveryId],
+      );
+      const delivery = deliveries[0];
+      if (!delivery) {
+        throw new ResourceNotFoundError(`Webhook delivery ${deliveryId} not found`);
+      }
+
+      // 1. Check 7-day retention limit: docs/API.md line 151
+      const createdAtMs = Date.parse(delivery.created_at);
+      if (nowMs - createdAtMs > WEBHOOK_REPLAY_RETENTION_MS) {
+        throw new DeliveryExpiredError(
+          `Webhook delivery ${deliveryId} expired (> 7 days since creation); reconcile via GET /jobs/{id}`,
+        );
+      }
+
+      // Check calendar day rollover for daily quota (resets each calendar day)
+      const lastUpdatedMs = Date.parse(delivery.updated_at);
+      const lastDate = new Date(lastUpdatedMs).toISOString().slice(0, 10);
+      const currentDate = now.toISOString().slice(0, 10);
+      const replayCountToday = currentDate === lastDate ? Number(delivery.replay_count_today) : 0;
+
+      // 2. Check daily replay limit (<= 5 per day): docs/API.md line 151
+      if (replayCountToday >= MAX_REPLAYS_PER_DAY) {
+        throw new ReplayQuotaExceededError(
+          `Daily replay limit of ${MAX_REPLAYS_PER_DAY} exceeded for delivery ${deliveryId}`,
+        );
+      }
+
+      // 3. Check endpoint not disabled: "Endpoint bị xóa thì không gửi tiếp"
+      const endpoints = tx.selectScoped<WebhookEndpointRecord>(
+        'webhook_endpoints',
+        'id = ?',
+        [delivery.endpoint_id],
+      );
+      const endpoint = endpoints[0];
+      if (!endpoint || endpoint.state === 'disabled') {
+        throw new WebhookNotVerifiedError(
+          `Webhook endpoint ${delivery.endpoint_id} is disabled; cannot replay delivery`,
+        );
+      }
+
+      // 4. Update delivery record to queued with same outbox_event_id
+      const nextReplayCount = replayCountToday + 1;
+      const newDeadlineIso = new Date(nowMs + MAX_DELIVERY_DEADLINE_MS).toISOString();
+
+      tx.updateScoped(
+        'webhook_deliveries',
+        {
+          state: 'queued',
+          attempt_count: 0,
+          next_attempt_at: nowIso,
+          deadline_at: newDeadlineIso,
+          last_http_status: null,
+          replay_count_today: nextReplayCount,
+          updated_at: nowIso,
+        },
+        'id = ?',
+        [deliveryId],
+      );
+
+      return {
+        id: delivery.id,
+        state: 'queued',
+        replay_count_today: nextReplayCount,
+        outbox_event_id: delivery.outbox_event_id,
       };
     });
   }
