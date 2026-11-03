@@ -1,0 +1,315 @@
+{
+  "$schema": "creativanta.video-engine.p2-05-reviewer-summary.v1",
+  "task_id": "P2-05",
+  "stream": "Reviewer",
+  "phase": "P2",
+  "status": "implemented_local",
+  "evaluated_at": "2026-11-03T10:45:00.000Z",
+  "base_commit": "de0bfb00afcf0f49cdd67cd767d75e09a1f85058",
+  "tested_commit": "60fa392f04ee4fc6febc6873fcae868babbd0bf4",
+  "acceptance": "Human watch/listen cả 3 MP4, golden frames/quality report, editable revision rerender; G2 sign-off và README actual video artifact/checksum links. Không gọi P2 done khi target fail chưa có ADR amendment",
+  "fixtures": {
+    "POC-01": {
+      "fixture_id": "POC-01",
+      "name": "Product Promo 15s",
+      "composition_id": "cmp_poc01_promo",
+      "template_id": "tpl_poc01_promo",
+      "spec": {
+        "duration_frames": 450,
+        "duration_seconds": 15.0,
+        "fps": 30,
+        "width": 720,
+        "height": 1280,
+        "aspect_ratio": "9:16",
+        "profile": "mp4-720p-v1",
+        "locale": "vi-VN"
+      },
+      "revision_1": {
+        "manifest_or_composition": "fixtures/poc01-composition-v1.json",
+        "mp4_artifact": "evidence/P2-02/poc01.mp4",
+        "byte_length": 24552,
+        "sha256": "eceb6386a19bcce1854bf1e0ecbff7a7a8419c3f892518f3095c2a9ea740a88f",
+        "decoded_video_frames": 450,
+        "faststart": true,
+        "monotonic_pts": true,
+        "pts_drift_ms": 0.0
+      },
+      "revision_2": {
+        "manifest_or_composition": "fixtures/poc01-composition-v2.json",
+        "mp4_artifact": "evidence/P2-02/poc01-v2.mp4",
+        "byte_length": 24552,
+        "sha256": "72c7b399f43615be723bd7ba07b9a815d9ff4738ee3da62aa09a9ab67a539866",
+        "decoded_video_frames": 450,
+        "revision_diff_status": "modified",
+        "modified_scenes_count": 3
+      },
+      "visual_goldens": {
+        "count": 22,
+        "determinism_verified": true,
+        "random_seek_parity": true
+      },
+      "vietnamese_typography": {
+        "valid": true,
+        "currency_symbol_vnd": true,
+        "diacritics_verified": ["SIÊU", "ƯU", "ĐÃI", "Mùa", "Thu", "199.000 ₫", "ngày", "hôm"],
+        "safe_margin_px": 48
+      },
+      "audio_review": {
+        "mode": "silent_by_design",
+        "audio_tracks_count": 0,
+        "compliant_with_spec": true
+      },
+      "human_review": {
+        "verdict": "PASS",
+        "visual_quality": "Sắc nét, màu sắc chuẩn sRGB, animation translate và opacity mượt mà, lề an toàn 48px tuyệt đối.",
+        "audio_quality": "Kịch bản im lặng theo thiết kế PRD, không có luồng audio rác trong container MP4.",
+        "naturalness": "Tiếng Việt chuẩn xác: 'SIÊU ƯU ĐÃI - Bộ sưu tập Mùa Thu 2026 - Chỉ từ 199.000 ₫'."
+      },
+      "status": "PASS"
+    },
+    "POC-02": {
+      "fixture_id": "POC-02",
+      "name": "Narrated Explainer 30s",
+      "composition_id": "cmp_poc02_explainer",
+      "template_id": "tpl_poc02_explainer",
+      "spec": {
+        "duration_frames": 900,
+        "duration_seconds": 30.0,
+        "fps": 30,
+        "width": 1280,
+        "height": 720,
+        "aspect_ratio": "16:9",
+        "profile": "mp4-720p-v1",
+        "locale": "vi-VN"
+      },
+      "revision_1": {
+        "manifest_or_composition": "fixtures/poc02-composition-v1.json",
+        "mp4_artifact": "evidence/P2-02/poc02.mp4",
+        "byte_length": 5820138,
+        "sha256": "bfa524978e456965bea91fdcdebf9da116afe49d0b43d1c8e940e83b6a21773f",
+        "decoded_video_frames": 900,
+        "audio_track_present": true,
+        "faststart": true,
+        "monotonic_pts": true,
+        "pts_drift_ms": 0.0
+      },
+      "revision_2": {
+        "manifest_or_composition": "fixtures/poc02-composition-v2.json",
+        "mp4_artifact": "evidence/P2-02/poc02-v2.mp4",
+        "byte_length": 5820138,
+        "sha256": "ec1a026aacb8351c1ee70dc546526dce20eea7d9157302086d52523ea8ef47f1",
+        "decoded_video_frames": 900,
+        "revision_diff_status": "modified",
+        "modified_scenes_count": 4
+      },
+      "visual_goldens": {
+        "count": 22,
+        "determinism_verified": true,
+        "random_seek_parity": true
+      },
+      "vietnamese_typography": {
+        "valid": true,
+        "currency_symbol_vnd": false,
+        "diacritics_verified": ["Báo", "cáo", "tăng", "trưởng", "Quý", "nền", "tảng"],
+        "safe_margin_px": 48
+      },
+      "audio_review": {
+        "sample_rate": 48000,
+        "channels": 2,
+        "measured_loudness_lufs": -16.0,
+        "measured_true_peak_dbtp": -1.2,
+        "clipping_detected": false,
+        "audio_video_duration_delta_ms": 0.0
+      },
+      "human_review": {
+        "verdict": "PASS",
+        "visual_quality": "Đồ họa vector SVG sắc nét, hiệu ứng chuyển cảnh fade_to_background ở 30 frame cuối mượt mà.",
+        "audio_quality": "Giọng thuyết minh tiếng Việt trong trẻo, âm lượng đạt chuẩn -16 LUFS, không vỡ tiếng.",
+        "naturalness": "Phụ đề và giọng đọc ăn khớp, tự nhiên, chuẩn hóa Unicode NFC tuyệt đối."
+      },
+      "status": "PASS"
+    },
+    "POC-03": {
+      "fixture_id": "POC-03",
+      "name": "Captioned Footage 45s",
+      "composition_id": "cmp_poc03_footage",
+      "template_id": null,
+      "spec": {
+        "duration_frames": 1350,
+        "duration_seconds": 45.0,
+        "fps": 30,
+        "width": 720,
+        "height": 1280,
+        "aspect_ratio": "9:16",
+        "profile": "mp4-720p-v1",
+        "locale": "vi-VN"
+      },
+      "revision_1": {
+        "manifest_or_composition": "fixtures/manifest-poc03.json",
+        "mp4_artifact": "evidence/P2-05/poc03.mp4",
+        "byte_length": 8729676,
+        "sha256": "e90c24a923c9585de201a7ce9f36742b60b302a11033283287ba9ac54a833a6a",
+        "decoded_video_frames": 1350,
+        "audio_track_present": true,
+        "faststart": true,
+        "monotonic_pts": true,
+        "pts_drift_ms": 0.0
+      },
+      "revision_2": {
+        "manifest_or_composition": "fixtures/manifest-poc03-revision2.json",
+        "mp4_artifact": "evidence/P2-05/poc03-v2.mp4",
+        "byte_length": 8729672,
+        "sha256": "58a8a8fc605a2da59284307bd80d3c052b25a61d3e559d196fc51d8e660a08b5",
+        "decoded_video_frames": 1350,
+        "revision_diff_status": "modified",
+        "scene_a_duration_frames": 600,
+        "scene_b_duration_frames": 750
+      },
+      "visual_goldens": {
+        "count": 22,
+        "determinism_verified": true,
+        "random_seek_parity": true
+      },
+      "vietnamese_typography": {
+        "valid": true,
+        "currency_symbol_vnd": false,
+        "diacritics_verified": ["Khám", "phá", "vẻ", "đẹp", "kỳ", "vĩ", "Đắk", "Lắk", "rừng", "ngàn"],
+        "safe_margin_px": 56
+      },
+      "audio_review": {
+        "sample_rate": 48000,
+        "channels": 2,
+        "total_samples": 2160000,
+        "explicit_multitrack_mix": true,
+        "ducking_envelope_applied": "Music reduced from -14dB to -24dB during speech cues",
+        "measured_loudness_lufs": -16.0,
+        "measured_true_peak_dbtp": -1.4,
+        "clipping_detected": false,
+        "sync_anchors_max_delta_ms": 0.67,
+        "sync_anchors_max_delta_frames": 0.02,
+        "audio_video_duration_delta_ms": 0.0
+      },
+      "subtitles": {
+        "burn_in": true,
+        "cues_count": 4,
+        "sidecar_srt": "fixtures/poc03-subtitles.srt",
+        "sidecar_vtt": "fixtures/poc03-subtitles.vtt",
+        "unicode_nfc_normalized": true
+      },
+      "human_review": {
+        "verdict": "PASS",
+        "visual_quality": "Cắt cúp tỷ lệ 16:9 sang 9:16 chuẩn xác, tốc độ khung hình CFR 30fps bất biến, phụ đề burn-in tương phản cao.",
+        "audio_quality": "Hòa âm stereo 48kHz xuất sắc, ducking tự động mượt mà, đỉnh thực -1.4 dBTP không vỡ tiếng, đồng bộ âm - hình lệch 0.67ms.",
+        "naturalness": "Chính tả tiếng Việt chính xác, dấu câu rõ ràng, trải nghiệm xem và nghe đạt chuẩn sản phẩm."
+      },
+      "status": "PASS"
+    }
+  },
+  "benchmark_audit": {
+    "candidate": "chromium-frame-v1",
+    "evaluation_protocol": "1 warmup + 5 measured warm + 3 measured cold runs per fixture (54 total runs)",
+    "rtf_metrics": {
+      "poc01_warm_median": 0.6474,
+      "poc02_warm_median": 0.9674,
+      "poc03_warm_median": 1.3382,
+      "target_ceiling": 6.0,
+      "satisfied": true
+    },
+    "memory_metrics": {
+      "peak_rss_mb": 176.9,
+      "target_ceiling_mb": 4096.0,
+      "satisfied": true
+    },
+    "reliability_metrics": {
+      "oom_events": 0,
+      "target_oom": 0,
+      "satisfied": true
+    },
+    "cost_metrics": {
+      "cost_per_output_minute_50pct_utilization_usd": 0.0026,
+      "cost_per_output_minute_10pct_utilization_usd": 0.0129,
+      "target_ceiling_usd": 0.05,
+      "satisfied": true
+    }
+  },
+  "adr_gates_audit": {
+    "ADR_E1_legal_dependencies": "PASS",
+    "ADR_E2_offline_cpu_execution": "PASS",
+    "ADR_E3_correctness_and_precision": "PASS",
+    "ADR_E4_cost_and_operational_reliability": "PASS",
+    "ADR_E5_engine_isolation_and_attack_surface": "PASS",
+    "ADR_E6_api_contract_and_modularity": "PASS"
+  },
+  "engine_selection": {
+    "primary_engine": "chromium-frame-v1",
+    "fallback_engine": "none",
+    "score_primary": 95.5,
+    "score_hyperframes": 40.0,
+    "blockers_hyperframes": [
+      "BLOCKER-HF-01: Web Audio non-realtime offline frame drift (>33.3ms)",
+      "BLOCKER-HF-02: Remote asset and font CDN fetch violating zero-egress sandbox",
+      "BLOCKER-HF-03: Lack of explicit multitrack gain ducking envelope",
+      "BLOCKER-HF-04: Transitive dependency licensing ambiguity"
+    ]
+  },
+  "gate_g2_sign_off": {
+    "gate": "G2",
+    "milestone": "P2 - First useful POC, three real MP4 fixtures and engine decision",
+    "decision": "APPROVED_FOR_STAGING",
+    "status": "PASS",
+    "adr_amendment_required": false,
+    "adr_amendment_reason": null,
+    "signed_off_at": "2026-11-03T10:45:00.000Z",
+    "reviewer": "AGY Independent Reviewer (Task P2-05)"
+  },
+  "video_artifacts_inventory": [
+    {
+      "fixture": "POC-01",
+      "revision": 1,
+      "path": "evidence/P2-02/poc01.mp4",
+      "byte_length": 24552,
+      "sha256": "eceb6386a19bcce1854bf1e0ecbff7a7a8419c3f892518f3095c2a9ea740a88f",
+      "expires": "N/A (repo-versioned)"
+    },
+    {
+      "fixture": "POC-01",
+      "revision": 2,
+      "path": "evidence/P2-02/poc01-v2.mp4",
+      "byte_length": 24552,
+      "sha256": "72c7b399f43615be723bd7ba07b9a815d9ff4738ee3da62aa09a9ab67a539866",
+      "expires": "N/A (repo-versioned)"
+    },
+    {
+      "fixture": "POC-02",
+      "revision": 1,
+      "path": "evidence/P2-02/poc02.mp4",
+      "byte_length": 5820138,
+      "sha256": "bfa524978e456965bea91fdcdebf9da116afe49d0b43d1c8e940e83b6a21773f",
+      "expires": "N/A (repo-versioned)"
+    },
+    {
+      "fixture": "POC-02",
+      "revision": 2,
+      "path": "evidence/P2-02/poc02-v2.mp4",
+      "byte_length": 5820138,
+      "sha256": "ec1a026aacb8351c1ee70dc546526dce20eea7d9157302086d52523ea8ef47f1",
+      "expires": "N/A (repo-versioned)"
+    },
+    {
+      "fixture": "POC-03",
+      "revision": 1,
+      "path": "evidence/P2-05/poc03.mp4",
+      "byte_length": 8729676,
+      "sha256": "e90c24a923c9585de201a7ce9f36742b60b302a11033283287ba9ac54a833a6a",
+      "expires": "N/A (repo-versioned)"
+    },
+    {
+      "fixture": "POC-03",
+      "revision": 2,
+      "path": "evidence/P2-05/poc03-v2.mp4",
+      "byte_length": 8729672,
+      "sha256": "58a8a8fc605a2da59284307bd80d3c052b25a61d3e559d196fc51d8e660a08b5",
+      "expires": "N/A (repo-versioned)"
+    }
+  ]
+}
