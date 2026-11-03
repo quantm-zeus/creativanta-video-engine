@@ -23,6 +23,7 @@ import { SYSTEM_CATALOG_TENANT_ID } from './migration-runner.js';
 import { TenantConnectionPool, TenantTransactionContext } from './tenant-pool.js';
 import {
   generateSignedDownloadGrant,
+  generateSignedArtifactDownloadGrant,
   StorageGrantRevocationStore,
   defaultGrantRevocationStore,
 } from '../assets/upload-grant.js';
@@ -3073,6 +3074,7 @@ export class TenantRepository {
               },
             }
           : {}),
+        metadata: input.request.metadata,
         spec,
       };
 
@@ -4018,10 +4020,52 @@ export class TenantRepository {
     });
   }
 
+  public getArtifact(
+    tenantId: string,
+    artifactId: string,
+  ): {
+    id: string;
+    job_id: string;
+    attempt_id: string;
+    kind: string;
+    filename: string;
+    mime_type: string;
+    sha256: string;
+    bytes: number;
+    storage_key: string;
+    expires_at: string;
+    revoked_at: string | null;
+    created_at: string;
+  } {
+    return this.pool.withTransaction({ tenantId, role: 'cve_api' }, (tx) => {
+      const rows = tx.selectScoped<{
+        id: string;
+        job_id: string;
+        attempt_id: string;
+        kind: string;
+        filename: string;
+        mime_type: string;
+        sha256: string;
+        bytes: number;
+        storage_key: string;
+        expires_at: string;
+        revoked_at: string | null;
+        created_at: string;
+      }>('artifacts', 'id = ?', [artifactId]);
+
+      const art = rows[0];
+      if (!art) {
+        throw new ResourceNotFoundError(`Artifact ${artifactId} not found`);
+      }
+      return art;
+    });
+  }
+
   public getArtifactDownloadGrant(
     tenantId: string,
     artifactId: string,
     now = new Date(),
+    baseUrl?: string,
   ): {
     url: string;
     expires_at: string;
@@ -4031,6 +4075,10 @@ export class TenantRepository {
     return this.pool.withTransaction({ tenantId, role: 'cve_api' }, (tx) => {
       const rows = tx.selectScoped<{
         id: string;
+        job_id: string;
+        kind: string;
+        filename: string;
+        mime_type: string;
         sha256: string;
         bytes: number;
         storage_key: string;
@@ -4041,6 +4089,36 @@ export class TenantRepository {
       const art = rows[0];
       if (!art || art.revoked_at !== null || Date.parse(art.expires_at) <= now.getTime()) {
         throw new ResourceNotFoundError(`Artifact ${artifactId} not found`);
+      }
+
+      if (baseUrl) {
+        const derivedFilename =
+          art.storage_key.split('/').pop() ||
+          `${art.kind}.${art.mime_type === 'application/json' ? 'json' : art.mime_type === 'text/vtt' ? 'vtt' : art.mime_type === 'image/png' ? 'png' : 'mp4'}`;
+        const grant = generateSignedArtifactDownloadGrant(
+          {
+            tenantId,
+            artifactId: art.id,
+            jobId: art.job_id,
+            storageKey: art.storage_key,
+            filename: derivedFilename,
+            mimeType: art.mime_type,
+            sha256: art.sha256,
+            bytes: art.bytes,
+            ttlSeconds: 300,
+          },
+          {
+            pepper: this.pepper,
+            baseUrl,
+            now,
+          },
+        );
+        return {
+          url: grant.downloadUrl,
+          expires_at: grant.expiresAt,
+          sha256: grant.sha256,
+          bytes: grant.bytes,
+        };
       }
 
       const grantExpiresIso = new Date(now.getTime() + 300 * 1000).toISOString();

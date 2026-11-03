@@ -1,0 +1,60 @@
+{
+  "$schema": "creativanta.video-engine.p4-06-summary.v1",
+  "task_id": "P4-06",
+  "stream": "B+D",
+  "phase": "P4",
+  "base_commit": "b86920a7b415f65f060829597384ca9d8f44d603",
+  "frame_and_clip_previews": {
+    "modes_supported": [
+      "frame",
+      "clip"
+    ],
+    "profile": "preview-360p-v1",
+    "frame_preview_format": "Lossless 8-bit RGBA PNG (640x360 landscape / 360x640 portrait)",
+    "clip_preview_format": "ISO-BMFF faststart MP4 (H.264 avc1 + AAC mp4a 48kHz stereo, t=0 offset)",
+    "scale_factor": 0.5,
+    "max_preview_duration_frames": 300,
+    "timeline_bounds_enforced": true
+  },
+  "download_grants": {
+    "max_ttl_seconds": 300,
+    "signature_algorithm": "HMAC-SHA256",
+    "constant_time_verification": true,
+    "revocation_store_checked": true,
+    "headers_enforced": [
+      "Content-Disposition: attachment",
+      "Content-Security-Policy: default-src 'none'; sandbox",
+      "X-Content-Type-Options: nosniff",
+      "X-Frame-Options: DENY"
+    ],
+    "no_raw_custom_html_origin": true,
+    "html_neutralization_mime": "application/octet-stream"
+  },
+  "captions_and_manifest": {
+    "captions_format": "WebVTT (text/vtt)",
+    "subrip_supported_in_store": true,
+    "captions_time_shift_supported": true,
+    "manifest_schema_version": "1.0",
+    "manifest_includes": [
+      "preview",
+      "parity",
+      "artifacts",
+      "checksums"
+    ]
+  },
+  "parity": {
+    "preview_to_render_mathematical_parity": true,
+    "scale_ratio": 0.5,
+    "relative_coordinates_preserved": true,
+    "animation_interpolation_identical": true,
+    "transition_alpha_identical": true,
+    "audio_mix_sample_accurate": true
+  },
+  "tests": {
+    "file": "packages/api/test/p4-06-previews-grants-captions-parity.test.mjs",
+    "suites": 1,
+    "total": 6,
+    "passed": 6,
+    "failed": 0
+  }
+}

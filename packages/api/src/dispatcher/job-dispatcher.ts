@@ -159,6 +159,7 @@ export interface PinnedJobSnapshot {
     start_frame: number | null;
     duration_frames: number | null;
   };
+  metadata?: Record<string, string>;
   spec: CompositionSpec;
 }
 
@@ -2461,8 +2462,9 @@ export class JobDispatcher {
 
         try {
           for (const descriptor of input.artifacts) {
-            const artifactId =
-              descriptor.id ?? `art_${job.id}_${descriptor.kind}`;
+            const cleanSuffix = descriptor.filename.replace(/[^a-zA-Z0-9_]/g, '_');
+            const defaultId = `art_${job.id}_${descriptor.kind}_${cleanSuffix}`.slice(0, 64);
+            const artifactId = descriptor.id ?? defaultId;
             let storageKey = `tenant/${input.tenantId}/job/${job.id}/${input.attemptId}/${descriptor.filename}`;
             let finalBytes = descriptor.bytes;
             let finalSha256 = descriptor.sha256;

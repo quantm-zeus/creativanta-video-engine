@@ -383,6 +383,102 @@ export function synthesizeAudioSamplesForFrame(
   return pcm16;
 }
 
+/**
+ * Formats milliseconds into standard SubRip timestamp (HH:MM:SS,mmm).
+ */
+export function formatTimestampSrt(ms: number): string {
+  const totalSeconds = Math.floor(ms / 1000);
+  const milliseconds = Math.floor(ms % 1000);
+  const hours = Math.floor(totalSeconds / 3600);
+  const minutes = Math.floor((totalSeconds % 3600) / 60);
+  const seconds = totalSeconds % 60;
+  return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')},${String(milliseconds).padStart(3, '0')}`;
+}
+
+/**
+ * Formats milliseconds into standard WebVTT timestamp (HH:MM:SS.mmm).
+ */
+export function formatTimestampVtt(ms: number): string {
+  const totalSeconds = Math.floor(ms / 1000);
+  const milliseconds = Math.floor(ms % 1000);
+  const hours = Math.floor(totalSeconds / 3600);
+  const minutes = Math.floor((totalSeconds % 3600) / 60);
+  const seconds = totalSeconds % 60;
+  return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}.${String(milliseconds).padStart(3, '0')}`;
+}
+
+/**
+ * Generates RFC 8216 / W3C WebVTT (.vtt) subtitle sidecar file for a given frame range.
+ * For clip previews, timestamps are shifted so that the export begins at presentation time 0.
+ */
+export function generateVttForRange(
+  tracks: CanonicalCompilerManifest['subtitles'],
+  startFrame: number,
+  durationFrames: number,
+  fps: number,
+): string {
+  const endFrame = startFrame + durationFrames;
+  const lines: string[] = ['WEBVTT - Creativanta Video Engine Subtitles'];
+  const primaryLocale = tracks[0]?.locale ?? 'vi-VN';
+  lines.push(`NOTE Language: ${primaryLocale}`);
+  lines.push('');
+
+  for (const track of tracks) {
+    for (const cue of track.cues ?? []) {
+      if (cue.end_frame <= startFrame || cue.start_frame >= endFrame) {
+        continue;
+      }
+      const cStart = Math.max(cue.start_frame, startFrame) - startFrame;
+      const cEnd = Math.min(cue.end_frame, endFrame) - startFrame;
+      if (cEnd <= cStart) continue;
+
+      const startMs = Math.round((cStart * 1000) / fps);
+      const endMs = Math.round((cEnd * 1000) / fps);
+      const cueText = cue.text.normalize('NFC');
+      lines.push(`${cue.id}`);
+      lines.push(`${formatTimestampVtt(startMs)} --> ${formatTimestampVtt(endMs)}`);
+      lines.push(cueText);
+      lines.push('');
+    }
+  }
+
+  return lines.join('\n');
+}
+
+/**
+ * Generates SubRip (.srt) subtitle sidecar file for a given frame range.
+ * For clip previews, timestamps are shifted so that the export begins at presentation time 0.
+ */
+export function generateSrtForRange(
+  tracks: CanonicalCompilerManifest['subtitles'],
+  startFrame: number,
+  durationFrames: number,
+  fps: number,
+): string {
+  const endFrame = startFrame + durationFrames;
+  const blocks: string[] = [];
+  let index = 1;
+
+  for (const track of tracks) {
+    for (const cue of track.cues ?? []) {
+      if (cue.end_frame <= startFrame || cue.start_frame >= endFrame) {
+        continue;
+      }
+      const cStart = Math.max(cue.start_frame, startFrame) - startFrame;
+      const cEnd = Math.min(cue.end_frame, endFrame) - startFrame;
+      if (cEnd <= cStart) continue;
+
+      const startMs = Math.round((cStart * 1000) / fps);
+      const endMs = Math.round((cEnd * 1000) / fps);
+      const cueText = cue.text.normalize('NFC');
+      blocks.push(`${index}\n${formatTimestampSrt(startMs)} --> ${formatTimestampSrt(endMs)}\n${cueText}\n`);
+      index += 1;
+    }
+  }
+
+  return blocks.join('\n');
+}
+
 // ============================================================================
 // 3. Faststart ISO-BMFF H.264/AAC MP4 Muxer & Full ISO-BMFF Decoder Verifier
 // ============================================================================
@@ -1494,7 +1590,7 @@ export class RealRendererWorker {
         buffer: primaryMediaBuffer,
       });
 
-      if (!isKeyframePreview && firstFramePng) {
+      if (firstFramePng) {
         const thumbSha256 = crypto.createHash('sha256').update(firstFramePng).digest('hex');
         if (quarantineStore) {
           quarantineStore.stageAttemptTempArtifact(
@@ -1514,6 +1610,44 @@ export class RealRendererWorker {
           bytes: firstFramePng.byteLength,
           sha256: thumbSha256,
           buffer: firstFramePng,
+        });
+      }
+
+      const shouldGenerateCaptions =
+        (compiled.subtitles ?? []).length > 0 &&
+        (lease.kind === 'preview' ||
+          (compiled.subtitles ?? []).some((s) => !s.burn_in) ||
+          lease.snapshot.metadata?.['captions'] === 'true' ||
+          lease.snapshot.metadata?.['include_captions'] === 'true');
+
+      if (shouldGenerateCaptions) {
+        const vttText = generateVttForRange(
+          compiled.subtitles,
+          startFrame,
+          frameCount,
+          fps,
+        );
+        const vttBuffer = Buffer.from(vttText, 'utf8');
+        const vttSha256 = crypto.createHash('sha256').update(vttBuffer).digest('hex');
+
+        if (quarantineStore) {
+          quarantineStore.stageAttemptTempArtifact(
+            lease.tenantId,
+            lease.jobId,
+            lease.attemptId,
+            'captions.vtt',
+            vttBuffer,
+            { maxAttemptTempBytes: hooks.maxAttemptTempBytes },
+          );
+        }
+        stagedArtifacts.push({
+          id: `art_${lease.jobId}_captions`,
+          kind: 'captions',
+          filename: 'captions.vtt',
+          mimeType: 'text/vtt',
+          bytes: vttBuffer.byteLength,
+          sha256: vttSha256,
+          buffer: vttBuffer,
         });
       }
 
@@ -1538,6 +1672,32 @@ export class RealRendererWorker {
         faststart: !isKeyframePreview,
         primary_sha256: primarySha256,
         frame_hashes: frameHashes,
+        parity: {
+          scale: lease.profile === 'preview-360p-v1' ? 0.5 : 1.0,
+          canvas_width: compiled.canvas.width,
+          canvas_height: compiled.canvas.height,
+          target_width: targetWidth,
+          target_height: targetHeight,
+          fps,
+        },
+        preview:
+          lease.kind === 'preview'
+            ? {
+                mode: isKeyframePreview ? 'frame' : 'clip',
+                frame_index: isKeyframePreview ? startFrame : null,
+                start_frame: isKeyframePreview ? null : startFrame,
+                duration_frames: frameCount,
+                composition_duration_frames: compiled.duration_frames,
+              }
+            : null,
+        artifacts: stagedArtifacts.map((a) => ({
+          id: a.id,
+          kind: a.kind,
+          filename: a.filename,
+          mime_type: a.mimeType,
+          bytes: a.bytes,
+          sha256: a.sha256,
+        })),
       };
       const manifestBuffer = Buffer.from(JSON.stringify(manifestPayload, null, 2), 'utf8');
       const manifestSha256 = crypto.createHash('sha256').update(manifestBuffer).digest('hex');

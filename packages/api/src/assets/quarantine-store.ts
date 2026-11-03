@@ -127,10 +127,18 @@ function verifyContainerMagicAndStructure(
     return { valid: errors.length === 0, errors };
   }
 
-  if (mimeType === 'text/vtt' || kind === 'captions') {
+  if (mimeType === 'text/vtt' || (kind === 'captions' && !mimeType.includes('subrip'))) {
     const text = buffer.toString('utf8');
     if (!text.startsWith('WEBVTT')) {
       errors.push('WebVTT artifact must start with WEBVTT header');
+    }
+    return { valid: errors.length === 0, errors };
+  }
+
+  if (mimeType === 'application/x-subrip' || (kind === 'captions' && mimeType.includes('subrip'))) {
+    const text = buffer.toString('utf8').trimStart();
+    if (!/^\d+\r?\n\d\d:\d\d:\d\d/.test(text)) {
+      errors.push('SubRip SRT artifact must start with numeric cue index and timestamp');
     }
     return { valid: errors.length === 0, errors };
   }
