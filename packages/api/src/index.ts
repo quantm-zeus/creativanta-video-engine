@@ -16,6 +16,7 @@ export * from './assets/quarantine-store.js';
 export * from './assets/media-guard.js';
 export * from './assets/ssrf-guard.js';
 export * from './assets/import-connector.js';
+export * from './storage/sweeper.js';
 
 export function main(): void {
   const config = loadEnvConfig();

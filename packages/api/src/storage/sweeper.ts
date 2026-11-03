@@ -1,0 +1,102 @@
+/**
+ * Storage & Temp File Sweeper (Task P3-05).
+ *
+ * Canonical specifications:
+ *   - docs/SECURITY.md ("Retention, webhook và supply chain", lines 61-64)
+ *   - docs/DEPLOYMENT.md ("Object storage và CDN", line 114)
+ *   - docs/API.md ("Quy tắc chung", lines 9-11 & status taxonomy)
+ */
+
+import { TenantRepository } from '../db/repository.js';
+import { QuarantineStore } from '../assets/quarantine-store.js';
+import {
+  StorageGrantRevocationStore,
+  defaultGrantRevocationStore,
+} from '../assets/upload-grant.js';
+
+export interface SweeperOptions {
+  repository: TenantRepository;
+  quarantineStore: QuarantineStore;
+  revocationStore?: StorageGrantRevocationStore;
+  defaultAssetRetentionDays?: number;
+  defaultArtifactRetentionDays?: number;
+  defaultIdempotencyRetentionDays?: number;
+  defaultQuarantineOrphanTtlMs?: number;
+}
+
+export interface SweepResult {
+  startedAt: string;
+  completedAt: string;
+  quarantineFilesRemoved: number;
+  quarantineBytesReclaimed: number;
+  grantsRevokedOrExpired: number;
+  assetsExpired: number;
+  artifactsExpired: number;
+  idempotencyRecordsPruned: number;
+}
+
+export class StorageTempSweeper {
+  private readonly repository: TenantRepository;
+  private readonly quarantineStore: QuarantineStore;
+  private readonly revocationStore: StorageGrantRevocationStore;
+  private readonly defaultAssetRetentionDays: number;
+  private readonly defaultArtifactRetentionDays: number;
+  private readonly defaultIdempotencyRetentionDays: number;
+  private readonly defaultQuarantineOrphanTtlMs: number;
+
+  constructor(options: SweeperOptions) {
+    this.repository = options.repository;
+    this.quarantineStore = options.quarantineStore;
+    this.revocationStore = options.revocationStore ?? defaultGrantRevocationStore;
+    this.defaultAssetRetentionDays = options.defaultAssetRetentionDays ?? 7;
+    this.defaultArtifactRetentionDays = options.defaultArtifactRetentionDays ?? 7;
+    this.defaultIdempotencyRetentionDays = options.defaultIdempotencyRetentionDays ?? 7;
+    // 24 hours default orphan cleanup per docs/DEPLOYMENT.md:114
+    this.defaultQuarantineOrphanTtlMs = options.defaultQuarantineOrphanTtlMs ?? 24 * 60 * 60 * 1000;
+  }
+
+  /**
+   * Executes a complete sweep of orphan quarantine files, expired grants,
+   * expired assets/artifacts retention, and expired idempotency records.
+   */
+  public sweep(options?: {
+    now?: Date;
+    assetRetentionDays?: number;
+    artifactRetentionDays?: number;
+    idempotencyRetentionDays?: number;
+    quarantineMaxAgeMs?: number;
+  }): SweepResult {
+    const now = options?.now ?? new Date();
+    const startedAt = now.toISOString();
+
+    // 1. Sweep orphan quarantine files
+    const quarantineResult = this.quarantineStore.sweepQuarantine(
+      options?.quarantineMaxAgeMs ?? this.defaultQuarantineOrphanTtlMs,
+      now,
+    );
+
+    // 2. Sweep expired grant revocations
+    const grantsCleaned = this.revocationStore.sweepExpired(now.getTime());
+
+    // 3. Sweep database records and cascade deletions
+    const dbResult = this.repository.sweepExpiredRecords({
+      now,
+      assetRetentionDays: options?.assetRetentionDays ?? this.defaultAssetRetentionDays,
+      artifactRetentionDays: options?.artifactRetentionDays ?? this.defaultArtifactRetentionDays,
+      idempotencyRetentionDays: options?.idempotencyRetentionDays ?? this.defaultIdempotencyRetentionDays,
+    });
+
+    const completedAt = new Date().toISOString();
+
+    return {
+      startedAt,
+      completedAt,
+      quarantineFilesRemoved: quarantineResult.removedFiles,
+      quarantineBytesReclaimed: quarantineResult.bytesReclaimed,
+      grantsRevokedOrExpired: grantsCleaned,
+      assetsExpired: dbResult.assetsExpired,
+      artifactsExpired: dbResult.artifactsExpired,
+      idempotencyRecordsPruned: dbResult.idempotencyRecordsPruned,
+    };
+  }
+}

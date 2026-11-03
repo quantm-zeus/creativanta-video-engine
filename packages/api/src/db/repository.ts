@@ -22,6 +22,12 @@ import {
 import { SYSTEM_CATALOG_TENANT_ID } from './migration-runner.js';
 import { TenantConnectionPool, TenantTransactionContext } from './tenant-pool.js';
 import {
+  generateSignedDownloadGrant,
+  StorageGrantRevocationStore,
+  defaultGrantRevocationStore,
+} from '../assets/upload-grant.js';
+import { QuarantineStore } from '../assets/quarantine-store.js';
+import {
   computeSceneContentHash,
   inspectAndValidateBindings,
   materializeCompositionFromTemplate,
@@ -111,11 +117,25 @@ export interface IssuedApiKeyResult {
 export class TenantRepository {
   private readonly pool: TenantConnectionPool;
   private readonly pepper: string;
+  private readonly quarantineStore?: QuarantineStore;
+  private readonly revocationStore: StorageGrantRevocationStore;
+  private readonly baseUrl: string;
   private readonly tenantImportAllowlists = new Map<string, string[]>();
 
-  constructor(pool: TenantConnectionPool, options: { pepper: string }) {
+  constructor(
+    pool: TenantConnectionPool,
+    options: {
+      pepper: string;
+      quarantineStore?: QuarantineStore;
+      revocationStore?: StorageGrantRevocationStore;
+      baseUrl?: string;
+    },
+  ) {
     this.pool = pool;
     this.pepper = options.pepper;
+    this.quarantineStore = options.quarantineStore;
+    this.revocationStore = options.revocationStore ?? defaultGrantRevocationStore;
+    this.baseUrl = options.baseUrl ?? (process.env['CVE_PUBLIC_BASE_URL'] || 'http://127.0.0.1:8080/v1');
   }
 
   public getPool(): TenantConnectionPool {
@@ -124,6 +144,18 @@ export class TenantRepository {
 
   public getPepper(): string {
     return this.pepper;
+  }
+
+  public getQuarantineStore(): QuarantineStore | undefined {
+    return this.quarantineStore;
+  }
+
+  public getRevocationStore(): StorageGrantRevocationStore {
+    return this.revocationStore;
+  }
+
+  public getBaseUrl(): string {
+    return this.baseUrl;
   }
 
   public getTenantImportAllowlist(tenantId: string): string[] {
@@ -600,6 +632,7 @@ export class TenantRepository {
         current_version: number;
         rights_json: string;
         created_at: string;
+        deleted_at: string | null;
       }>('assets', 'id = ?', [assetId]);
 
       const asset = assets[0];
@@ -664,6 +697,141 @@ export class TenantRepository {
         sha256,
         metadata,
         created_at: asset.created_at,
+        deleted_at: asset.deleted_at ?? undefined,
+        tombstone: asset.status === 'deleted' ? true : undefined,
+      };
+    });
+  }
+
+  public getAssetTombstone(
+    tenantId: string,
+    assetId: string,
+  ): {
+    id: string;
+    tenant_id: string;
+    filename: string;
+    kind: string;
+    status: 'deleted';
+    deleted_at: string;
+    created_at: string;
+    sha256?: string;
+    bytes?: number;
+    tombstone: true;
+  } {
+    return this.pool.withTransaction({ tenantId, role: 'cve_api' }, (tx) => {
+      const assets = tx.selectScoped<{
+        tenant_id: string;
+        id: string;
+        filename: string;
+        kind: string;
+        status: string;
+        created_at: string;
+        deleted_at: string | null;
+      }>('assets', 'id = ?', [assetId]);
+
+      const asset = assets[0];
+      if (!asset || asset.status !== 'deleted') {
+        throw new ResourceNotFoundError(`Asset tombstone for ${assetId} not found`);
+      }
+
+      const versions = tx.selectScoped<{
+        original_sha256: string;
+        bytes: number;
+      }>('asset_versions', 'asset_id = ? ORDER BY version DESC LIMIT 1', [assetId]);
+
+      return {
+        id: asset.id,
+        tenant_id: asset.tenant_id,
+        filename: asset.filename,
+        kind: asset.kind,
+        status: 'deleted',
+        deleted_at: asset.deleted_at ?? asset.created_at,
+        created_at: asset.created_at,
+        sha256: versions[0]?.original_sha256,
+        bytes: versions[0]?.bytes,
+        tombstone: true,
+      };
+    });
+  }
+
+  public getAssetDownloadGrant(
+    tenantId: string,
+    assetId: string,
+    options: { now?: Date; ttlSeconds?: number; baseUrl?: string } = {},
+  ): {
+    url: string;
+    expires_at: string;
+    sha256: string;
+    bytes: number;
+  } {
+    const now = options.now ?? new Date();
+    const effectiveBaseUrl = options.baseUrl ?? this.baseUrl;
+    return this.pool.withTransaction({ tenantId, role: 'cve_api' }, (tx) => {
+      const rows = tx.selectScoped<{
+        tenant_id: string;
+        id: string;
+        filename: string;
+        kind: string;
+        status: string;
+        current_version: number;
+        created_at: string;
+        deleted_at: string | null;
+      }>('assets', 'id = ?', [assetId]);
+
+      const asset = rows[0];
+      if (!asset || asset.status === 'deleted' || asset.deleted_at !== null) {
+        throw new ResourceNotFoundError(`Asset ${assetId} not found`);
+      }
+
+      if (asset.status !== 'ready') {
+        throw new RevisionConflictError(
+          `Asset ${assetId} is not ready for download (current status: ${asset.status})`,
+        );
+      }
+
+      // Check retention (default 7 days)
+      const retentionDays = Number(process.env['CVE_ASSET_RETENTION_DAYS'] || 7);
+      const ageMs = now.getTime() - new Date(asset.created_at).getTime();
+      if (ageMs > retentionDays * 24 * 60 * 60 * 1000) {
+        throw new ResourceNotFoundError(`Asset ${assetId} has expired`);
+      }
+
+      const versions = tx.selectScoped<{
+        version: number;
+        original_sha256: string;
+        bytes: number;
+        mime_type: string;
+        storage_key: string;
+      }>('asset_versions', 'asset_id = ? AND version = ?', [assetId, asset.current_version]);
+
+      const ver = versions[0];
+      if (!ver) {
+        throw new ResourceNotFoundError(`Asset version ${asset.current_version} not found`);
+      }
+
+      const grant = generateSignedDownloadGrant(
+        {
+          tenantId,
+          assetId: asset.id,
+          version: ver.version,
+          filename: asset.filename,
+          mimeType: ver.mime_type,
+          sha256: ver.original_sha256,
+          bytes: ver.bytes,
+          ttlSeconds: options.ttlSeconds,
+        },
+        {
+          pepper: this.pepper,
+          baseUrl: effectiveBaseUrl,
+          now,
+        },
+      );
+
+      return {
+        url: grant.downloadUrl,
+        expires_at: grant.expiresAt,
+        sha256: grant.sha256,
+        bytes: grant.bytes,
       };
     });
   }
@@ -799,12 +967,25 @@ export class TenantRepository {
         throw new ResourceNotFoundError(`Asset ${assetId} not found`);
       }
 
+      // Repeated DELETE on already deleted asset is idempotent per docs/API.md
+      if (existing.status === 'deleted') {
+        return { id: assetId, status: 'deleted', revokedJobs: [] };
+      }
+
       tx.updateScoped(
         'assets',
         { status: 'deleted', deleted_at: nowIso, updated_at: nowIso },
         'id = ?',
         [assetId],
       );
+
+      // Invalidate all active upload & download grants for this asset immediately
+      this.revocationStore.revokeAssetGrants(tenantId, assetId, now.getTime());
+
+      // Purge storage files from quarantine and permanent locations
+      if (this.quarantineStore) {
+        this.quarantineStore.removeAsset(tenantId, assetId);
+      }
 
       // Cascade ASSET_REVOKED to any non-terminal jobs of this tenant referencing assetId
       const nonTerminalJobs = tx.selectScoped<{
@@ -1498,11 +1679,20 @@ export class TenantRepository {
 
       const readyFont = visibleAssets.find((a) => a.status === 'ready' && a.kind === 'font');
       if (!readyFont) {
-        details.push({
-          pointer: `${pointerPrefix}/fonts/${i}/asset_id`,
-          code: 'ASSET_NOT_FOUND',
-          message: `Font asset '${font.asset_id}' was not found or is not ready`,
-        });
+        const deletedFont = visibleAssets.find((a) => a.status === 'deleted');
+        if (deletedFont) {
+          details.push({
+            pointer: `${pointerPrefix}/fonts/${i}/asset_id`,
+            code: 'ASSET_REVOKED',
+            message: `Font asset '${font.asset_id}' was revoked/deleted`,
+          });
+        } else {
+          details.push({
+            pointer: `${pointerPrefix}/fonts/${i}/asset_id`,
+            code: 'ASSET_NOT_FOUND',
+            message: `Font asset '${font.asset_id}' was not found or is not ready`,
+          });
+        }
       }
     }
 
@@ -1533,11 +1723,20 @@ export class TenantRepository {
             (a) => a.status === 'ready' && a.kind === layer.type,
           );
           if (!readyAsset) {
-            details.push({
-              pointer: `${pointerPrefix}/scenes/${sIdx}/layers/${lIdx}/content/asset_id`,
-              code: 'ASSET_NOT_FOUND',
-              message: `Layer asset '${assetId}' was not found or is not authorized for tenant`,
-            });
+            const deletedAsset = visibleAssets.find((a) => a.status === 'deleted');
+            if (deletedAsset) {
+              details.push({
+                pointer: `${pointerPrefix}/scenes/${sIdx}/layers/${lIdx}/content/asset_id`,
+                code: 'ASSET_REVOKED',
+                message: `Layer asset '${assetId}' was revoked/deleted and cannot be referenced`,
+              });
+            } else {
+              details.push({
+                pointer: `${pointerPrefix}/scenes/${sIdx}/layers/${lIdx}/content/asset_id`,
+                code: 'ASSET_NOT_FOUND',
+                message: `Layer asset '${assetId}' was not found or is not authorized for tenant`,
+              });
+            }
           }
         }
       }
@@ -1553,11 +1752,20 @@ export class TenantRepository {
       }>('assets', 'id = ?', [track.asset_id]);
       const readyAudio = visibleAssets.find((a) => a.status === 'ready' && a.kind === 'audio');
       if (!readyAudio) {
-        details.push({
-          pointer: `${pointerPrefix}/audio_tracks/${aIdx}/asset_id`,
-          code: 'ASSET_NOT_FOUND',
-          message: `Audio asset '${track.asset_id}' was not found or is not authorized for tenant`,
-        });
+        const deletedAudio = visibleAssets.find((a) => a.status === 'deleted');
+        if (deletedAudio) {
+          details.push({
+            pointer: `${pointerPrefix}/audio_tracks/${aIdx}/asset_id`,
+            code: 'ASSET_REVOKED',
+            message: `Audio asset '${track.asset_id}' was revoked/deleted and cannot be referenced`,
+          });
+        } else {
+          details.push({
+            pointer: `${pointerPrefix}/audio_tracks/${aIdx}/asset_id`,
+            code: 'ASSET_NOT_FOUND',
+            message: `Audio asset '${track.asset_id}' was not found or is not authorized for tenant`,
+          });
+        }
       }
     }
 
@@ -1918,6 +2126,22 @@ export class TenantRepository {
         );
       }
 
+      // Enforce reference safety: inspect all assets in snapshot are authorized and not deleted/revoked
+      try {
+        const spec = JSON.parse(compRev.spec_json) as CompositionSpec;
+        const refErrors = this.validateCompositionReferencesInTx(tx, spec, '/snapshot');
+        if (refErrors.length > 0) {
+          throw new BodyReferenceValidationError(
+            refErrors,
+            'Composition references deleted, revoked, or unauthorized assets',
+          );
+        }
+      } catch (err) {
+        if (err instanceof BodyReferenceValidationError) {
+          throw err;
+        }
+      }
+
       if (input.webhookEndpointId) {
         const endpoints = tx.selectScoped<{ id: string; state: string }>(
           'webhook_endpoints',
@@ -2187,7 +2411,7 @@ export class TenantRepository {
       }>('artifacts', 'id = ?', [artifactId]);
 
       const art = rows[0];
-      if (!art || art.revoked_at !== null) {
+      if (!art || art.revoked_at !== null || Date.parse(art.expires_at) <= now.getTime()) {
         throw new ResourceNotFoundError(`Artifact ${artifactId} not found`);
       }
 
@@ -2472,5 +2696,155 @@ export class TenantRepository {
     } catch {
       // ignore
     }
+  }
+
+  // --------------------------------------------------------------------------
+  // Retention & Storage Sweeper Purge (Task P3-05)
+  // --------------------------------------------------------------------------
+
+  public sweepExpiredRecords(options: {
+    now?: Date;
+    assetRetentionDays?: number;
+    artifactRetentionDays?: number;
+    idempotencyRetentionDays?: number;
+  } = {}): {
+    assetsExpired: number;
+    artifactsExpired: number;
+    idempotencyRecordsPruned: number;
+  } {
+    const now = options.now ?? new Date();
+    const nowIso = now.toISOString();
+    const assetDays = options.assetRetentionDays ?? 7;
+    const artifactDays = options.artifactRetentionDays ?? 7;
+    const idempotencyDays = options.idempotencyRetentionDays ?? 7;
+
+    const assetCutoff = new Date(now.getTime() - assetDays * 24 * 60 * 60 * 1000).toISOString();
+    const artifactCutoff = new Date(now.getTime() - artifactDays * 24 * 60 * 60 * 1000).toISOString();
+    const idempotencyCutoff = new Date(now.getTime() - idempotencyDays * 24 * 60 * 60 * 1000).toISOString();
+
+    let assetsExpiredCount = 0;
+    let artifactsExpiredCount = 0;
+    let idempotencyPrunedCount = 0;
+
+    // Use migrator role to perform retention sweep across all tenants
+    this.pool.withTransaction({ tenantId: SYSTEM_CATALOG_TENANT_ID, role: 'cve_migrator' }, (tx) => {
+      // 1. Expire assets older than assetCutoff or rights_json.expires_at < nowIso
+      const activeAssets = tx.selectScoped<{
+        tenant_id: string;
+        id: string;
+        created_at: string;
+        rights_json: string;
+      }>('assets', "status = 'ready' AND visibility = 'tenant_private'", []);
+
+      for (const ast of activeAssets) {
+        let isExpired = ast.created_at < assetCutoff;
+        if (!isExpired) {
+          try {
+            const rights = JSON.parse(ast.rights_json) as { expires_at?: string };
+            if (rights.expires_at && rights.expires_at < nowIso) {
+              isExpired = true;
+            }
+          } catch {
+            // ignore
+          }
+        }
+
+        if (isExpired) {
+          // Soft-delete asset (create tombstone)
+          tx.updateScoped(
+            'assets',
+            { status: 'deleted', deleted_at: nowIso, updated_at: nowIso },
+            'tenant_id = ? AND id = ?',
+            [ast.tenant_id, ast.id],
+          );
+          // Revoke active grants
+          this.revocationStore.revokeAssetGrants(ast.tenant_id, ast.id, now.getTime());
+          // Remove storage files
+          if (this.quarantineStore) {
+            this.quarantineStore.removeAsset(ast.tenant_id, ast.id);
+          }
+
+          // Cascade failure to any active jobs referencing this asset
+          const activeJobs = tx.selectScoped<{
+            tenant_id: string;
+            id: string;
+            state_version: number;
+            lease_epoch: number;
+            snapshot_json: string;
+          }>('jobs', "state NOT IN ('succeeded', 'failed', 'canceled') AND tenant_id = ?", [ast.tenant_id]);
+
+          for (const job of activeJobs) {
+            if (job.snapshot_json.includes(`"${ast.id}"`)) {
+              tx.updateScoped(
+                'jobs',
+                {
+                  state: 'failed',
+                  stage: 'failed',
+                  state_version: job.state_version + 1,
+                  lease_epoch: job.lease_epoch + 1,
+                  active_attempt_id: null,
+                  lease_expires_at: null,
+                  error_json: JSON.stringify({
+                    code: 'ASSET_REVOKED',
+                    message: `Asset ${ast.id} expired per retention policy`,
+                    retryable: false,
+                  }),
+                  completed_at: nowIso,
+                  updated_at: nowIso,
+                },
+                'tenant_id = ? AND id = ?',
+                [job.tenant_id, job.id],
+              );
+            }
+          }
+
+          assetsExpiredCount++;
+        }
+      }
+
+      // 2. Expire artifacts older than artifactCutoff or past expires_at
+      const activeArtifacts = tx.selectScoped<{
+        tenant_id: string;
+        id: string;
+        expires_at: string;
+        storage_key: string;
+      }>('artifacts', 'revoked_at IS NULL', []);
+
+      for (const art of activeArtifacts) {
+        if (art.expires_at <= nowIso || art.expires_at < artifactCutoff) {
+          tx.updateScoped(
+            'artifacts',
+            { revoked_at: nowIso },
+            'tenant_id = ? AND id = ?',
+            [art.tenant_id, art.id],
+          );
+          artifactsExpiredCount++;
+        }
+      }
+
+      // 3. Prune expired idempotency records
+      const expiredIdem = tx.selectScoped<{
+        tenant_id: string;
+        method: string;
+        normalized_path: string;
+        key: string;
+        expires_at: string;
+      }>('idempotency_records', 'expires_at <= ? OR expires_at < ?', [nowIso, idempotencyCutoff]);
+
+      for (const idem of expiredIdem) {
+        tx.deleteScoped(
+          'idempotency_records',
+          'tenant_id = ? AND method = ? AND normalized_path = ? AND key = ?',
+          [idem.tenant_id, idem.method, idem.normalized_path, idem.key],
+        );
+        idempotencyPrunedCount++;
+      }
+    });
+
+    return {
+      assetsExpired: assetsExpiredCount,
+      artifactsExpired: artifactsExpiredCount,
+      idempotencyRecordsPruned: idempotencyPrunedCount,
+    };
   }
 }

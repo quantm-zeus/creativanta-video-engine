@@ -32,10 +32,16 @@ import {
   TenantRepository,
 } from './db/repository.js';
 import {
+  DownloadGrantError,
+  SignedDownloadGrantPayload,
+  StorageGrantRevocationStore,
   UploadGrantError,
+  defaultGrantRevocationStore,
   generateSignedUploadGrant,
+  verifySignedDownloadGrant,
   verifySignedUploadGrant,
 } from './assets/upload-grant.js';
+import { StorageTempSweeper } from './storage/sweeper.js';
 import {
   QuarantineStorageError,
   QuarantineStore,
@@ -66,6 +72,8 @@ export interface CreateServerOptions {
   requireAuthOnCapabilities?: boolean;
   quarantineStore?: QuarantineStore;
   importConnector?: ImportConnector;
+  revocationStore?: StorageGrantRevocationStore;
+  sweeper?: StorageTempSweeper;
 }
 
 const IDEMPOTENCY_KEY_REGEX = /^[A-Za-z0-9._:-]{1,128}$/;
@@ -234,9 +242,22 @@ export function createServer({
   requireAuthOnCapabilities = false,
   quarantineStore: providedStore,
   importConnector: providedConnector,
+  revocationStore: providedRevocationStore,
+  sweeper: providedSweeper,
 }: CreateServerOptions): http.Server {
   const startTime = Date.now();
-  const quarantineStore = providedStore ?? new QuarantineStore();
+  const quarantineStore = providedStore ?? repository?.getQuarantineStore() ?? new QuarantineStore();
+  const revocationStore =
+    providedRevocationStore ?? repository?.getRevocationStore() ?? defaultGrantRevocationStore;
+  const sweeper =
+    providedSweeper ??
+    (repository
+      ? new StorageTempSweeper({
+          repository,
+          quarantineStore,
+          revocationStore,
+        })
+      : undefined);
   const importConnector = providedConnector ?? new ImportConnector({ quarantineStore });
 
   const server = http.createServer(async (req, res) => {
@@ -507,7 +528,7 @@ export function createServer({
       const pepper = repository ? repository.getPepper() : 'default_test_pepper_0123456789abcdef';
       let grantPayload;
       try {
-        grantPayload = verifySignedUploadGrant(token, { pepper });
+        grantPayload = verifySignedUploadGrant(token, { pepper, revocationStore });
       } catch (err) {
         if (err instanceof UploadGrantError) {
           sendError(res, err.httpStatus, err.code, err.message, requestId);
@@ -576,6 +597,71 @@ export function createServer({
           sha256: saved.sha256,
         }),
       );
+      return;
+    }
+
+    // Scoped Asset Download Execution Endpoint (Bearer capability token in URL, Task P3-05)
+    const assetDownloadExecMatch = /^\/v1\/assets\/download\/([^/]+)$/.exec(pathname);
+    if (assetDownloadExecMatch && method === 'GET') {
+      const token = assetDownloadExecMatch[1]!;
+      const pepper = repository ? repository.getPepper() : 'default_test_pepper_0123456789abcdef';
+      let grantPayload: SignedDownloadGrantPayload;
+      try {
+        grantPayload = verifySignedDownloadGrant(token, { pepper, revocationStore });
+      } catch (err) {
+        if (err instanceof DownloadGrantError) {
+          sendError(res, err.httpStatus, err.code, err.message, requestId);
+          return;
+        }
+        sendError(res, 403, 'INVALID_GRANT_SIGNATURE', 'Invalid download grant token', requestId);
+        return;
+      }
+
+      if (repository) {
+        try {
+          const asset = repository.getAsset(grantPayload.tenantId, grantPayload.assetId);
+          if (asset.status === 'deleted') {
+            sendError(res, 410, 'GRANT_REVOKED', 'Asset has been deleted and grant is revoked', requestId);
+            return;
+          }
+          if (asset.status !== 'ready') {
+            sendError(
+              res,
+              409,
+              'REVISION_CONFLICT',
+              `Asset is not ready for download (current status: ${asset.status})`,
+              requestId,
+            );
+            return;
+          }
+        } catch (err) {
+          if (err instanceof ResourceNotFoundError) {
+            sendError(res, 404, 'NOT_FOUND', err.message, requestId);
+            return;
+          }
+          throw err;
+        }
+      }
+
+      const fileData = quarantineStore.getPermanentFile(
+        grantPayload.tenantId,
+        grantPayload.assetId,
+        grantPayload.version,
+        grantPayload.filename,
+      );
+
+      if (!fileData) {
+        sendError(res, 404, 'STORAGE_OBJECT_NOT_FOUND', 'Asset storage file not found on disk', requestId);
+        return;
+      }
+
+      res.writeHead(200, {
+        'Content-Type': grantPayload.mimeType,
+        'Content-Length': fileData.buffer.byteLength,
+        'ETag': `"${grantPayload.sha256}"`,
+        'Content-Disposition': `inline; filename="${grantPayload.filename}"`,
+      });
+      res.end(fileData.buffer);
       return;
     }
 
@@ -1430,6 +1516,37 @@ export function createServer({
           return;
         }
 
+        // 5.5b GET /v1/assets/{id}/download
+        const assetDownloadMatch = /^\/v1\/assets\/([^/]+)\/download$/.exec(pathname);
+        if (assetDownloadMatch && method === 'GET') {
+          const auth = authenticateAndAuthorize(['assets:read']);
+          if (!auth) return;
+          const rawBaseUrl = config.CVE_PUBLIC_BASE_URL;
+          const hostHeader = req.headers.host || '127.0.0.1';
+          const effectiveBaseUrl =
+            !rawBaseUrl || rawBaseUrl.includes(':0')
+              ? `http://${hostHeader}/v1`
+              : rawBaseUrl;
+          const cleanBaseUrl = effectiveBaseUrl.replace(/\/+$/, '');
+          const grant = repository.getAssetDownloadGrant(auth.tenantId, assetDownloadMatch[1]!, {
+            baseUrl: cleanBaseUrl,
+          });
+          res.writeHead(200);
+          res.end(JSON.stringify(grant));
+          return;
+        }
+
+        // 5.5c GET /v1/assets/{id}/tombstone
+        const assetTombstoneMatch = /^\/v1\/assets\/([^/]+)\/tombstone$/.exec(pathname);
+        if (assetTombstoneMatch && method === 'GET') {
+          const auth = authenticateAndAuthorize(['assets:read']);
+          if (!auth) return;
+          const tombstone = repository.getAssetTombstone(auth.tenantId, assetTombstoneMatch[1]!);
+          res.writeHead(200);
+          res.end(JSON.stringify(tombstone));
+          return;
+        }
+
         // 5.6 DELETE /v1/assets/{id}
         const assetDelMatch = /^\/v1\/assets\/([^/]+)$/.exec(pathname);
         if (assetDelMatch && method === 'DELETE') {
@@ -1648,6 +1765,18 @@ export function createServer({
           res.end(JSON.stringify(usage));
           return;
         }
+
+        // 16. POST /v1/system/sweep (Maintenance sweeper execution)
+        if (pathname === '/v1/system/sweep' && method === 'POST') {
+          if (!sweeper) {
+            sendError(res, 503, 'SERVICE_UNAVAILABLE', 'Sweeper service not initialized', requestId);
+            return;
+          }
+          const result = sweeper.sweep();
+          res.writeHead(200);
+          res.end(JSON.stringify(result));
+          return;
+        }
       } catch (err) {
         if (err instanceof ResourceNotFoundError) {
           sendError(res, 404, 'NOT_FOUND', err.message, requestId);
@@ -1667,6 +1796,10 @@ export function createServer({
           return;
         }
         if (err instanceof UploadGrantError) {
+          sendError(res, err.httpStatus, err.code, err.message, requestId);
+          return;
+        }
+        if (err instanceof DownloadGrantError) {
           sendError(res, err.httpStatus, err.code, err.message, requestId);
           return;
         }
