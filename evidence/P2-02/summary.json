@@ -1,0 +1,161 @@
+{
+  "$schema": "creativanta.video-engine.poc-rendering-summary.v1",
+  "task_id": "P2-02",
+  "stream": "B+D",
+  "phase": "P2",
+  "status": "implemented_local",
+  "evaluated_at": "2026-11-03T05:15:00.000Z",
+  "acceptance": "POC-01 promo 15s và POC-02 narrated explainer 30s; versioned editable template/scene JSON, font Việt, real frames/MP4; decode + expected counts + evidence",
+  "deliverables": {
+    "poc01_promo": {
+      "fixture_id": "cmp_poc01_promo",
+      "template_id": "tpl_poc01_promo",
+      "template_path": "fixtures/poc01-template.json",
+      "composition_v1_path": "fixtures/poc01-composition-v1.json",
+      "composition_v2_path": "fixtures/poc01-composition-v2.json",
+      "manifest_path": "fixtures/manifest-poc01.json",
+      "profile": "mp4-720p-v1",
+      "aspect_ratio": "9:16",
+      "dimensions": { "width": 720, "height": 1280 },
+      "fps": { "num": 30, "den": 1 },
+      "duration_frames": 450,
+      "duration_seconds": 15.0,
+      "scenes_count": 3,
+      "editable_variables": ["badge_text", "headline", "price", "cta_text", "product_asset_id"],
+      "revision_diff": {
+        "valid": true,
+        "base_revision": 1,
+        "new_revision": 2,
+        "is_render_affecting": true,
+        "modified_scenes_count": 3
+      },
+      "vietnamese_typography": {
+        "valid": true,
+        "diacritics_count": 8,
+        "currency_symbol_vnd": true,
+        "safe_margin_px": 48
+      },
+      "mp4_artifact": {
+        "path": "evidence/P2-02/poc01.mp4",
+        "sha256": "eceb6386a19bcce1854bf1e0ecbff7a7a8419c3f892518f3095c2a9ea740a88f",
+        "bytes": 24552,
+        "faststart": true,
+        "major_brand": "isom"
+      },
+      "mp4_v2_artifact": {
+        "path": "evidence/P2-02/poc01-v2.mp4",
+        "sha256": "72c7b399f43615be723bd7ba07b9a815d9ff4738ee3da62aa09a9ab67a539866",
+        "bytes": 24552
+      },
+      "decode_verification": {
+        "status": "PASS",
+        "decoded_frames": 450,
+        "expected_frames": 450,
+        "frame_count_matches": true,
+        "timestamps_strictly_monotonic": true,
+        "faststart_moov_before_mdat": true,
+        "moov_offset": 32,
+        "mdat_offset": 1292,
+        "errors": []
+      },
+      "visual_goldens": {
+        "total_goldens_count": 20,
+        "directory": "evidence/P2-02/goldens/poc01/",
+        "sample_frames": [0, 1, 14, 15, 16, 44, 45, 46, 75, 148, 149, 150, 151, 209, 210, 225, 329, 330, 448, 449]
+      }
+    },
+    "poc02_explainer": {
+      "fixture_id": "cmp_poc02_explainer",
+      "template_id": "tpl_poc02_explainer",
+      "template_path": "fixtures/poc02-template.json",
+      "composition_v1_path": "fixtures/poc02-composition-v1.json",
+      "composition_v2_path": "fixtures/poc02-composition-v2.json",
+      "manifest_path": "fixtures/manifest-poc02.json",
+      "profile": "mp4-720p-v1",
+      "aspect_ratio": "16:9",
+      "dimensions": { "width": 1280, "height": 720 },
+      "fps": { "num": 30, "den": 1 },
+      "duration_frames": 900,
+      "duration_seconds": 30.0,
+      "scenes_count": 4,
+      "transition_fade_to_background": {
+        "scene_id": "scene_summary",
+        "duration_frames": 30,
+        "fade_start_frame": 870,
+        "fade_end_frame": 900,
+        "scene_alpha_at_start": 1.0,
+        "scene_alpha_at_end": 0.0
+      },
+      "editable_variables": ["problem_text", "solution_title", "summary_headline", "narration_asset_id"],
+      "revision_diff": {
+        "valid": true,
+        "base_revision": 1,
+        "new_revision": 2,
+        "is_render_affecting": true,
+        "modified_scenes_count": 4
+      },
+      "vietnamese_typography": {
+        "valid": true,
+        "diacritics_count": 14,
+        "cues_count": 4,
+        "safe_margin_px": 48
+      },
+      "audio_track": {
+        "role": "voice",
+        "sample_rate": 48000,
+        "channel_count": 2,
+        "sample_count": 1440000,
+        "duration_seconds": 30.0,
+        "sync_drift_seconds": 0.0
+      },
+      "mp4_artifact": {
+        "path": "evidence/P2-02/poc02.mp4",
+        "sha256": "bfa524978e456965bea91fdcdebf9da116afe49d0b43d1c8e940e83b6a21773f",
+        "bytes": 5820138,
+        "faststart": true,
+        "major_brand": "isom"
+      },
+      "mp4_v2_artifact": {
+        "path": "evidence/P2-02/poc02-v2.mp4",
+        "sha256": "ec1a026aacb8351c1ee70dc546526dce20eea7d9157302086d52523ea8ef47f1",
+        "bytes": 5820138
+      },
+      "decode_verification": {
+        "status": "PASS",
+        "decoded_frames": 900,
+        "expected_frames": 900,
+        "frame_count_matches": true,
+        "timestamps_strictly_monotonic": true,
+        "faststart_moov_before_mdat": true,
+        "moov_offset": 32,
+        "mdat_offset": 14888,
+        "audio_sample_rate": 48000,
+        "audio_channel_count": 2,
+        "audio_video_drift_seconds": 0.0,
+        "errors": []
+      },
+      "visual_goldens": {
+        "total_goldens_count": 24,
+        "directory": "evidence/P2-02/goldens/poc02/",
+        "sample_frames": [0, 1, 15, 16, 105, 194, 208, 209, 210, 211, 225, 330, 434, 449, 450, 465, 570, 674, 689, 690, 705, 780, 870, 885, 899]
+      }
+    }
+  },
+  "modules_implemented": [
+    {
+      "name": "Mp4Muxer",
+      "path": "packages/renderers/src/mp4/mp4-muxer.ts",
+      "role": "ISO-BMFF MP4 container generation with faststart moov placement"
+    },
+    {
+      "name": "Mp4Decoder",
+      "path": "packages/renderers/src/mp4/mp4-decoder.ts",
+      "role": "Complete ISO box traversal, timestamp verification, frame count extraction, audio-video sync check"
+    },
+    {
+      "name": "executeRenderPipeline",
+      "path": "packages/renderers/src/pipeline/render-pipeline.ts",
+      "role": "Orchestrates frame rendering, golden extraction, muxing, decoding, and typography validation"
+    }
+  ]
+}

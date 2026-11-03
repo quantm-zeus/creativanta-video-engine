@@ -1,0 +1,257 @@
+{
+  "schema_version": "1.0",
+  "metadata": {
+    "template_id": "tpl_poc01_promo",
+    "template_revision": "1",
+    "name": "POC-01 Product Promo v1"
+  },
+  "canvas": {
+    "width": 720,
+    "height": 1280,
+    "background": "#0F172A"
+  },
+  "fps": {
+    "num": 30,
+    "den": 1
+  },
+  "duration_frames": 450,
+  "seed": 1001,
+  "locale": "vi-VN",
+  "direction": "ltr",
+  "fonts": [
+    {
+      "id": "heading_bold",
+      "asset_id": "ast_font_heading_bold",
+      "sha256": "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
+      "family": "Be Vietnam Pro",
+      "weight": 700,
+      "style": "normal"
+    },
+    {
+      "id": "body_regular",
+      "asset_id": "ast_font_body_regular",
+      "sha256": "123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0",
+      "family": "Be Vietnam Pro",
+      "weight": 400,
+      "style": "normal"
+    }
+  ],
+  "scenes": [
+    {
+      "id": "scene_intro",
+      "revision": 1,
+      "start_frame": 0,
+      "duration_frames": 150,
+      "engine": "html-v1",
+      "layers": [
+        {
+          "id": "badge",
+          "type": "shape",
+          "start_frame": 0,
+          "duration_frames": 150,
+          "z_index": 1,
+          "box": {
+            "x": 240,
+            "y": 280,
+            "width": 240,
+            "height": 60
+          },
+          "content": {
+            "shape": "rect",
+            "fill": "#EF4444",
+            "stroke_width": 0,
+            "radius": 12
+          }
+        },
+        {
+          "id": "badge_text",
+          "type": "text",
+          "start_frame": 0,
+          "duration_frames": 150,
+          "z_index": 2,
+          "box": {
+            "x": 250,
+            "y": 292,
+            "width": 220,
+            "height": 40
+          },
+          "content": {
+            "text": "SIÊU ƯU ĐÃI",
+            "font_id": "heading_bold",
+            "font_size": 24,
+            "color": "#FFFFFF",
+            "align": "center",
+            "overflow": "error"
+          }
+        },
+        {
+          "id": "headline",
+          "type": "text",
+          "start_frame": 15,
+          "duration_frames": 135,
+          "z_index": 3,
+          "box": {
+            "x": 48,
+            "y": 420,
+            "width": 624,
+            "height": 180
+          },
+          "content": {
+            "text": "Bộ sưu tập Mùa Thu 2026",
+            "font_id": "heading_bold",
+            "font_size": 52,
+            "color": "#F8FAFC",
+            "align": "center",
+            "max_lines": 2,
+            "overflow": "error"
+          },
+          "animations": [
+            {
+              "property": "translate_y",
+              "easing": "ease_out_quad",
+              "keyframes": [
+                {
+                  "frame": 0,
+                  "value": 40
+                },
+                {
+                  "frame": 30,
+                  "value": 0
+                }
+              ]
+            }
+          ]
+        }
+      ],
+      "transition_out": {
+        "type": "cut",
+        "duration_frames": 0
+      }
+    },
+    {
+      "id": "scene_showcase",
+      "revision": 1,
+      "start_frame": 150,
+      "duration_frames": 180,
+      "engine": "html-v1",
+      "layers": [
+        {
+          "id": "product_image",
+          "type": "image",
+          "start_frame": 0,
+          "duration_frames": 180,
+          "z_index": 1,
+          "box": {
+            "x": 110,
+            "y": 200,
+            "width": 500,
+            "height": 500
+          },
+          "content": {
+            "asset_id": "ast_product_autumn",
+            "fit": "contain",
+            "anchor_x": 0.5,
+            "anchor_y": 0.5,
+            "alt": "Ảnh sản phẩm mùa thu"
+          },
+          "animations": [
+            {
+              "property": "scale_x",
+              "easing": "ease_out_quad",
+              "keyframes": [
+                {
+                  "frame": 0,
+                  "value": 0.8
+                },
+                {
+                  "frame": 45,
+                  "value": 1
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "price_tag",
+          "type": "text",
+          "start_frame": 30,
+          "duration_frames": 150,
+          "z_index": 2,
+          "box": {
+            "x": 60,
+            "y": 760,
+            "width": 600,
+            "height": 80
+          },
+          "content": {
+            "text": "Chỉ từ 199.000 ₫",
+            "font_id": "heading_bold",
+            "font_size": 48,
+            "color": "#FACC15",
+            "align": "center",
+            "overflow": "error"
+          }
+        }
+      ],
+      "transition_out": {
+        "type": "cut",
+        "duration_frames": 0
+      }
+    },
+    {
+      "id": "scene_cta",
+      "revision": 1,
+      "start_frame": 330,
+      "duration_frames": 120,
+      "engine": "html-v1",
+      "layers": [
+        {
+          "id": "cta_button",
+          "type": "shape",
+          "start_frame": 0,
+          "duration_frames": 120,
+          "z_index": 1,
+          "box": {
+            "x": 160,
+            "y": 580,
+            "width": 400,
+            "height": 90
+          },
+          "content": {
+            "shape": "rect",
+            "fill": "#3B82F6",
+            "stroke_width": 0,
+            "radius": 16
+          }
+        },
+        {
+          "id": "cta_text",
+          "type": "text",
+          "start_frame": 0,
+          "duration_frames": 120,
+          "z_index": 2,
+          "box": {
+            "x": 180,
+            "y": 605,
+            "width": 360,
+            "height": 50
+          },
+          "content": {
+            "text": "Mua ngay hôm nay",
+            "font_id": "heading_bold",
+            "font_size": 32,
+            "color": "#FFFFFF",
+            "align": "center",
+            "overflow": "error"
+          }
+        }
+      ],
+      "transition_out": {
+        "type": "cut",
+        "duration_frames": 0
+      }
+    }
+  ],
+  "audio_tracks": [],
+  "subtitles": []
+}
