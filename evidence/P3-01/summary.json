@@ -3,7 +3,7 @@
   "task_id": "P3-01",
   "stream": "A",
   "phase": "P3",
-  "base_commit": "9469a1ad90108fffc56de02dfc8c0b54b9193e52",
+  "base_commit": "74a8bdc8d9daf02ddd512c6347e8123bbeb8fb5b",
   "migrations": {
     "manifest_path": "migrations/manifest.json",
     "rollback_plan_path": "migrations/ROLLBACK_AND_RECOVERY.md",
