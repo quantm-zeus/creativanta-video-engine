@@ -5,12 +5,14 @@
 
 import crypto from 'node:crypto';
 import http from 'node:http';
+import path from 'node:path';
 import { URL } from 'node:url';
 import {
   CapabilitiesResponse,
   CompositionSpec,
   CveEnvConfig,
   ErrorDetail,
+  canonicalizeJson,
   compileComposition,
   materializeCompositionDefaults,
   validateCompositionUnified,
@@ -22,16 +24,48 @@ import {
 } from './auth/api-key.js';
 import {
   BodyReferenceValidationError,
+  IdempotencyConflictError,
+  IdempotencyInProgressError,
   InvalidCursorError,
   ResourceNotFoundError,
   RevisionConflictError,
   TenantRepository,
 } from './db/repository.js';
+import {
+  UploadGrantError,
+  generateSignedUploadGrant,
+  verifySignedUploadGrant,
+} from './assets/upload-grant.js';
+import {
+  QuarantineStorageError,
+  QuarantineStore,
+} from './assets/quarantine-store.js';
+import {
+  executeSandboxMediaProbe,
+  getAssetKindFromMimeType,
+  getMaxBytesForMimeType,
+  validateUploadRequestBounds,
+} from './assets/media-guard.js';
+import {
+  ImportConnector,
+  inferAssetMimeType,
+  sanitizeSourceUrl,
+  validateImportRights,
+} from './assets/import-connector.js';
+import {
+  checkTenantImportAllowlist,
+  resolveAndAuditHostDns,
+  validateAndNormalizeImportUrl,
+  SsrSecurityError,
+  ValidatedImportUrlResult,
+} from './assets/ssrf-guard.js';
 
 export interface CreateServerOptions {
   config: CveEnvConfig;
   repository?: TenantRepository;
   requireAuthOnCapabilities?: boolean;
+  quarantineStore?: QuarantineStore;
+  importConnector?: ImportConnector;
 }
 
 const IDEMPOTENCY_KEY_REGEX = /^[A-Za-z0-9._:-]{1,128}$/;
@@ -166,12 +200,44 @@ async function readJsonBody(
   }
 }
 
+async function readRawBody(
+  req: http.IncomingMessage,
+  maxBytes: number,
+): Promise<{ ok: true; buffer: Buffer; bytes: number; sha256: string } | { ok: false; status: number; code: string; message: string }> {
+  const chunks: Buffer[] = [];
+  let totalBytes = 0;
+  const hash = crypto.createHash('sha256');
+
+  for await (const chunk of req) {
+    const buf = Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk as Uint8Array);
+    totalBytes += buf.byteLength;
+    if (totalBytes > maxBytes) {
+      return {
+        ok: false,
+        status: 413,
+        code: 'PAYLOAD_TOO_LARGE',
+        message: `Upload payload exceeds limit of ${maxBytes} bytes`,
+      };
+    }
+    hash.update(buf);
+    chunks.push(buf);
+  }
+
+  const buffer = Buffer.concat(chunks);
+  const sha256 = hash.digest('hex');
+  return { ok: true, buffer, bytes: totalBytes, sha256 };
+}
+
 export function createServer({
   config,
   repository,
   requireAuthOnCapabilities = false,
+  quarantineStore: providedStore,
+  importConnector: providedConnector,
 }: CreateServerOptions): http.Server {
   const startTime = Date.now();
+  const quarantineStore = providedStore ?? new QuarantineStore();
+  const importConnector = providedConnector ?? new ImportConnector({ quarantineStore });
 
   const server = http.createServer(async (req, res) => {
     const requestId = `req_${crypto.randomBytes(6).toString('hex')}`;
@@ -434,6 +500,85 @@ export function createServer({
       return;
     }
 
+    // Quarantine raw bytes upload endpoint (Bearer capability token in URL, no header needed)
+    const quarantineUploadMatch = /^\/v1\/assets\/upload-quarantine\/([^/]+)$/.exec(pathname);
+    if (quarantineUploadMatch && method === 'PUT') {
+      const token = quarantineUploadMatch[1]!;
+      const pepper = repository ? repository.getPepper() : 'default_test_pepper_0123456789abcdef';
+      let grantPayload;
+      try {
+        grantPayload = verifySignedUploadGrant(token, { pepper });
+      } catch (err) {
+        if (err instanceof UploadGrantError) {
+          sendError(res, err.httpStatus, err.code, err.message, requestId);
+          return;
+        }
+        sendError(res, 403, 'INVALID_UPLOAD_GRANT', 'Invalid upload grant token', requestId);
+        return;
+      }
+
+      if (repository) {
+        try {
+          const asset = repository.getAsset(grantPayload.tenantId, grantPayload.assetId);
+          if (asset.status !== 'uploading') {
+            sendError(
+              res,
+              409,
+              'REVISION_CONFLICT',
+              `Asset upload session is not open (current status: ${asset.status})`,
+              requestId,
+            );
+            return;
+          }
+        } catch (err) {
+          if (err instanceof ResourceNotFoundError) {
+            sendError(res, 404, 'NOT_FOUND', err.message, requestId);
+            return;
+          }
+          throw err;
+        }
+      }
+
+      // Check Content-Length if provided
+      const contentLengthHeader = req.headers['content-length'];
+      if (contentLengthHeader !== undefined) {
+        const contentLength = Number(contentLengthHeader);
+        if (!Number.isNaN(contentLength) && contentLength > grantPayload.maxBytes) {
+          sendError(
+            res,
+            413,
+            'PAYLOAD_TOO_LARGE',
+            `Upload payload exceeds maximum allowed size of ${grantPayload.maxBytes} bytes`,
+            requestId,
+          );
+          return;
+        }
+      }
+
+      const bodyRes = await readRawBody(req, grantPayload.maxBytes);
+      if (!bodyRes.ok) {
+        sendError(res, bodyRes.status, bodyRes.code, bodyRes.message, requestId);
+        return;
+      }
+
+      const saved = quarantineStore.saveQuarantined(
+        grantPayload.tenantId,
+        grantPayload.assetId,
+        bodyRes.buffer,
+      );
+
+      res.writeHead(200);
+      res.end(
+        JSON.stringify({
+          status: 'uploaded',
+          asset_id: grantPayload.assetId,
+          bytes: saved.bytes,
+          sha256: saved.sha256,
+        }),
+      );
+      return;
+    }
+
     // Tenant-scoped v1 endpoints require repository
     if (pathname.startsWith('/v1/') && repository) {
       try {
@@ -600,20 +745,698 @@ export function createServer({
           return;
         }
 
-        // 5. GET & DELETE /v1/assets/{id}
-        const assetMatch = /^\/v1\/assets\/([^/]+)$/.exec(pathname);
-        if (assetMatch && method === 'GET') {
+        // 5. Asset Ingestion Pipeline (Task P3-02)
+
+        // 5.1 POST /v1/assets/uploads
+        if (pathname === '/v1/assets/uploads' && method === 'POST') {
+          const auth = authenticateAndAuthorize(['assets:write']);
+          if (!auth) return;
+          const idemKey = verifyIdempotencyHeader();
+          if (!idemKey) return;
+
+          const bodyRes = await readJsonBody(req);
+          if (!bodyRes.ok) {
+            sendError(res, bodyRes.status, bodyRes.code, bodyRes.message, requestId);
+            return;
+          }
+
+          if ('tenant_id' in bodyRes.data) {
+            sendError(res, 422, 'VALIDATION_FAILED', 'tenant_id is not permitted in request body', requestId, false, [
+              { pointer: '/tenant_id', code: 'UNKNOWN_FIELD', message: 'tenant_id is forbidden in body' },
+            ]);
+            return;
+          }
+
+          const reqHash = crypto
+            .createHash('sha256')
+            .update(canonicalizeJson(bodyRes.data), 'utf8')
+            .digest('hex');
+
+          const idem = repository.claimIdempotency(auth.tenantId, {
+            method: 'POST',
+            normalizedPath: '/v1/assets/uploads',
+            key: idemKey,
+            requestHash: reqHash,
+          });
+
+          if (idem.replayed) {
+            res.setHeader('Idempotency-Replayed', 'true');
+            res.writeHead(idem.httpStatus);
+            res.end(idem.responseBody);
+            return;
+          }
+
+          const valResult = validateUploadRequestBounds(bodyRes.data);
+          if (!valResult.valid) {
+            repository.releaseIdempotency(auth.tenantId, {
+              method: 'POST',
+              normalizedPath: '/v1/assets/uploads',
+              key: idemKey,
+            });
+            sendError(
+              res,
+              valResult.httpStatus ?? 422,
+              valResult.code ?? 'VALIDATION_FAILED',
+              valResult.message ?? 'Invalid upload request',
+              requestId,
+              false,
+              valResult.details,
+            );
+            return;
+          }
+
+          const assetId = `ast_${crypto.randomBytes(6).toString('hex')}`;
+          const mimeType = String(bodyRes.data['mime_type']).toLowerCase();
+          const kind = getAssetKindFromMimeType(mimeType);
+          const declaredBytes = Number(bodyRes.data['bytes']);
+          const sha256 = String(bodyRes.data['sha256']).toLowerCase();
+
+          repository.createAssetUpload(auth.tenantId, {
+            id: assetId,
+            filename: String(bodyRes.data['filename']),
+            kind,
+            mimeType,
+            bytes: declaredBytes,
+            sha256,
+            rights: bodyRes.data['rights'] as Record<string, unknown>,
+          });
+
+          const rawBaseUrl = config.CVE_PUBLIC_BASE_URL;
+          const hostHeader = req.headers.host || '127.0.0.1';
+          const effectiveBaseUrl =
+            !rawBaseUrl || rawBaseUrl.includes(':0')
+              ? `http://${hostHeader}/v1`
+              : rawBaseUrl;
+          const cleanBaseUrl = effectiveBaseUrl.replace(/\/+$/, '');
+
+          const grant = generateSignedUploadGrant(
+            {
+              tenantId: auth.tenantId,
+              assetId,
+              filename: String(bodyRes.data['filename']),
+              mimeType,
+              sha256,
+              declaredBytes,
+              maxBytes: getMaxBytesForMimeType(mimeType),
+              ttlSeconds: 600, // 10 minutes
+            },
+            {
+              pepper: repository.getPepper(),
+              baseUrl: cleanBaseUrl,
+            },
+          );
+
+          const responsePayload = {
+            asset_id: assetId,
+            upload_method: 'PUT' as const,
+            upload_url: grant.uploadUrl,
+            required_headers: grant.requiredHeaders,
+            expires_at: grant.expiresAt,
+            max_bytes: grant.maxBytes,
+          };
+
+          repository.completeIdempotency(auth.tenantId, {
+            method: 'POST',
+            normalizedPath: '/v1/assets/uploads',
+            key: idemKey,
+            httpStatus: 201,
+            responseBody: responsePayload,
+            resourceId: assetId,
+          });
+
+          res.writeHead(201);
+          res.end(JSON.stringify(responsePayload));
+          return;
+        }
+
+        // 5.2 POST /v1/assets/{id}/upload-url
+        const assetUploadUrlMatch = /^\/v1\/assets\/([^/]+)\/upload-url$/.exec(pathname);
+        if (assetUploadUrlMatch && method === 'POST') {
+          const auth = authenticateAndAuthorize(['assets:write']);
+          if (!auth) return;
+          const idemKey = verifyIdempotencyHeader();
+          if (!idemKey) return;
+
+          const assetId = assetUploadUrlMatch[1]!;
+          const normalizedPath = `/v1/assets/${assetId}/upload-url`;
+
+          const reqHash = crypto.createHash('sha256').update('', 'utf8').digest('hex');
+          const idem = repository.claimIdempotency(auth.tenantId, {
+            method: 'POST',
+            normalizedPath,
+            key: idemKey,
+            requestHash: reqHash,
+          });
+
+          if (idem.replayed) {
+            res.setHeader('Idempotency-Replayed', 'true');
+            res.writeHead(idem.httpStatus);
+            res.end(idem.responseBody);
+            return;
+          }
+
+          const asset = repository.getAsset(auth.tenantId, assetId);
+          if (asset.status !== 'uploading') {
+            repository.releaseIdempotency(auth.tenantId, {
+              method: 'POST',
+              normalizedPath,
+              key: idemKey,
+            });
+            throw new RevisionConflictError(
+              `Asset upload session is not open (current status: ${asset.status})`,
+            );
+          }
+
+          const rawBaseUrl = config.CVE_PUBLIC_BASE_URL;
+          const hostHeader = req.headers.host || '127.0.0.1';
+          const effectiveBaseUrl =
+            !rawBaseUrl || rawBaseUrl.includes(':0')
+              ? `http://${hostHeader}/v1`
+              : rawBaseUrl;
+          const cleanBaseUrl = effectiveBaseUrl.replace(/\/+$/, '');
+
+          const grant = generateSignedUploadGrant(
+            {
+              tenantId: auth.tenantId,
+              assetId: asset.id,
+              filename: asset.filename,
+              mimeType: asset.mime_type,
+              sha256: asset.sha256,
+              declaredBytes: asset.bytes,
+              maxBytes: getMaxBytesForMimeType(asset.mime_type),
+              ttlSeconds: 600,
+            },
+            {
+              pepper: repository.getPepper(),
+              baseUrl: cleanBaseUrl,
+            },
+          );
+
+          const responsePayload = {
+            upload_url: grant.uploadUrl,
+            expires_at: grant.expiresAt,
+            required_headers: grant.requiredHeaders,
+          };
+
+          repository.completeIdempotency(auth.tenantId, {
+            method: 'POST',
+            normalizedPath,
+            key: idemKey,
+            httpStatus: 200,
+            responseBody: responsePayload,
+            resourceId: asset.id,
+          });
+
+          res.writeHead(200);
+          res.end(JSON.stringify(responsePayload));
+          return;
+        }
+
+        // 5.3 POST /v1/assets/{id}/complete
+        const assetCompleteMatch = /^\/v1\/assets\/([^/]+)\/complete$/.exec(pathname);
+        if (assetCompleteMatch && method === 'POST') {
+          const auth = authenticateAndAuthorize(['assets:write']);
+          if (!auth) return;
+          const idemKey = verifyIdempotencyHeader();
+          if (!idemKey) return;
+
+          const assetId = assetCompleteMatch[1]!;
+          const normalizedPath = `/v1/assets/${assetId}/complete`;
+
+          const bodyRes = await readJsonBody(req);
+          if (!bodyRes.ok) {
+            sendError(res, bodyRes.status, bodyRes.code, bodyRes.message, requestId);
+            return;
+          }
+
+          const reqHash = crypto
+            .createHash('sha256')
+            .update(canonicalizeJson(bodyRes.data), 'utf8')
+            .digest('hex');
+
+          const idem = repository.claimIdempotency(auth.tenantId, {
+            method: 'POST',
+            normalizedPath,
+            key: idemKey,
+            requestHash: reqHash,
+          });
+
+          if (idem.replayed) {
+            res.setHeader('Idempotency-Replayed', 'true');
+            res.writeHead(idem.httpStatus);
+            res.end(idem.responseBody);
+            return;
+          }
+
+          const asset = repository.getAsset(auth.tenantId, assetId);
+          if (asset.status !== 'uploading') {
+            repository.releaseIdempotency(auth.tenantId, {
+              method: 'POST',
+              normalizedPath,
+              key: idemKey,
+            });
+            throw new RevisionConflictError(
+              `Asset is not in uploading state (current status: ${asset.status})`,
+            );
+          }
+
+          const declaredSha =
+            typeof bodyRes.data['sha256'] === 'string'
+              ? bodyRes.data['sha256'].toLowerCase().trim()
+              : '';
+
+          if (!/^[0-9a-f]{64}$/.test(declaredSha)) {
+            repository.releaseIdempotency(auth.tenantId, {
+              method: 'POST',
+              normalizedPath,
+              key: idemKey,
+            });
+            sendError(
+              res,
+              422,
+              'VALIDATION_FAILED',
+              'sha256 must be a 64-character lowercase hex string',
+              requestId,
+              false,
+              [
+                {
+                  pointer: '/sha256',
+                  code: 'INVALID_CHECKSUM',
+                  message: 'Invalid sha256 checksum string',
+                },
+              ],
+            );
+            return;
+          }
+
+          const quarantined = quarantineStore.getQuarantined(auth.tenantId, asset.id);
+          if (!quarantined) {
+            repository.updateAssetStatus(auth.tenantId, asset.id, {
+              status: 'rejected',
+              mimeType: asset.mime_type,
+              probeMetadata: {
+                error: 'MISSING_UPLOAD_DATA',
+                message: 'No uploaded data found in quarantine for complete step',
+              },
+            });
+
+            const resp = { id: asset.id, status: 'rejected' as const };
+            repository.completeIdempotency(auth.tenantId, {
+              method: 'POST',
+              normalizedPath,
+              key: idemKey,
+              httpStatus: 202,
+              responseBody: resp,
+              resourceId: asset.id,
+            });
+
+            res.writeHead(202);
+            res.end(JSON.stringify(resp));
+            return;
+          }
+
+          // Checksum guard
+          if (quarantined.sha256 !== declaredSha || quarantined.sha256 !== asset.sha256.toLowerCase()) {
+            repository.updateAssetStatus(auth.tenantId, asset.id, {
+              status: 'rejected',
+              mimeType: asset.mime_type,
+              probeMetadata: {
+                error: 'CHECKSUM_MISMATCH',
+                message: 'Uploaded data SHA-256 does not match declared checksum',
+                declared_in_complete: declaredSha,
+                declared_in_upload: asset.sha256,
+                actual: quarantined.sha256,
+              },
+            });
+            quarantineStore.removeQuarantined(auth.tenantId, asset.id);
+
+            const resp = { id: asset.id, status: 'rejected' as const };
+            repository.completeIdempotency(auth.tenantId, {
+              method: 'POST',
+              normalizedPath,
+              key: idemKey,
+              httpStatus: 202,
+              responseBody: resp,
+              resourceId: asset.id,
+            });
+
+            res.writeHead(202);
+            res.end(JSON.stringify(resp));
+            return;
+          }
+
+          // Byte size guard
+          if (quarantined.bytes !== asset.bytes) {
+            repository.updateAssetStatus(auth.tenantId, asset.id, {
+              status: 'rejected',
+              mimeType: asset.mime_type,
+              probeMetadata: {
+                error: 'BYTE_COUNT_MISMATCH',
+                message: 'Uploaded data byte size does not match declared size',
+                expected: asset.bytes,
+                actual: quarantined.bytes,
+              },
+            });
+            quarantineStore.removeQuarantined(auth.tenantId, asset.id);
+
+            const resp = { id: asset.id, status: 'rejected' as const };
+            repository.completeIdempotency(auth.tenantId, {
+              method: 'POST',
+              normalizedPath,
+              key: idemKey,
+              httpStatus: 202,
+              responseBody: resp,
+              resourceId: asset.id,
+            });
+
+            res.writeHead(202);
+            res.end(JSON.stringify(resp));
+            return;
+          }
+
+          // Media Guard & Sandbox Probe (runs isolated)
+          const probeRes = await executeSandboxMediaProbe(
+            quarantined.filePath,
+            quarantined.buffer,
+            asset.mime_type,
+          );
+
+          if (!probeRes.success) {
+            repository.updateAssetStatus(auth.tenantId, asset.id, {
+              status: 'rejected',
+              mimeType: asset.mime_type,
+              probeMetadata: {
+                error: probeRes.code ?? 'PROBE_FAILED',
+                message: probeRes.reason ?? 'Media probing rejected in isolated sandbox',
+              },
+            });
+            quarantineStore.removeQuarantined(auth.tenantId, asset.id);
+
+            const resp = { id: asset.id, status: 'rejected' as const };
+            repository.completeIdempotency(auth.tenantId, {
+              method: 'POST',
+              normalizedPath,
+              key: idemKey,
+              httpStatus: 202,
+              responseBody: resp,
+              resourceId: asset.id,
+            });
+
+            res.writeHead(202);
+            res.end(JSON.stringify(resp));
+            return;
+          }
+
+          // Validated successfully! Promote to permanent storage
+          quarantineStore.promoteToReady(auth.tenantId, asset.id, 1, asset.filename);
+          repository.updateAssetStatus(auth.tenantId, asset.id, {
+            status: 'ready',
+            mimeType: asset.mime_type,
+            probeMetadata: probeRes.metadata,
+            normalizedSha256: quarantined.sha256,
+            bytes: quarantined.bytes,
+          });
+
+          const resp = { id: asset.id, status: 'ready' as const };
+          repository.completeIdempotency(auth.tenantId, {
+            method: 'POST',
+            normalizedPath,
+            key: idemKey,
+            httpStatus: 202,
+            responseBody: resp,
+            resourceId: asset.id,
+          });
+
+          res.writeHead(202);
+          res.end(JSON.stringify(resp));
+          return;
+        }
+
+        // 5.4 POST /v1/assets/imports (behind feature flag per docs/API.md line 35)
+        if (pathname === '/v1/assets/imports' && method === 'POST') {
+          const auth = authenticateAndAuthorize(['assets:write']);
+          if (!auth) return;
+          const idemKey = verifyIdempotencyHeader();
+          if (!idemKey) return;
+
+          if (!config.CVE_REMOTE_IMPORT_ENABLED) {
+            sendError(
+              res,
+              403,
+              'CAPABILITY_DISABLED',
+              'Remote import connector is disabled by policy',
+              requestId,
+            );
+            return;
+          }
+
+          const bodyRes = await readJsonBody(req);
+          if (!bodyRes.ok) {
+            sendError(res, bodyRes.status, bodyRes.code, bodyRes.message, requestId);
+            return;
+          }
+
+          const reqHash = crypto
+            .createHash('sha256')
+            .update(canonicalizeJson(bodyRes.data), 'utf8')
+            .digest('hex');
+
+          const idem = repository.claimIdempotency(auth.tenantId, {
+            method: 'POST',
+            normalizedPath: '/v1/assets/imports',
+            key: idemKey,
+            requestHash: reqHash,
+          });
+
+          if (idem.replayed) {
+            res.setHeader('Idempotency-Replayed', 'true');
+            res.writeHead(idem.httpStatus);
+            res.end(idem.responseBody);
+            return;
+          }
+
+          const rawUrl = bodyRes.data['url'];
+          const expectedSha = String(bodyRes.data['expected_sha256'] ?? '').toLowerCase().trim();
+          const rightsData = bodyRes.data['rights'];
+
+          // 1. Validate rights metadata
+          const rightsCheck = validateImportRights(rightsData);
+          if (!rightsCheck.valid) {
+            repository.releaseIdempotency(auth.tenantId, {
+              method: 'POST',
+              normalizedPath: '/v1/assets/imports',
+              key: idemKey,
+            });
+            sendError(
+              res,
+              422,
+              'VALIDATION_FAILED',
+              rightsCheck.message,
+              requestId,
+              false,
+              [{ pointer: rightsCheck.pointer, code: rightsCheck.code, message: rightsCheck.message }],
+            );
+            return;
+          }
+
+          // 2. Validate expected SHA-256 format
+          if (!/^[0-9a-f]{64}$/.test(expectedSha)) {
+            repository.releaseIdempotency(auth.tenantId, {
+              method: 'POST',
+              normalizedPath: '/v1/assets/imports',
+              key: idemKey,
+            });
+            sendError(
+              res,
+              422,
+              'VALIDATION_FAILED',
+              'expected_sha256 must be a 64-character lowercase hexadecimal string',
+              requestId,
+              false,
+              [{ pointer: '/expected_sha256', code: 'INVALID_CHECKSUM', message: 'Invalid hex SHA-256' }],
+            );
+            return;
+          }
+
+          // 3. Syntactic URL validation & SSRF defense
+          let validatedUrl: ValidatedImportUrlResult;
+          try {
+            validatedUrl = validateAndNormalizeImportUrl(rawUrl, {
+              allowCustomPortForTesting: importConnector.getAllowCustomPortForTesting(),
+            });
+          } catch (err) {
+            repository.releaseIdempotency(auth.tenantId, {
+              method: 'POST',
+              normalizedPath: '/v1/assets/imports',
+              key: idemKey,
+            });
+            const isSsr = err instanceof SsrSecurityError;
+            sendError(
+              res,
+              isSsr ? err.httpStatus : 422,
+              isSsr ? err.code : 'VALIDATION_FAILED',
+              err instanceof Error ? err.message : String(err),
+              requestId,
+              false,
+              [{ pointer: isSsr ? err.pointer : '/url', code: isSsr ? err.code : 'INVALID_URL', message: err instanceof Error ? err.message : String(err) }],
+            );
+            return;
+          }
+
+          // 4. Tenant allowlist check
+          const tenantAllowlist = repository.getTenantImportAllowlist(auth.tenantId);
+          const allowCheck = checkTenantImportAllowlist(validatedUrl.url, tenantAllowlist);
+          if (!allowCheck.allowed) {
+            repository.releaseIdempotency(auth.tenantId, {
+              method: 'POST',
+              normalizedPath: '/v1/assets/imports',
+              key: idemKey,
+            });
+            sendError(
+              res,
+              422,
+              'VALIDATION_FAILED',
+              `Import URL "${sanitizeSourceUrl(validatedUrl.url)}" is not in tenant allowlist`,
+              requestId,
+              false,
+              [{ pointer: '/url', code: 'URL_NOT_ALLOWLISTED', message: 'Target host or path is not allowlisted for tenant' }],
+            );
+            return;
+          }
+
+          // 5. DNS Resolution and IP range defense (fail fast against prohibited IPs)
+          try {
+            await resolveAndAuditHostDns(
+              validatedUrl.url.hostname,
+              importConnector.getDnsResolver(),
+              { allowLoopbackForTesting: importConnector.getAllowLoopbackForTesting() },
+            );
+          } catch (err) {
+            repository.releaseIdempotency(auth.tenantId, {
+              method: 'POST',
+              normalizedPath: '/v1/assets/imports',
+              key: idemKey,
+            });
+            const isSsr = err instanceof SsrSecurityError;
+            sendError(
+              res,
+              isSsr ? err.httpStatus : 422,
+              isSsr ? err.code : 'VALIDATION_FAILED',
+              err instanceof Error ? err.message : String(err),
+              requestId,
+              false,
+              [{ pointer: isSsr ? err.pointer : '/url', code: isSsr ? err.code : 'SSRF_PROHIBITED_IP', message: err instanceof Error ? err.message : String(err) }],
+            );
+            return;
+          }
+
+          // 6. Create asset in processing status
+          const assetId = `ast_${crypto.randomBytes(6).toString('hex')}`;
+          const filename = path.basename(validatedUrl.url.pathname) || 'imported_asset.mp4';
+          const inferredMime = inferAssetMimeType(validatedUrl.url.pathname);
+          const kind = getAssetKindFromMimeType(inferredMime);
+
+          const sanitizedSource = sanitizeSourceUrl(validatedUrl.url);
+          const sanitizedRights = {
+            ...rightsCheck.sanitized,
+            source: sanitizedSource,
+          };
+
+          repository.createAssetImport(auth.tenantId, {
+            id: assetId,
+            filename,
+            kind,
+            status: 'processing',
+            mimeType: inferredMime,
+            expectedSha256: expectedSha,
+            rights: sanitizedRights,
+          });
+
+          // 7. Complete idempotency record with 202 and initial AssetSummary
+          const responsePayload = {
+            id: assetId,
+            status: 'processing' as const,
+          };
+
+          repository.completeIdempotency(auth.tenantId, {
+            method: 'POST',
+            normalizedPath: '/v1/assets/imports',
+            key: idemKey,
+            httpStatus: 202,
+            responseBody: responsePayload,
+            resourceId: assetId,
+          });
+
+          res.writeHead(202);
+          res.end(JSON.stringify(responsePayload));
+
+          // 8. Execute asynchronous background import via ImportConnector
+          const currentTenantId = auth.tenantId;
+          importConnector
+            .executeImport({
+              tenantId: currentTenantId,
+              assetId,
+              url: String(rawUrl),
+              expectedSha256: expectedSha,
+              rights: rightsCheck.sanitized,
+              allowlist: tenantAllowlist,
+            })
+            .then((result) => {
+              if (result.success) {
+                repository.updateAssetStatus(currentTenantId, assetId, {
+                  status: 'ready',
+                  mimeType: result.mimeType,
+                  probeMetadata: result.probeMetadata,
+                  normalizedSha256: result.sha256,
+                  bytes: result.bytes,
+                });
+              } else {
+                repository.updateAssetStatus(currentTenantId, assetId, {
+                  status: 'rejected',
+                  mimeType: result.mimeType,
+                  probeMetadata: {
+                    error: result.error?.code ?? 'IMPORT_FAILED',
+                    message: result.error?.message ?? 'Remote import failed validation or transfer',
+                  },
+                });
+              }
+            })
+            .catch((err) => {
+              try {
+                repository.updateAssetStatus(currentTenantId, assetId, {
+                  status: 'rejected',
+                  mimeType: inferredMime,
+                  probeMetadata: {
+                    error: 'UNHANDLED_IMPORT_ERROR',
+                    message: err instanceof Error ? err.message : String(err),
+                  },
+                });
+              } catch {
+                // Ignore secondary errors to prevent unhandled rejection
+              }
+            });
+
+          return;
+        }
+
+        // 5.5 GET /v1/assets/{id}
+        const assetGetMatch = /^\/v1\/assets\/([^/]+)$/.exec(pathname);
+        if (assetGetMatch && method === 'GET') {
           const auth = authenticateAndAuthorize(['assets:read']);
           if (!auth) return;
-          const asset = repository.getAsset(auth.tenantId, assetMatch[1]!);
+          const asset = repository.getAsset(auth.tenantId, assetGetMatch[1]!);
           res.writeHead(200);
           res.end(JSON.stringify(asset));
           return;
         }
-        if (assetMatch && method === 'DELETE') {
+
+        // 5.6 DELETE /v1/assets/{id}
+        const assetDelMatch = /^\/v1\/assets\/([^/]+)$/.exec(pathname);
+        if (assetDelMatch && method === 'DELETE') {
           const auth = authenticateAndAuthorize(['assets:write']);
           if (!auth) return;
-          const deleted = repository.deleteAsset(auth.tenantId, assetMatch[1]!);
+          const deleted = repository.deleteAsset(auth.tenantId, assetDelMatch[1]!);
+          quarantineStore.removeAsset(auth.tenantId, assetDelMatch[1]!);
           res.writeHead(202);
           res.end(JSON.stringify(deleted));
           return;
@@ -832,6 +1655,23 @@ export function createServer({
         }
         if (err instanceof RevisionConflictError) {
           sendError(res, 409, 'REVISION_CONFLICT', err.message, requestId);
+          return;
+        }
+        if (err instanceof IdempotencyConflictError) {
+          sendError(res, 409, 'IDEMPOTENCY_CONFLICT', err.message, requestId);
+          return;
+        }
+        if (err instanceof IdempotencyInProgressError) {
+          res.setHeader('Retry-After', '1');
+          sendError(res, 409, 'IDEMPOTENCY_IN_PROGRESS', err.message, requestId);
+          return;
+        }
+        if (err instanceof UploadGrantError) {
+          sendError(res, err.httpStatus, err.code, err.message, requestId);
+          return;
+        }
+        if (err instanceof QuarantineStorageError) {
+          sendError(res, 400, err.code, err.message, requestId);
           return;
         }
         if (err instanceof InvalidCursorError) {

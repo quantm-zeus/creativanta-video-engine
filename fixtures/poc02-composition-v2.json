@@ -1,0 +1,263 @@
+{
+  "schema_version": "1.0",
+  "metadata": {
+    "template_id": "tpl_poc02_explainer",
+    "template_revision": "1",
+    "base_revision": "1",
+    "change_note": "Cập nhật thông điệp phiên bản v2 và điều chỉnh phụ đề thuyết minh"
+  },
+  "canvas": {
+    "width": 1280,
+    "height": 720,
+    "background": "#0B132B"
+  },
+  "fps": {
+    "num": 30,
+    "den": 1
+  },
+  "duration_frames": 900,
+  "seed": 2026,
+  "locale": "vi-VN",
+  "direction": "ltr",
+  "fonts": [
+    {
+      "id": "font_title",
+      "asset_id": "ast_font_noto_sans_bold",
+      "sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "family": "Noto Sans",
+      "weight": 700,
+      "style": "normal"
+    },
+    {
+      "id": "font_body",
+      "asset_id": "ast_font_noto_sans_regular",
+      "sha256": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+      "family": "Noto Sans",
+      "weight": 400,
+      "style": "normal"
+    }
+  ],
+  "scenes": [
+    {
+      "id": "scene_problem",
+      "revision": 2,
+      "start_frame": 0,
+      "duration_frames": 210,
+      "engine": "html-v1",
+      "layers": [
+        {
+          "id": "icon_cloud",
+          "type": "svg",
+          "start_frame": 0,
+          "duration_frames": 210,
+          "z_index": 1,
+          "box": {
+            "x": 560,
+            "y": 140,
+            "width": 160,
+            "height": 160
+          },
+          "content": {
+            "asset_id": "ast_svg_cloud_icon",
+            "fit": "contain"
+          }
+        },
+        {
+          "id": "text_problem",
+          "type": "text",
+          "start_frame": 15,
+          "duration_frames": 195,
+          "z_index": 2,
+          "box": {
+            "x": 140,
+            "y": 360,
+            "width": 1000,
+            "height": 120
+          },
+          "content": {
+            "text": "Làm thế nào để tạo hàng nghìn video tự động mỗi ngày?",
+            "font_id": "font_title",
+            "font_size": 42,
+            "color": "#F0F6FC",
+            "align": "center",
+            "overflow": "error"
+          }
+        }
+      ],
+      "transition_out": {
+        "type": "cut",
+        "duration_frames": 0
+      }
+    },
+    {
+      "id": "scene_solution",
+      "revision": 2,
+      "start_frame": 210,
+      "duration_frames": 240,
+      "engine": "html-v1",
+      "layers": [
+        {
+          "id": "text_solution_title",
+          "type": "text",
+          "start_frame": 0,
+          "duration_frames": 240,
+          "z_index": 1,
+          "box": {
+            "x": 140,
+            "y": 160,
+            "width": 1000,
+            "height": 90
+          },
+          "content": {
+            "text": "Creativanta Video Engine v2: Hiệu năng vượt trội và tối ưu chi phí",
+            "font_id": "font_title",
+            "font_size": 38,
+            "color": "#0EA5E9",
+            "align": "center",
+            "overflow": "error"
+          }
+        },
+        {
+          "id": "metric_card",
+          "type": "svg",
+          "start_frame": 30,
+          "duration_frames": 210,
+          "z_index": 2,
+          "box": {
+            "x": 390,
+            "y": 300,
+            "width": 500,
+            "height": 260
+          },
+          "content": {
+            "asset_id": "ast_svg_metric_card",
+            "fit": "contain"
+          }
+        }
+      ],
+      "transition_out": {
+        "type": "cut",
+        "duration_frames": 0
+      }
+    },
+    {
+      "id": "scene_growth",
+      "revision": 2,
+      "start_frame": 450,
+      "duration_frames": 240,
+      "engine": "html-v1",
+      "layers": [
+        {
+          "id": "growth_chart",
+          "type": "svg",
+          "start_frame": 0,
+          "duration_frames": 240,
+          "z_index": 1,
+          "box": {
+            "x": 240,
+            "y": 120,
+            "width": 800,
+            "height": 450
+          },
+          "content": {
+            "asset_id": "ast_svg_growth_chart",
+            "fit": "contain"
+          }
+        }
+      ],
+      "transition_out": {
+        "type": "cut",
+        "duration_frames": 0
+      }
+    },
+    {
+      "id": "scene_summary",
+      "revision": 2,
+      "start_frame": 690,
+      "duration_frames": 210,
+      "engine": "html-v1",
+      "layers": [
+        {
+          "id": "summary_text",
+          "type": "text",
+          "start_frame": 0,
+          "duration_frames": 210,
+          "z_index": 1,
+          "box": {
+            "x": 190,
+            "y": 260,
+            "width": 900,
+            "height": 160
+          },
+          "content": {
+            "text": "Đăng ký trải nghiệm nền tảng ngay hôm nay",
+            "font_id": "font_title",
+            "font_size": 48,
+            "color": "#F8FAFC",
+            "align": "center",
+            "overflow": "error"
+          }
+        }
+      ],
+      "transition_out": {
+        "type": "fade_to_background",
+        "duration_frames": 30
+      }
+    }
+  ],
+  "audio_tracks": [
+    {
+      "id": "narration_vo",
+      "asset_id": "ast_audio_narration_poc02",
+      "start_frame": 0,
+      "duration_frames": 900,
+      "source_in_samples": 0,
+      "gain_db": -2.0,
+      "role": "voice",
+      "fade_in_frames": 5,
+      "fade_out_frames": 15
+    }
+  ],
+  "subtitles": [
+    {
+      "id": "sub_vi",
+      "locale": "vi-VN",
+      "burn_in": true,
+      "style": {
+        "font_id": "font_body",
+        "font_size": 28,
+        "color": "#FFFFFF",
+        "background": "#000000CC",
+        "align": "center",
+        "max_lines": 2,
+        "safe_margin_px": 48
+      },
+      "cues": [
+        {
+          "id": "cue_1",
+          "start_frame": 15,
+          "end_frame": 195,
+          "text": "Làm thế nào để tạo hàng nghìn video tự động mỗi ngày?"
+        },
+        {
+          "id": "cue_2",
+          "start_frame": 225,
+          "end_frame": 435,
+          "text": "Creativanta Video Engine v2: Hiệu năng vượt trội và tối ưu chi phí."
+        },
+        {
+          "id": "cue_3",
+          "start_frame": 465,
+          "end_frame": 675,
+          "text": "Tăng tốc độ kết xuất và tối ưu chi phí hạ tầng CPU hiệu quả."
+        },
+        {
+          "id": "cue_4",
+          "start_frame": 705,
+          "end_frame": 870,
+          "text": "Đăng ký trải nghiệm nền tảng ngay hôm nay."
+        }
+      ]
+    }
+  ]
+}

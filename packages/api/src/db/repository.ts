@@ -72,6 +72,26 @@ export class BodyReferenceValidationError extends Error {
   }
 }
 
+export class IdempotencyConflictError extends Error {
+  public readonly httpStatus = 409;
+  public readonly code = 'IDEMPOTENCY_CONFLICT';
+
+  constructor(message = 'Idempotency key reused with different request payload') {
+    super(message);
+    this.name = 'IdempotencyConflictError';
+  }
+}
+
+export class IdempotencyInProgressError extends Error {
+  public readonly httpStatus = 409;
+  public readonly code = 'IDEMPOTENCY_IN_PROGRESS';
+
+  constructor(message = 'Request with this idempotency key is currently in progress') {
+    super(message);
+    this.name = 'IdempotencyInProgressError';
+  }
+}
+
 export function computeSha256Hex(input: string): string {
   return crypto.createHash('sha256').update(input, 'utf8').digest('hex');
 }
@@ -91,6 +111,7 @@ export interface IssuedApiKeyResult {
 export class TenantRepository {
   private readonly pool: TenantConnectionPool;
   private readonly pepper: string;
+  private readonly tenantImportAllowlists = new Map<string, string[]>();
 
   constructor(pool: TenantConnectionPool, options: { pepper: string }) {
     this.pool = pool;
@@ -103,6 +124,22 @@ export class TenantRepository {
 
   public getPepper(): string {
     return this.pepper;
+  }
+
+  public getTenantImportAllowlist(tenantId: string): string[] {
+    const specific = this.tenantImportAllowlists.get(tenantId);
+    if (specific !== undefined) return specific;
+    const globalDefault = this.tenantImportAllowlists.get('*');
+    if (globalDefault !== undefined) return globalDefault;
+    return [
+      'https://approved-stock.example.invalid/assets/',
+      'approved-stock.example.invalid',
+      'cdn.partner-stock.com',
+    ];
+  }
+
+  public setTenantImportAllowlist(tenantId: string, prefixes: string[]): void {
+    this.tenantImportAllowlists.set(tenantId, prefixes);
   }
 
   // --------------------------------------------------------------------------
@@ -418,6 +455,127 @@ export class TenantRepository {
     });
   }
 
+  public createAssetUpload(
+    tenantId: string,
+    input: {
+      id: string;
+      filename: string;
+      kind: 'image' | 'video' | 'audio' | 'font' | 'svg' | 'subtitle';
+      mimeType: string;
+      bytes: number;
+      sha256: string;
+      rights: Record<string, unknown>;
+      now?: Date;
+    },
+  ): {
+    id: string;
+    status: 'uploading';
+    filename: string;
+    mime_type: string;
+    bytes: number;
+    sha256: string;
+    created_at: string;
+  } {
+    const nowIso = (input.now ?? new Date()).toISOString();
+    const rightsEnvelope = {
+      ...input.rights,
+      _upload: {
+        mime_type: input.mimeType,
+        bytes: input.bytes,
+        sha256: input.sha256,
+      },
+    };
+
+    return this.pool.withTransaction({ tenantId, role: 'cve_api' }, (tx) => {
+      tx.insertScoped('assets', {
+        tenant_id: tenantId,
+        id: input.id,
+        filename: input.filename,
+        kind: input.kind,
+        status: 'uploading',
+        current_version: 1,
+        visibility: 'tenant_private',
+        rights_json: JSON.stringify(rightsEnvelope),
+        created_at: nowIso,
+        updated_at: nowIso,
+        deleted_at: null,
+      });
+
+      return {
+        id: input.id,
+        status: 'uploading',
+        filename: input.filename,
+        mime_type: input.mimeType,
+        bytes: input.bytes,
+        sha256: input.sha256,
+        created_at: nowIso,
+      };
+    });
+  }
+
+  public createAssetImport(
+    tenantId: string,
+    input: {
+      id: string;
+      filename: string;
+      kind: 'image' | 'video' | 'audio' | 'font' | 'svg' | 'subtitle';
+      status?: 'uploading' | 'processing' | 'ready' | 'rejected' | 'deleted';
+      mimeType: string;
+      expectedSha256: string;
+      rights: Record<string, unknown>;
+      now?: Date;
+    },
+  ): {
+    id: string;
+    status: string;
+    filename: string;
+    mime_type: string;
+    bytes: number;
+    sha256: string;
+    created_at: string;
+  } {
+    const nowIso = (input.now ?? new Date()).toISOString();
+    const status = input.status ?? 'processing';
+    const rightsEnvelope = {
+      ...input.rights,
+      _upload: {
+        mime_type: input.mimeType,
+        bytes: 0,
+        sha256: input.expectedSha256,
+      },
+      _import: {
+        expected_sha256: input.expectedSha256,
+        mime_type: input.mimeType,
+      },
+    };
+
+    return this.pool.withTransaction({ tenantId, role: 'cve_api' }, (tx) => {
+      tx.insertScoped('assets', {
+        tenant_id: tenantId,
+        id: input.id,
+        filename: input.filename,
+        kind: input.kind,
+        status,
+        current_version: 1,
+        visibility: 'tenant_private',
+        rights_json: JSON.stringify(rightsEnvelope),
+        created_at: nowIso,
+        updated_at: nowIso,
+        deleted_at: null,
+      });
+
+      return {
+        id: input.id,
+        status,
+        filename: input.filename,
+        mime_type: input.mimeType,
+        bytes: 0,
+        sha256: input.expectedSha256,
+        created_at: nowIso,
+      };
+    });
+  }
+
   public getAsset(
     tenantId: string,
     assetId: string,
@@ -429,6 +587,7 @@ export class TenantRepository {
     mime_type: string;
     bytes: number;
     sha256: string;
+    metadata?: Record<string, unknown>;
     created_at: string;
   } {
     return this.pool.withTransaction({ tenantId, role: 'cve_api' }, (tx) => {
@@ -439,6 +598,7 @@ export class TenantRepository {
         kind: string;
         status: string;
         current_version: number;
+        rights_json: string;
         created_at: string;
       }>('assets', 'id = ?', [assetId]);
 
@@ -451,14 +611,47 @@ export class TenantRepository {
         original_sha256: string;
         mime_type: string;
         bytes: number;
+        probe_metadata: string | null;
       }>(
         'asset_versions',
         'tenant_id = ? AND asset_id = ? AND version = ?',
         [asset.tenant_id, asset.id, asset.current_version],
       );
       const ver = versions[0];
-      if (!ver) {
-        throw new ResourceNotFoundError(`Asset version for ${assetId} not found`);
+
+      let mimeType = 'application/octet-stream';
+      let bytes = 0;
+      let sha256 = '';
+      let metadata: Record<string, unknown> | undefined;
+
+      if (ver) {
+        mimeType = ver.mime_type;
+        bytes = ver.bytes;
+        sha256 = ver.original_sha256;
+        if (ver.probe_metadata) {
+          try {
+            metadata = JSON.parse(ver.probe_metadata);
+          } catch {
+            // ignore
+          }
+        }
+      } else {
+        try {
+          const parsedRights = JSON.parse(asset.rights_json) as {
+            _upload?: { mime_type?: string; bytes?: number; sha256?: string };
+            _probe_metadata?: Record<string, unknown>;
+          };
+          if (parsedRights._upload) {
+            mimeType = parsedRights._upload.mime_type ?? mimeType;
+            bytes = parsedRights._upload.bytes ?? bytes;
+            sha256 = parsedRights._upload.sha256 ?? sha256;
+          }
+          if (parsedRights._probe_metadata) {
+            metadata = parsedRights._probe_metadata;
+          }
+        } catch {
+          // ignore
+        }
       }
 
       return {
@@ -466,10 +659,123 @@ export class TenantRepository {
         status: asset.status,
         filename: asset.filename,
         kind: asset.kind,
-        mime_type: ver.mime_type,
-        bytes: ver.bytes,
-        sha256: ver.original_sha256,
+        mime_type: mimeType,
+        bytes,
+        sha256,
+        metadata,
         created_at: asset.created_at,
+      };
+    });
+  }
+
+  public updateAssetStatus(
+    tenantId: string,
+    assetId: string,
+    input: {
+      status: 'uploading' | 'processing' | 'ready' | 'rejected' | 'deleted';
+      probeMetadata?: Record<string, unknown>;
+      normalizedSha256?: string;
+      bytes?: number;
+      mimeType?: string;
+      now?: Date;
+    },
+  ): {
+    id: string;
+    status: string;
+    filename: string;
+    kind: string;
+    mime_type: string;
+    bytes: number;
+    sha256: string;
+    metadata?: Record<string, unknown>;
+    created_at: string;
+  } {
+    const nowIso = (input.now ?? new Date()).toISOString();
+
+    return this.pool.withTransaction({ tenantId, role: 'cve_api' }, (tx) => {
+      const existing = tx.selectScoped<{
+        tenant_id: string;
+        id: string;
+        filename: string;
+        kind: string;
+        status: string;
+        current_version: number;
+        rights_json: string;
+        created_at: string;
+      }>('assets', 'id = ?', [assetId])[0];
+
+      if (!existing) {
+        throw new ResourceNotFoundError(`Asset ${assetId} not found`);
+      }
+
+      let updatedRights = existing.rights_json;
+      let uploadInfo: { mime_type?: string; bytes?: number; sha256?: string } = {};
+      try {
+        const parsed = JSON.parse(existing.rights_json);
+        if (parsed._upload) uploadInfo = parsed._upload;
+        if (input.probeMetadata) {
+          parsed._probe_metadata = input.probeMetadata;
+          updatedRights = JSON.stringify(parsed);
+        }
+      } catch {
+        // ignore
+      }
+
+      tx.updateScoped(
+        'assets',
+        {
+          status: input.status,
+          rights_json: updatedRights,
+          updated_at: nowIso,
+          deleted_at: input.status === 'deleted' ? nowIso : null,
+        },
+        'id = ?',
+        [assetId],
+      );
+
+      const ver = tx.selectScoped<{
+        original_sha256: string;
+        mime_type: string;
+        bytes: number;
+        storage_key: string;
+      }>(
+        'asset_versions',
+        'tenant_id = ? AND asset_id = ? AND version = ?',
+        [existing.tenant_id, existing.id, existing.current_version],
+      )[0];
+
+      const mimeType = input.mimeType ?? ver?.mime_type ?? uploadInfo.mime_type ?? 'application/octet-stream';
+      const candidateBytes = input.bytes ?? ver?.bytes ?? uploadInfo.bytes;
+      const finalBytes = typeof candidateBytes === 'number' && candidateBytes > 0 ? candidateBytes : 1;
+      const sha256 = input.normalizedSha256 ?? ver?.original_sha256 ?? uploadInfo.sha256 ?? '';
+      const storageKey = `tenant/${tenantId}/asset/${existing.id}/${existing.current_version}/${existing.filename}`;
+
+      // Insert immutable version row on ready if not yet inserted
+      if (!ver && input.status === 'ready') {
+        tx.insertScoped('asset_versions', {
+          tenant_id: tenantId,
+          asset_id: existing.id,
+          version: existing.current_version,
+          original_sha256: sha256 || '0'.repeat(64),
+          normalized_sha256: input.normalizedSha256 ?? (sha256 || '0'.repeat(64)),
+          mime_type: mimeType,
+          bytes: finalBytes,
+          probe_metadata: input.probeMetadata ? JSON.stringify(input.probeMetadata) : null,
+          storage_key: storageKey,
+          created_at: nowIso,
+        });
+      }
+
+      return {
+        id: existing.id,
+        status: input.status,
+        filename: existing.filename,
+        kind: existing.kind,
+        mime_type: mimeType,
+        bytes: finalBytes,
+        sha256,
+        metadata: input.probeMetadata,
+        created_at: existing.created_at,
       };
     });
   }
@@ -2032,5 +2338,139 @@ export class TenantRepository {
         currency: 'USD',
       };
     });
+  }
+
+  // --------------------------------------------------------------------------
+  // 10. Idempotency Management (Task P3-02 / docs/API.md lines 9-13)
+  // --------------------------------------------------------------------------
+
+  public claimIdempotency(
+    tenantId: string,
+    input: {
+      method: 'POST';
+      normalizedPath: string;
+      key: string;
+      requestHash: string;
+      now?: Date;
+    },
+  ): { replayed: false } | { replayed: true; httpStatus: number; responseBody: string; resourceId?: string } {
+    const now = input.now ?? new Date();
+    const nowIso = now.toISOString();
+    const expiresAt = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000).toISOString(); // 7 days
+
+    return this.pool.withTransaction({ tenantId, role: 'cve_api' }, (tx) => {
+      const records = tx.selectScoped<{
+        tenant_id: string;
+        method: string;
+        normalized_path: string;
+        key: string;
+        request_hash: string;
+        state: 'in_progress' | 'completed';
+        http_status: number | null;
+        response_body_encrypted: string | null;
+        resource_id: string | null;
+        expires_at: string;
+      }>(
+        'idempotency_records',
+        'method = ? AND normalized_path = ? AND key = ?',
+        [input.method, input.normalizedPath, input.key],
+      );
+
+      const record = records[0];
+      if (record) {
+        // If expired, delete and allow new operation
+        if (Date.parse(record.expires_at) <= now.getTime()) {
+          tx.deleteScoped('idempotency_records', 'method = ? AND normalized_path = ? AND key = ?', [
+            input.method,
+            input.normalizedPath,
+            input.key,
+          ]);
+        } else if (record.state === 'completed') {
+          if (record.request_hash !== input.requestHash) {
+            throw new IdempotencyConflictError('Idempotency key reused with different request payload');
+          }
+          return {
+            replayed: true,
+            httpStatus: record.http_status ?? 200,
+            responseBody: record.response_body_encrypted ?? '{}',
+            resourceId: record.resource_id ?? undefined,
+          };
+        } else if (record.state === 'in_progress') {
+          if (record.request_hash !== input.requestHash) {
+            throw new IdempotencyConflictError('Idempotency key reused with different request payload');
+          }
+          throw new IdempotencyInProgressError('Request with this idempotency key is currently in progress');
+        }
+      }
+
+      // Insert in_progress record
+      tx.insertScoped('idempotency_records', {
+        tenant_id: tenantId,
+        method: input.method,
+        normalized_path: input.normalizedPath,
+        key: input.key,
+        request_hash: input.requestHash,
+        state: 'in_progress',
+        http_status: null,
+        response_body_encrypted: null,
+        resource_id: null,
+        secret_redacted: 0,
+        created_at: nowIso,
+        expires_at: expiresAt,
+      });
+
+      return { replayed: false };
+    });
+  }
+
+  public completeIdempotency(
+    tenantId: string,
+    input: {
+      method: 'POST';
+      normalizedPath: string;
+      key: string;
+      httpStatus: number;
+      responseBody: unknown;
+      resourceId?: string;
+    },
+  ): void {
+    this.pool.withTransaction({ tenantId, role: 'cve_api' }, (tx) => {
+      tx.updateScoped(
+        'idempotency_records',
+        {
+          state: 'completed',
+          http_status: input.httpStatus,
+          response_body_encrypted:
+            typeof input.responseBody === 'string'
+              ? input.responseBody
+              : JSON.stringify(input.responseBody),
+          resource_id: input.resourceId ?? null,
+        },
+        'method = ? AND normalized_path = ? AND key = ?',
+        [input.method, input.normalizedPath, input.key],
+      );
+    });
+  }
+
+  public releaseIdempotency(
+    tenantId: string,
+    input: {
+      method: 'POST';
+      normalizedPath: string;
+      key: string;
+    },
+  ): void {
+    try {
+      this.pool.withTransaction({ tenantId, role: 'cve_api' }, (tx) => {
+        // Only release if it was still in_progress
+        tx.deleteScoped(
+          'idempotency_records',
+          "method = ? AND normalized_path = ? AND key = ? AND state = 'in_progress'",
+          [input.method, input.normalizedPath, input.key],
+        );
+      });
+    } catch {
+      // ignore
+    }
   }
 }
