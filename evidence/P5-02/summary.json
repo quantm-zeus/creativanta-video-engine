@@ -1,0 +1,201 @@
+{
+  "$schema": "creativanta.video-engine.p5-02-summary.v1",
+  "task_id": "P5-02",
+  "stream": "D+C",
+  "phase": "P5",
+  "base_commit": "de614f462d0070069fb55cdde899572d907f543d",
+  "tested_commit": "a09a644b125ddf4ec385f6c37946612048634435",
+  "acceptance_ref": "docs/IMPLEMENTATION_PLAN.md: P5-02",
+  "tts_configuration": {
+    "default_flag": "CVE_TTS_PROVIDER=disabled",
+    "upload_audio_baseline": true,
+    "fallback_enabled": true
+  },
+  "subsystem_components": {
+    "tts_interface": {
+      "package": "@creativanta/sdk",
+      "export": "TtsServiceImpl",
+      "canonical_format": "wav-48k-pcm16",
+      "sample_rate": 48000,
+      "channels": 2,
+      "bit_depth": 16,
+      "locales_supported": ["vi-VN", "en-US"]
+    },
+    "terms_review_registry": {
+      "package": "@creativanta/sdk",
+      "export": "TermsReviewRegistry",
+      "enforce_before_activation": true,
+      "rejection_error_code": "UNREVIEWED_PROVIDER_TERMS",
+      "reviewed_voices": [
+        {
+          "review_id": "rev_vi_hoaimy_001",
+          "voice_id": "vi-VN-HoaiMy-Neural",
+          "provider_id": "cve-offline-tts",
+          "model_id": "cve-vi-phoneme-v1",
+          "locale": "vi-VN",
+          "gender": "female",
+          "license_basis": "open_weights_permissive",
+          "commercial_terms_accepted": true,
+          "voice_consent_verified": true,
+          "impersonation_prohibited": true,
+          "status": "active"
+        },
+        {
+          "review_id": "rev_vi_namminh_001",
+          "voice_id": "vi-VN-NamMinh-Neural",
+          "provider_id": "cve-offline-tts",
+          "model_id": "cve-vi-phoneme-v1",
+          "locale": "vi-VN",
+          "gender": "male",
+          "license_basis": "open_weights_permissive",
+          "commercial_terms_accepted": true,
+          "voice_consent_verified": true,
+          "impersonation_prohibited": true,
+          "status": "active"
+        },
+        {
+          "review_id": "rev_en_jenny_001",
+          "voice_id": "en-US-Jenny-Neural",
+          "provider_id": "cve-offline-tts",
+          "model_id": "cve-en-phoneme-v1",
+          "locale": "en-US",
+          "gender": "female",
+          "license_basis": "commercial_licensed",
+          "commercial_terms_accepted": true,
+          "voice_consent_verified": true,
+          "impersonation_prohibited": true,
+          "status": "active"
+        }
+      ]
+    },
+    "budget_and_timeout": {
+      "package": "@creativanta/sdk",
+      "export": "TtsBudgetLimiter",
+      "max_characters_per_request": 5000,
+      "max_characters_per_tenant_month": 100000,
+      "default_timeout_ms": 5000,
+      "hard_max_timeout_ms": 15000,
+      "cost_per_1k_chars_usd": 0.015,
+      "budget_error_code": "TTS_BUDGET_EXCEEDED",
+      "timeout_error_code": "TTS_TIMEOUT"
+    },
+    "content_addressable_cache": {
+      "package": "@creativanta/sdk",
+      "export": "MemoryTtsCache / FileTtsCache",
+      "key_algorithm": "SHA-256(provider::model::voice::locale::format::rate::pitch::vol::fps::textSha256)",
+      "nfc_normalized": true,
+      "from_cache_flag": true
+    },
+    "asset_provenance": {
+      "package": "@creativanta/sdk",
+      "mandatory_fields": [
+        "assetId",
+        "provider",
+        "model",
+        "modelVersion",
+        "voiceId",
+        "voiceName",
+        "locale",
+        "inputTextSha256",
+        "characterCount",
+        "wordCount",
+        "audioSha256",
+        "audioByteLength",
+        "durationSeconds",
+        "durationFrames",
+        "sampleRate",
+        "channels",
+        "termsReviewStatus",
+        "termsReviewId",
+        "termsReviewedBy",
+        "termsReviewedAt",
+        "voiceConsentBasis",
+        "impersonationProhibited",
+        "synthesizedAt",
+        "billableCharacters",
+        "estimatedCostUsd"
+      ]
+    },
+    "upload_audio_fallback": {
+      "package": "@creativanta/sdk",
+      "export": "AudioFallbackResolver",
+      "fallback_reasons": [
+        "TTS_DISABLED",
+        "SYNTHESIS_FAILED",
+        "BUDGET_EXCEEDED",
+        "TIMEOUT",
+        "UNREVIEWED_TERMS",
+        "TEXT_EMPTY"
+      ]
+    },
+    "template_pack_integration": {
+      "package": "@creativanta/templates",
+      "templates": [
+        "tpl_narrated_explainer_v1",
+        "tpl_retail_promo_v1"
+      ]
+    }
+  },
+  "vietnamese_quality_samples": [
+    {
+      "fixture_id": "sample_vi_promo_01",
+      "category": "eCommerce Promo",
+      "voice_id": "vi-VN-HoaiMy-Neural",
+      "filename": "vi-vn-promo.wav",
+      "sha256": "56f0688708aa816328ecedd14339706f42483ee7514d1b89008c2ca887e38970",
+      "bytes": 1352108,
+      "sample_rate": 48000,
+      "channels": 2,
+      "bit_depth": 16,
+      "duration_seconds": 7.042,
+      "duration_frames_30fps": 212,
+      "peak_dbfs": -5.43,
+      "rms_dbfs": -14.01,
+      "zero_clipping": true,
+      "compliant_peak_headroom": true,
+      "passed": true
+    },
+    {
+      "fixture_id": "sample_vi_explainer_01",
+      "category": "Technical Explainer",
+      "voice_id": "vi-VN-NamMinh-Neural",
+      "filename": "vi-vn-explainer.wav",
+      "sha256": "bd387f262107c808fa8f088a47878f0447114bf1c851982f75eee2ffe20839db",
+      "bytes": 1742636,
+      "sample_rate": 48000,
+      "channels": 2,
+      "bit_depth": 16,
+      "duration_seconds": 9.076,
+      "duration_frames_30fps": 273,
+      "peak_dbfs": -5.47,
+      "rms_dbfs": -13.7,
+      "zero_clipping": true,
+      "compliant_peak_headroom": true,
+      "passed": true
+    },
+    {
+      "fixture_id": "sample_vi_tone_stress_01",
+      "category": "Phonetic Diacritic & Tone Stress",
+      "voice_id": "vi-VN-HoaiMy-Neural",
+      "filename": "vi-vn-tone-stress.wav",
+      "sha256": "1a6a3e663876b5bd22adaf5540025ed1939735b2a2eaf1b96fb648375fd4c87d",
+      "bytes": 1509548,
+      "sample_rate": 48000,
+      "channels": 2,
+      "bit_depth": 16,
+      "duration_seconds": 7.862,
+      "duration_frames_30fps": 236,
+      "peak_dbfs": -5.43,
+      "rms_dbfs": -13.9,
+      "zero_clipping": true,
+      "compliant_peak_headroom": true,
+      "passed": true
+    }
+  ],
+  "test_metrics": {
+    "sdk_tests_passed": 25,
+    "template_tests_passed": 3,
+    "total_tests_passed": 28,
+    "total_tests_failed": 0
+  }
+}
