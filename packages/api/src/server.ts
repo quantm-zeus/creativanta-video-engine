@@ -59,6 +59,20 @@ import {
   SsrSecurityError,
   ValidatedImportUrlResult,
 } from './assets/ssrf-guard.js';
+import { PoolContextSecurityError } from './db/tenant-pool.js';
+import { TokenBucketRateLimiter } from './admission/rate-limiter.js';
+import {
+  AdmissionServiceUnavailableError,
+  AssetNotReadyError,
+  JobTerminalError,
+  QuotaExceededError,
+  RateLimitedError,
+  TenantPolicyLimits,
+  UnsupportedCapabilityError,
+  WebhookNotVerifiedError,
+  validatePreviewJobRequest,
+  validateRenderJobRequest,
+} from './admission/job-admission.js';
 
 export interface CreateServerOptions {
   config: CveEnvConfig;
@@ -66,20 +80,53 @@ export interface CreateServerOptions {
   requireAuthOnCapabilities?: boolean;
   quarantineStore?: QuarantineStore;
   importConnector?: ImportConnector;
+  rateLimiter?: TokenBucketRateLimiter;
+  enforceGlobalRateLimit?: boolean;
+  onAfterIdempotencyClaim?: (ctx: {
+    tenantId: string;
+    normalizedPath: string;
+    key: string;
+  }) => Promise<void> | void;
+  onBeforeJobCommit?: (ctx: {
+    tenantId: string;
+    jobId: string;
+    kind: 'render' | 'preview';
+  }) => void;
+  onJobAdmissionCommitted?: (ctx: {
+    tenantId: string;
+    jobId: string;
+    kind: 'render' | 'preview';
+    committedAtMs: number;
+  }) => void;
 }
 
 const IDEMPOTENCY_KEY_REGEX = /^[A-Za-z0-9._:-]{1,128}$/;
 const MAX_JSON_BODY_BYTES = 1048576; // 1 MiB per docs/PRD.md
 
-export function buildCapabilities(config: CveEnvConfig): CapabilitiesResponse {
+export function normalizeIdempotencyPath(rawPathname: string): string {
+  if (!rawPathname || rawPathname === '/') {
+    return '/';
+  }
+  const stripped = rawPathname.replace(/\/+$/, '');
+  return stripped.length > 0 ? stripped : '/';
+}
+
+export function buildCapabilities(
+  config: CveEnvConfig,
+  tenantLimits?: TenantPolicyLimits,
+): CapabilitiesResponse {
+  const customCodeEnabled =
+    tenantLimits?.custom_code_enabled !== undefined
+      ? Boolean(config.CVE_CUSTOM_CODE_ENABLED && tenantLimits.custom_code_enabled)
+      : config.CVE_CUSTOM_CODE_ENABLED;
   return {
     api_version: '1.0.0',
     scene_schema_versions: ['1.0'],
     engines: {
       'html-v1': true,
-      'canvas-v1': true,
-      'svg-v1': true,
-      'custom-html-v1': config.CVE_CUSTOM_CODE_ENABLED,
+      'canvas-v1': tenantLimits?.canvas_engine_enabled ?? true,
+      'svg-v1': tenantLimits?.svg_engine_enabled ?? true,
+      'custom-html-v1': customCodeEnabled,
     },
     profiles: {
       'mp4-720p-v1': {
@@ -123,7 +170,7 @@ export function buildCapabilities(config: CveEnvConfig): CapabilitiesResponse {
     },
     features: {
       remote_import: config.CVE_REMOTE_IMPORT_ENABLED,
-      custom_code: config.CVE_CUSTOM_CODE_ENABLED,
+      custom_code: customCodeEnabled,
       authoring_adapter: config.CVE_AUTHORING_PROVIDER !== 'disabled',
       tts: config.CVE_TTS_PROVIDER !== 'disabled',
     },
@@ -234,10 +281,16 @@ export function createServer({
   requireAuthOnCapabilities = false,
   quarantineStore: providedStore,
   importConnector: providedConnector,
+  rateLimiter: providedRateLimiter,
+  enforceGlobalRateLimit = false,
+  onAfterIdempotencyClaim,
+  onBeforeJobCommit,
+  onJobAdmissionCommitted,
 }: CreateServerOptions): http.Server {
   const startTime = Date.now();
   const quarantineStore = providedStore ?? new QuarantineStore();
   const importConnector = providedConnector ?? new ImportConnector({ quarantineStore });
+  const rateLimiter = providedRateLimiter ?? new TokenBucketRateLimiter();
 
   const server = http.createServer(async (req, res) => {
     const requestId = `req_${crypto.randomBytes(6).toString('hex')}`;
@@ -255,7 +308,7 @@ export function createServer({
       return;
     }
 
-    const pathname = parsedUrl.pathname;
+    const pathname = normalizeIdempotencyPath(parsedUrl.pathname);
     const method = (req.method ?? 'GET').toUpperCase();
 
     // Liveness probe
@@ -311,10 +364,46 @@ export function createServer({
       return;
     }
 
+    const enforceRateLimitForTenant = (tenantId: string, keyId: string): boolean => {
+      if (!repository) return true;
+      const limits = repository.getTenantPolicyLimits(tenantId);
+      const decision = rateLimiter.consume({
+        tenantId,
+        keyId,
+        tenantLimits: {
+          refillPerSecond: limits.token_bucket_refill_per_second,
+          burstCapacity: limits.token_bucket_burst_capacity,
+        },
+        keyLimits: {
+          refillPerSecond:
+            limits.api_key_token_bucket_refill_per_second ??
+            limits.token_bucket_refill_per_second,
+          burstCapacity:
+            limits.api_key_token_bucket_burst_capacity ??
+            limits.token_bucket_burst_capacity,
+        },
+      });
+      if (!decision.allowed) {
+        res.setHeader('Retry-After', String(decision.retryAfterSeconds));
+        sendError(
+          res,
+          429,
+          'RATE_LIMITED',
+          `Request rate limit exceeded (${decision.limitedBy ?? 'tenant'} bucket exhausted); retry after ${decision.retryAfterSeconds}s`,
+          requestId,
+          true,
+        );
+        return false;
+      }
+      return true;
+    };
+
     const authenticateAndAuthorize = (
       requiredScopes: readonly ApiScope[],
+      options: { enforceRateLimit?: boolean } = {},
     ): { tenantId: string; keyId: string; scopes: ApiScope[] } | null => {
       if (!repository) {
+        res.setHeader('Retry-After', '2');
         sendError(
           res,
           503,
@@ -360,6 +449,12 @@ export function createServer({
         return null;
       }
 
+      if (options.enforceRateLimit || enforceGlobalRateLimit) {
+        if (!enforceRateLimitForTenant(verification.tenantId, verification.keyId!)) {
+          return null;
+        }
+      }
+
       return {
         tenantId: verification.tenantId,
         keyId: verification.keyId!,
@@ -395,13 +490,15 @@ export function createServer({
 
     // Capabilities endpoint
     if (pathname === '/v1/capabilities' && method === 'GET') {
+      let tenantLimits: TenantPolicyLimits | undefined;
       if (requireAuthOnCapabilities || req.headers['authorization'] !== undefined) {
         if (repository) {
           const auth = authenticateAndAuthorize(['jobs:read']);
           if (!auth) return;
+          tenantLimits = repository.getTenantPolicyLimits(auth.tenantId);
         }
       }
-      const caps = buildCapabilities(config);
+      const caps = buildCapabilities(config, tenantLimits);
       res.writeHead(200);
       res.end(JSON.stringify(caps));
       return;
@@ -581,6 +678,19 @@ export function createServer({
 
     // Tenant-scoped v1 endpoints require repository
     if (pathname.startsWith('/v1/') && repository) {
+      let activeIdemClaim: {
+        tenantId: string;
+        normalizedPath: string;
+        key: string;
+      } | null = null;
+
+      const computeCanonicalRequestHash = (data: Record<string, unknown>): string => {
+        return crypto
+          .createHash('sha256')
+          .update(canonicalizeJson(data), 'utf8')
+          .digest('hex');
+      };
+
       try {
         // 1. GET /v1/templates
         if (pathname === '/v1/templates' && method === 'GET') {
@@ -603,7 +713,8 @@ export function createServer({
         if (pathname === '/v1/templates' && method === 'POST') {
           const auth = authenticateAndAuthorize(['templates:write']);
           if (!auth) return;
-          if (!verifyIdempotencyHeader()) return;
+          const idemKey = verifyIdempotencyHeader();
+          if (!idemKey) return;
           const bodyRes = await readJsonBody(req);
           if (!bodyRes.ok) {
             sendError(res, bodyRes.status, bodyRes.code, bodyRes.message, requestId);
@@ -615,6 +726,25 @@ export function createServer({
             ]);
             return;
           }
+          const reqHash = computeCanonicalRequestHash(bodyRes.data);
+          const idem = repository.claimIdempotency(auth.tenantId, {
+            method: 'POST',
+            normalizedPath: '/v1/templates',
+            key: idemKey,
+            requestHash: reqHash,
+          });
+          if (idem.replayed) {
+            res.setHeader('Idempotency-Replayed', 'true');
+            res.writeHead(idem.httpStatus);
+            res.end(idem.responseBody);
+            return;
+          }
+          activeIdemClaim = {
+            tenantId: auth.tenantId,
+            normalizedPath: '/v1/templates',
+            key: idemKey,
+          };
+
           const id =
             typeof bodyRes.data['id'] === 'string' && bodyRes.data['id'].length > 0
               ? bodyRes.data['id']
@@ -628,6 +758,17 @@ export function createServer({
             supported_locales: (bodyRes.data['supported_locales'] as string[]) ?? [],
             source_template: bodyRes.data['source_template'] as { id: string; revision: number } | undefined,
           });
+
+          repository.completeIdempotency(auth.tenantId, {
+            method: 'POST',
+            normalizedPath: '/v1/templates',
+            key: idemKey,
+            httpStatus: 201,
+            responseBody: created,
+            resourceId: created.id,
+          });
+          activeIdemClaim = null;
+
           res.writeHead(201);
           res.end(JSON.stringify(created));
           return;
@@ -653,7 +794,8 @@ export function createServer({
         if (tplCreateRevMatch && method === 'POST') {
           const auth = authenticateAndAuthorize(['templates:write']);
           if (!auth) return;
-          if (!verifyIdempotencyHeader()) return;
+          const idemKey = verifyIdempotencyHeader();
+          if (!idemKey) return;
           const bodyRes = await readJsonBody(req);
           if (!bodyRes.ok) {
             sendError(res, bodyRes.status, bodyRes.code, bodyRes.message, requestId);
@@ -665,6 +807,22 @@ export function createServer({
             ]);
             return;
           }
+          const normalizedPath = `/v1/templates/${tplCreateRevMatch[1]!}/revisions`;
+          const reqHash = computeCanonicalRequestHash(bodyRes.data);
+          const idem = repository.claimIdempotency(auth.tenantId, {
+            method: 'POST',
+            normalizedPath,
+            key: idemKey,
+            requestHash: reqHash,
+          });
+          if (idem.replayed) {
+            res.setHeader('Idempotency-Replayed', 'true');
+            res.writeHead(idem.httpStatus);
+            res.end(idem.responseBody);
+            return;
+          }
+          activeIdemClaim = { tenantId: auth.tenantId, normalizedPath, key: idemKey };
+
           const created = repository.createTemplateRevision(auth.tenantId, tplCreateRevMatch[1]!, {
             base_revision: Number(bodyRes.data['base_revision'] ?? 0),
             change_note: bodyRes.data['change_note'] ? String(bodyRes.data['change_note']) : undefined,
@@ -674,6 +832,17 @@ export function createServer({
             composition_spec: (bodyRes.data['composition_spec'] as Record<string, unknown>) ?? {},
             supported_locales: (bodyRes.data['supported_locales'] as string[]) ?? [],
           });
+
+          repository.completeIdempotency(auth.tenantId, {
+            method: 'POST',
+            normalizedPath,
+            key: idemKey,
+            httpStatus: 201,
+            responseBody: created,
+            resourceId: created.id,
+          });
+          activeIdemClaim = null;
+
           res.writeHead(201);
           res.end(JSON.stringify(created));
           return;
@@ -684,7 +853,8 @@ export function createServer({
         if (tplInstantiateMatch && method === 'POST') {
           const auth = authenticateAndAuthorize(['compositions:write', 'templates:read']);
           if (!auth) return;
-          if (!verifyIdempotencyHeader()) return;
+          const idemKey = verifyIdempotencyHeader();
+          if (!idemKey) return;
           const bodyRes = await readJsonBody(req);
           if (!bodyRes.ok) {
             sendError(res, bodyRes.status, bodyRes.code, bodyRes.message, requestId);
@@ -698,6 +868,22 @@ export function createServer({
           }
 
           const templateId = tplInstantiateMatch[1]!;
+          const normalizedPath = `/v1/templates/${templateId}/instantiate`;
+          const reqHash = computeCanonicalRequestHash(bodyRes.data);
+          const idem = repository.claimIdempotency(auth.tenantId, {
+            method: 'POST',
+            normalizedPath,
+            key: idemKey,
+            requestHash: reqHash,
+          });
+          if (idem.replayed) {
+            res.setHeader('Idempotency-Replayed', 'true');
+            res.writeHead(idem.httpStatus);
+            res.end(idem.responseBody);
+            return;
+          }
+          activeIdemClaim = { tenantId: auth.tenantId, normalizedPath, key: idemKey };
+
           const templateRevision = Number(bodyRes.data['template_revision'] ?? 0);
           const name = String(bodyRes.data['name'] ?? '');
           const variables = (bodyRes.data['variables'] as Record<string, unknown> | undefined) ?? {};
@@ -710,6 +896,16 @@ export function createServer({
             locale,
           });
 
+          repository.completeIdempotency(auth.tenantId, {
+            method: 'POST',
+            normalizedPath,
+            key: idemKey,
+            httpStatus: 201,
+            responseBody: instantiated,
+            resourceId: instantiated.id,
+          });
+          activeIdemClaim = null;
+
           res.writeHead(201);
           res.end(JSON.stringify(instantiated));
           return;
@@ -720,7 +916,8 @@ export function createServer({
         if (tplForkMatch && method === 'POST') {
           const auth = authenticateAndAuthorize(['templates:write', 'templates:read']);
           if (!auth) return;
-          if (!verifyIdempotencyHeader()) return;
+          const idemKey = verifyIdempotencyHeader();
+          if (!idemKey) return;
           const bodyRes = await readJsonBody(req);
           if (!bodyRes.ok) {
             sendError(res, bodyRes.status, bodyRes.code, bodyRes.message, requestId);
@@ -734,11 +931,37 @@ export function createServer({
           }
 
           const templateId = tplForkMatch[1]!;
+          const normalizedPath = `/v1/templates/${templateId}/fork`;
+          const reqHash = computeCanonicalRequestHash(bodyRes.data);
+          const idem = repository.claimIdempotency(auth.tenantId, {
+            method: 'POST',
+            normalizedPath,
+            key: idemKey,
+            requestHash: reqHash,
+          });
+          if (idem.replayed) {
+            res.setHeader('Idempotency-Replayed', 'true');
+            res.writeHead(idem.httpStatus);
+            res.end(idem.responseBody);
+            return;
+          }
+          activeIdemClaim = { tenantId: auth.tenantId, normalizedPath, key: idemKey };
+
           const forked = repository.forkTemplate(auth.tenantId, templateId, {
             name: bodyRes.data['name'] ? String(bodyRes.data['name']) : undefined,
             new_id: bodyRes.data['id'] ? String(bodyRes.data['id']) : undefined,
             source_revision: bodyRes.data['revision'] ? Number(bodyRes.data['revision']) : undefined,
           });
+
+          repository.completeIdempotency(auth.tenantId, {
+            method: 'POST',
+            normalizedPath,
+            key: idemKey,
+            httpStatus: 201,
+            responseBody: forked,
+            resourceId: forked.id,
+          });
+          activeIdemClaim = null;
 
           res.writeHead(201);
           res.end(JSON.stringify(forked));
@@ -1446,7 +1669,8 @@ export function createServer({
         if (pathname === '/v1/compositions' && method === 'POST') {
           const auth = authenticateAndAuthorize(['compositions:write']);
           if (!auth) return;
-          if (!verifyIdempotencyHeader()) return;
+          const idemKey = verifyIdempotencyHeader();
+          if (!idemKey) return;
           const bodyRes = await readJsonBody(req);
           if (!bodyRes.ok) {
             sendError(res, bodyRes.status, bodyRes.code, bodyRes.message, requestId);
@@ -1458,6 +1682,25 @@ export function createServer({
             ]);
             return;
           }
+          const reqHash = computeCanonicalRequestHash(bodyRes.data);
+          const idem = repository.claimIdempotency(auth.tenantId, {
+            method: 'POST',
+            normalizedPath: '/v1/compositions',
+            key: idemKey,
+            requestHash: reqHash,
+          });
+          if (idem.replayed) {
+            res.setHeader('Idempotency-Replayed', 'true');
+            res.writeHead(idem.httpStatus);
+            res.end(idem.responseBody);
+            return;
+          }
+          activeIdemClaim = {
+            tenantId: auth.tenantId,
+            normalizedPath: '/v1/compositions',
+            key: idemKey,
+          };
+
           const compId =
             typeof bodyRes.data['id'] === 'string' && bodyRes.data['id'].length > 0
               ? bodyRes.data['id']
@@ -1467,15 +1710,25 @@ export function createServer({
             name: String(bodyRes.data['name'] ?? 'Composition'),
             spec: bodyRes.data['spec'] as CompositionSpec,
           });
+          const responsePayload = {
+            id: created.id,
+            revision: created.revision,
+            name: created.name,
+            created_at: created.created_at,
+          };
+
+          repository.completeIdempotency(auth.tenantId, {
+            method: 'POST',
+            normalizedPath: '/v1/compositions',
+            key: idemKey,
+            httpStatus: 201,
+            responseBody: responsePayload,
+            resourceId: created.id,
+          });
+          activeIdemClaim = null;
+
           res.writeHead(201);
-          res.end(
-            JSON.stringify({
-              id: created.id,
-              revision: created.revision,
-              name: created.name,
-              created_at: created.created_at,
-            }),
-          );
+          res.end(JSON.stringify(responsePayload));
           return;
         }
 
@@ -1511,31 +1764,8 @@ export function createServer({
         if (compCreateRevMatch && method === 'POST') {
           const auth = authenticateAndAuthorize(['compositions:write']);
           if (!auth) return;
-          if (!verifyIdempotencyHeader()) return;
-          const bodyRes = await readJsonBody(req);
-          if (!bodyRes.ok) {
-            sendError(res, bodyRes.status, bodyRes.code, bodyRes.message, requestId);
-            return;
-          }
-          const created = repository.createCompositionRevision(
-            auth.tenantId,
-            compCreateRevMatch[1]!,
-            {
-              base_revision: Number(bodyRes.data['base_revision'] ?? 1),
-              change_note: bodyRes.data['change_note'] ? String(bodyRes.data['change_note']) : undefined,
-              spec: bodyRes.data['spec'] as CompositionSpec,
-            },
-          );
-          res.writeHead(201);
-          res.end(JSON.stringify(created));
-          return;
-        }
-
-        // 10. POST /v1/render-jobs
-        if (pathname === '/v1/render-jobs' && method === 'POST') {
-          const auth = authenticateAndAuthorize(['jobs:write']);
-          if (!auth) return;
-          if (!verifyIdempotencyHeader()) return;
+          const idemKey = verifyIdempotencyHeader();
+          if (!idemKey) return;
           const bodyRes = await readJsonBody(req);
           if (!bodyRes.ok) {
             sendError(res, bodyRes.status, bodyRes.code, bodyRes.message, requestId);
@@ -1547,25 +1777,214 @@ export function createServer({
             ]);
             return;
           }
-          const jobId = `job_${crypto.randomBytes(6).toString('hex')}`;
-          const job = repository.createJob(auth.tenantId, {
-            id: jobId,
-            kind: 'render',
-            compositionId: String(bodyRes.data['composition_id'] ?? ''),
-            compositionRevision: Number(bodyRes.data['revision'] ?? 1),
-            profile: (bodyRes.data['profile'] as 'mp4-720p-v1') ?? 'mp4-720p-v1',
-            webhookEndpointId: bodyRes.data['webhook_endpoint_id']
-              ? String(bodyRes.data['webhook_endpoint_id'])
-              : undefined,
-            clientReference: bodyRes.data['client_reference']
-              ? String(bodyRes.data['client_reference'])
-              : undefined,
-            metadata: bodyRes.data['metadata'] as Record<string, string> | undefined,
+          const normalizedPath = `/v1/compositions/${compCreateRevMatch[1]!}/revisions`;
+          const reqHash = computeCanonicalRequestHash(bodyRes.data);
+          const idem = repository.claimIdempotency(auth.tenantId, {
+            method: 'POST',
+            normalizedPath,
+            key: idemKey,
+            requestHash: reqHash,
           });
-          res.setHeader('Location', `/v1/jobs/${job.id}`);
+          if (idem.replayed) {
+            res.setHeader('Idempotency-Replayed', 'true');
+            res.writeHead(idem.httpStatus);
+            res.end(idem.responseBody);
+            return;
+          }
+          activeIdemClaim = { tenantId: auth.tenantId, normalizedPath, key: idemKey };
+
+          const created = repository.createCompositionRevision(
+            auth.tenantId,
+            compCreateRevMatch[1]!,
+            {
+              base_revision: Number(bodyRes.data['base_revision'] ?? 1),
+              change_note: bodyRes.data['change_note'] ? String(bodyRes.data['change_note']) : undefined,
+              spec: bodyRes.data['spec'] as CompositionSpec,
+            },
+          );
+
+          repository.completeIdempotency(auth.tenantId, {
+            method: 'POST',
+            normalizedPath,
+            key: idemKey,
+            httpStatus: 201,
+            responseBody: created,
+            resourceId: created.id,
+          });
+          activeIdemClaim = null;
+
+          res.writeHead(201);
+          res.end(JSON.stringify(created));
+          return;
+        }
+
+        // 10. POST /v1/render-jobs (Task P4-01 atomic admission)
+        if (pathname === '/v1/render-jobs' && method === 'POST') {
+          const auth = authenticateAndAuthorize(['jobs:write'], { enforceRateLimit: true });
+          if (!auth) return;
+          const idemKey = verifyIdempotencyHeader();
+          if (!idemKey) return;
+          const bodyRes = await readJsonBody(req);
+          if (!bodyRes.ok) {
+            sendError(res, bodyRes.status, bodyRes.code, bodyRes.message, requestId);
+            return;
+          }
+
+          const normalizedPath = '/v1/render-jobs';
+          const reqHash = computeCanonicalRequestHash(bodyRes.data);
+          const idem = repository.claimIdempotency(auth.tenantId, {
+            method: 'POST',
+            normalizedPath,
+            key: idemKey,
+            requestHash: reqHash,
+          });
+          if (idem.replayed) {
+            const parsedReplay = JSON.parse(idem.responseBody) as { id?: string };
+            if (parsedReplay.id) {
+              res.setHeader('Location', `/v1/jobs/${parsedReplay.id}`);
+            }
+            res.setHeader('Retry-After', '2');
+            res.setHeader('Idempotency-Replayed', 'true');
+            res.writeHead(idem.httpStatus);
+            res.end(idem.responseBody);
+            return;
+          }
+          activeIdemClaim = { tenantId: auth.tenantId, normalizedPath, key: idemKey };
+
+          if (onAfterIdempotencyClaim) {
+            await onAfterIdempotencyClaim({
+              tenantId: auth.tenantId,
+              normalizedPath,
+              key: idemKey,
+            });
+          }
+
+          const validatedReq = validateRenderJobRequest(bodyRes.data);
+          const jobId = `job_${crypto.randomBytes(6).toString('hex')}`;
+          const admitted = repository.admitJob(auth.tenantId, {
+            id: jobId,
+            request: validatedReq,
+            idempotency: {
+              method: 'POST',
+              normalizedPath,
+              key: idemKey,
+              requestHash: reqHash,
+            },
+            serverCapabilities: {
+              customCodeEnabled: config.CVE_CUSTOM_CODE_ENABLED,
+            },
+            beforeCommitHook: onBeforeJobCommit
+              ? () =>
+                  onBeforeJobCommit({
+                    tenantId: auth.tenantId,
+                    jobId,
+                    kind: 'render',
+                  })
+              : undefined,
+          });
+          activeIdemClaim = null;
+
+          if (onJobAdmissionCommitted) {
+            onJobAdmissionCommitted({
+              tenantId: auth.tenantId,
+              jobId: admitted.job.id,
+              kind: 'render',
+              committedAtMs: Date.now(),
+            });
+          }
+
+          res.setHeader('Location', `/v1/jobs/${admitted.job.id}`);
           res.setHeader('Retry-After', '2');
+          if (admitted.replayed) {
+            res.setHeader('Idempotency-Replayed', 'true');
+          }
           res.writeHead(202);
-          res.end(JSON.stringify(job));
+          res.end(JSON.stringify(admitted.job));
+          return;
+        }
+
+        // 10b. POST /v1/previews (Task P4-01 atomic preview admission)
+        if (pathname === '/v1/previews' && method === 'POST') {
+          const auth = authenticateAndAuthorize(['jobs:write'], { enforceRateLimit: true });
+          if (!auth) return;
+          const idemKey = verifyIdempotencyHeader();
+          if (!idemKey) return;
+          const bodyRes = await readJsonBody(req);
+          if (!bodyRes.ok) {
+            sendError(res, bodyRes.status, bodyRes.code, bodyRes.message, requestId);
+            return;
+          }
+
+          const normalizedPath = '/v1/previews';
+          const reqHash = computeCanonicalRequestHash(bodyRes.data);
+          const idem = repository.claimIdempotency(auth.tenantId, {
+            method: 'POST',
+            normalizedPath,
+            key: idemKey,
+            requestHash: reqHash,
+          });
+          if (idem.replayed) {
+            const parsedReplay = JSON.parse(idem.responseBody) as { id?: string };
+            if (parsedReplay.id) {
+              res.setHeader('Location', `/v1/jobs/${parsedReplay.id}`);
+            }
+            res.setHeader('Retry-After', '2');
+            res.setHeader('Idempotency-Replayed', 'true');
+            res.writeHead(idem.httpStatus);
+            res.end(idem.responseBody);
+            return;
+          }
+          activeIdemClaim = { tenantId: auth.tenantId, normalizedPath, key: idemKey };
+
+          if (onAfterIdempotencyClaim) {
+            await onAfterIdempotencyClaim({
+              tenantId: auth.tenantId,
+              normalizedPath,
+              key: idemKey,
+            });
+          }
+
+          const validatedReq = validatePreviewJobRequest(bodyRes.data);
+          const jobId = `job_${crypto.randomBytes(6).toString('hex')}`;
+          const admitted = repository.admitJob(auth.tenantId, {
+            id: jobId,
+            request: validatedReq,
+            idempotency: {
+              method: 'POST',
+              normalizedPath,
+              key: idemKey,
+              requestHash: reqHash,
+            },
+            serverCapabilities: {
+              customCodeEnabled: config.CVE_CUSTOM_CODE_ENABLED,
+            },
+            beforeCommitHook: onBeforeJobCommit
+              ? () =>
+                  onBeforeJobCommit({
+                    tenantId: auth.tenantId,
+                    jobId,
+                    kind: 'preview',
+                  })
+              : undefined,
+          });
+          activeIdemClaim = null;
+
+          if (onJobAdmissionCommitted) {
+            onJobAdmissionCommitted({
+              tenantId: auth.tenantId,
+              jobId: admitted.job.id,
+              kind: 'preview',
+              committedAtMs: Date.now(),
+            });
+          }
+
+          res.setHeader('Location', `/v1/jobs/${admitted.job.id}`);
+          res.setHeader('Retry-After', '2');
+          if (admitted.replayed) {
+            res.setHeader('Idempotency-Replayed', 'true');
+          }
+          res.writeHead(202);
+          res.end(JSON.stringify(admitted.job));
           return;
         }
 
@@ -1595,6 +2014,72 @@ export function createServer({
           return;
         }
 
+        // 12b. POST /v1/jobs/{id}/cancel
+        const jobCancelMatch = /^\/v1\/jobs\/([^/]+)\/cancel$/.exec(pathname);
+        if (jobCancelMatch && method === 'POST') {
+          const auth = authenticateAndAuthorize(['jobs:write']);
+          if (!auth) return;
+          const idemKey = verifyIdempotencyHeader();
+          if (!idemKey) return;
+          const bodyRes = await readJsonBody(req);
+          if (!bodyRes.ok) {
+            sendError(res, bodyRes.status, bodyRes.code, bodyRes.message, requestId);
+            return;
+          }
+
+          const jobId = jobCancelMatch[1]!;
+          const normalizedPath = `/v1/jobs/${jobId}/cancel`;
+          const reqHash = computeCanonicalRequestHash(bodyRes.data);
+          const idem = repository.claimIdempotency(auth.tenantId, {
+            method: 'POST',
+            normalizedPath,
+            key: idemKey,
+            requestHash: reqHash,
+          });
+          if (idem.replayed) {
+            res.setHeader('Idempotency-Replayed', 'true');
+            res.writeHead(idem.httpStatus);
+            res.end(idem.responseBody);
+            return;
+          }
+          activeIdemClaim = { tenantId: auth.tenantId, normalizedPath, key: idemKey };
+
+          const canceled = repository.cancelJob(auth.tenantId, jobId);
+          repository.completeIdempotency(auth.tenantId, {
+            method: 'POST',
+            normalizedPath,
+            key: idemKey,
+            httpStatus: canceled.httpStatus,
+            responseBody: canceled.body,
+            resourceId: jobId,
+          });
+          activeIdemClaim = null;
+
+          res.writeHead(canceled.httpStatus);
+          res.end(JSON.stringify(canceled.body));
+          return;
+        }
+
+        // 12c. GET /v1/jobs/{id}/events
+        const jobEventsMatch = /^\/v1\/jobs\/([^/]+)\/events$/.exec(pathname);
+        if (jobEventsMatch && method === 'GET') {
+          const auth = authenticateAndAuthorize(['jobs:read']);
+          if (!auth) return;
+          const afterSeqRaw = parsedUrl.searchParams.get('after_seq');
+          const afterSeq = afterSeqRaw ? Number(afterSeqRaw) : undefined;
+          const limitRaw = parsedUrl.searchParams.get('limit');
+          const limit = limitRaw ? Number(limitRaw) : 50;
+          const cursor = parsedUrl.searchParams.get('cursor') ?? undefined;
+          const events = repository.listJobEvents(auth.tenantId, jobEventsMatch[1]!, {
+            afterSeq,
+            limit,
+            cursor,
+          });
+          res.writeHead(200);
+          res.end(JSON.stringify(events));
+          return;
+        }
+
         // 13. GET /v1/artifacts/{id}/download
         const artDownloadMatch = /^\/v1\/artifacts\/([^/]+)\/download$/.exec(pathname);
         if (artDownloadMatch && method === 'GET') {
@@ -1610,20 +2095,111 @@ export function createServer({
         if (pathname === '/v1/webhook-endpoints' && method === 'POST') {
           const auth = authenticateAndAuthorize(['webhooks:manage']);
           if (!auth) return;
-          if (!verifyIdempotencyHeader()) return;
+          const idemKey = verifyIdempotencyHeader();
+          if (!idemKey) return;
           const bodyRes = await readJsonBody(req);
           if (!bodyRes.ok) {
             sendError(res, bodyRes.status, bodyRes.code, bodyRes.message, requestId);
             return;
           }
+          if ('tenant_id' in bodyRes.data) {
+            sendError(res, 422, 'VALIDATION_FAILED', 'tenant_id is not permitted in request body', requestId, false, [
+              { pointer: '/tenant_id', code: 'UNKNOWN_FIELD', message: 'tenant_id is forbidden in body' },
+            ]);
+            return;
+          }
+
+          const normalizedPath = '/v1/webhook-endpoints';
+          const reqHash = computeCanonicalRequestHash(bodyRes.data);
+          const idem = repository.claimIdempotency(auth.tenantId, {
+            method: 'POST',
+            normalizedPath,
+            key: idemKey,
+            requestHash: reqHash,
+          });
+          if (idem.replayed) {
+            res.setHeader('Idempotency-Replayed', 'true');
+            res.writeHead(idem.httpStatus);
+            res.end(idem.responseBody);
+            return;
+          }
+          activeIdemClaim = { tenantId: auth.tenantId, normalizedPath, key: idemKey };
+
           const epId = `wh_${crypto.randomBytes(6).toString('hex')}`;
           const created = repository.createWebhookEndpoint(auth.tenantId, {
             id: epId,
             url: String(bodyRes.data['url'] ?? 'https://client.example.invalid/hook'),
             events: (bodyRes.data['events'] as string[]) ?? ['job.succeeded'],
           });
+
+          // Per docs/API.md line 13: signing_secret is returned ONLY once on initial creation;
+          // idempotency store never stores plaintext secret and replays return secret_redacted: true.
+          const redactedForReplay = {
+            id: created.id,
+            url: created.url,
+            state: created.state,
+            secret_redacted: true as const,
+            events: created.events,
+            created_at: created.created_at,
+          };
+
+          repository.completeIdempotency(auth.tenantId, {
+            method: 'POST',
+            normalizedPath,
+            key: idemKey,
+            httpStatus: 201,
+            responseBody: redactedForReplay,
+            resourceId: created.id,
+            secretRedacted: true,
+          });
+          activeIdemClaim = null;
+
           res.writeHead(201);
           res.end(JSON.stringify(created));
+          return;
+        }
+
+        const whVerifyMatch = /^\/v1\/webhook-endpoints\/([^/]+)\/verify$/.exec(pathname);
+        if (whVerifyMatch && method === 'POST') {
+          const auth = authenticateAndAuthorize(['webhooks:manage']);
+          if (!auth) return;
+          const idemKey = verifyIdempotencyHeader();
+          if (!idemKey) return;
+          const bodyRes = await readJsonBody(req);
+          if (!bodyRes.ok) {
+            sendError(res, bodyRes.status, bodyRes.code, bodyRes.message, requestId);
+            return;
+          }
+          const endpointId = whVerifyMatch[1]!;
+          const normalizedPath = `/v1/webhook-endpoints/${endpointId}/verify`;
+          const reqHash = computeCanonicalRequestHash(bodyRes.data);
+          const idem = repository.claimIdempotency(auth.tenantId, {
+            method: 'POST',
+            normalizedPath,
+            key: idemKey,
+            requestHash: reqHash,
+          });
+          if (idem.replayed) {
+            res.setHeader('Idempotency-Replayed', 'true');
+            res.writeHead(idem.httpStatus);
+            res.end(idem.responseBody);
+            return;
+          }
+          activeIdemClaim = { tenantId: auth.tenantId, normalizedPath, key: idemKey };
+
+          const verified = repository.verifyWebhookEndpoint(auth.tenantId, endpointId);
+          repository.completeIdempotency(auth.tenantId, {
+            method: 'POST',
+            normalizedPath,
+            key: idemKey,
+            httpStatus: 200,
+            responseBody: verified,
+            resourceId: endpointId,
+          });
+          activeIdemClaim = null;
+
+          res.writeHead(200);
+          res.end(JSON.stringify(verified));
           return;
         }
 
@@ -1649,6 +2225,15 @@ export function createServer({
           return;
         }
       } catch (err) {
+        if (activeIdemClaim) {
+          repository.releaseIdempotency(activeIdemClaim.tenantId, {
+            method: 'POST',
+            normalizedPath: activeIdemClaim.normalizedPath,
+            key: activeIdemClaim.key,
+          });
+          activeIdemClaim = null;
+        }
+
         if (err instanceof ResourceNotFoundError) {
           sendError(res, 404, 'NOT_FOUND', err.message, requestId);
           return;
@@ -1658,12 +2243,38 @@ export function createServer({
           return;
         }
         if (err instanceof IdempotencyConflictError) {
-          sendError(res, 409, 'IDEMPOTENCY_CONFLICT', err.message, requestId);
+          sendError(res, 409, 'IDEMPOTENCY_CONFLICT', err.message, requestId, false);
           return;
         }
         if (err instanceof IdempotencyInProgressError) {
           res.setHeader('Retry-After', '1');
-          sendError(res, 409, 'IDEMPOTENCY_IN_PROGRESS', err.message, requestId);
+          sendError(res, 409, 'IDEMPOTENCY_IN_PROGRESS', err.message, requestId, true);
+          return;
+        }
+        if (err instanceof AssetNotReadyError) {
+          sendError(res, 409, 'ASSET_NOT_READY', err.message, requestId, false);
+          return;
+        }
+        if (err instanceof WebhookNotVerifiedError) {
+          sendError(res, 409, 'WEBHOOK_NOT_VERIFIED', err.message, requestId, false);
+          return;
+        }
+        if (err instanceof JobTerminalError) {
+          sendError(res, 409, 'JOB_TERMINAL', err.message, requestId, false);
+          return;
+        }
+        if (err instanceof RateLimitedError) {
+          res.setHeader('Retry-After', String(err.retryAfterSeconds));
+          sendError(res, 429, 'RATE_LIMITED', err.message, requestId, true);
+          return;
+        }
+        if (err instanceof QuotaExceededError) {
+          res.setHeader('Retry-After', String(err.retryAfterSeconds));
+          sendError(res, 429, 'QUOTA_EXCEEDED', err.message, requestId, true);
+          return;
+        }
+        if (err instanceof UnsupportedCapabilityError) {
+          sendError(res, 422, 'UNSUPPORTED_CAPABILITY', err.message, requestId, false, err.details);
           return;
         }
         if (err instanceof UploadGrantError) {
@@ -1680,6 +2291,14 @@ export function createServer({
         }
         if (err instanceof BodyReferenceValidationError) {
           sendError(res, 422, 'VALIDATION_FAILED', err.message, requestId, false, err.details);
+          return;
+        }
+        if (
+          err instanceof AdmissionServiceUnavailableError ||
+          (err instanceof PoolContextSecurityError && err.code === 'POOL_EXHAUSTED')
+        ) {
+          res.setHeader('Retry-After', '2');
+          sendError(res, 503, 'SERVICE_UNAVAILABLE', err.message, requestId, true);
           return;
         }
         sendError(

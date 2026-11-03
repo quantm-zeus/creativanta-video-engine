@@ -1,0 +1,94 @@
+{
+  "$schema": "creativanta.video-engine.p4-01-summary.v1",
+  "task_id": "P4-01",
+  "stream": "A",
+  "phase": "P4",
+  "base_commit": "b6f6a826afdb5b21e71150a4b80ed3a84b5fb0be",
+  "admission_guarantees": {
+    "atomic_transaction_commit_before_202": true,
+    "tables_written_in_single_tx": [
+      "jobs",
+      "job_events",
+      "usage_reservations",
+      "idempotency_keys"
+    ],
+    "rollback_releases_idempotency_claim": true,
+    "pinned_snapshot_immutable": true,
+    "pinned_snapshot_fields": [
+      "schema_version",
+      "kind",
+      "profile",
+      "composition_id",
+      "composition_revision",
+      "render_hash",
+      "compiler_version",
+      "seed",
+      "required_capabilities",
+      "resolved_assets",
+      "total_input_bytes",
+      "spec"
+    ]
+  },
+  "idempotency": {
+    "header": "Idempotency-Key",
+    "max_length": 128,
+    "pattern": "^[A-Za-z0-9._:-]{1,128}$",
+    "ttl_hours": 24,
+    "request_hash": "RFC 8785 JCS SHA-256",
+    "states": [
+      "in_progress",
+      "completed"
+    ],
+    "replay_header": "Idempotency-Replayed: true",
+    "in_progress_status": 409,
+    "in_progress_code": "IDEMPOTENCY_IN_PROGRESS",
+    "in_progress_retry_after_seconds": 1,
+    "conflict_status": 409,
+    "conflict_code": "IDEMPOTENCY_CONFLICT",
+    "webhook_secret_redacted_on_replay": true
+  },
+  "rate_limiting": {
+    "algorithm": "token_bucket",
+    "default_refill_per_second": 1,
+    "default_burst_capacity": 20,
+    "api_key_bucket_capped_by_tenant_bucket": true,
+    "exceeded_status": 429,
+    "exceeded_code": "RATE_LIMITED",
+    "retry_after_header_enforced": true
+  },
+  "quotas_and_reservations": {
+    "active_job_slots_max": 2,
+    "pending_admission_slots_max": 20,
+    "non_terminal_jobs_total_max": 22,
+    "exceeded_status": 429,
+    "exceeded_code": "QUOTA_EXCEEDED",
+    "retry_wait_retains_slot_and_reservation_amb_004": true,
+    "cancel_releases_slot_and_reservation": true,
+    "terminal_cancel_status": 409,
+    "terminal_cancel_code": "JOB_TERMINAL"
+  },
+  "capabilities_and_limits": {
+    "supported_render_profiles": [
+      "mp4-720p-v1"
+    ],
+    "supported_preview_profiles": [
+      "preview-360p-v1"
+    ],
+    "max_assets_per_job": 50,
+    "max_total_input_bytes_per_job": 524288000,
+    "max_preview_clip_duration_frames": 300,
+    "max_metadata_bytes": 4096,
+    "max_metadata_keys": 32,
+    "custom_code_requires_approved_bundle_and_security_gate_digest": true,
+    "webhook_endpoint_requires_active_verified_state": true,
+    "foreign_or_revoked_asset_returns_422_asset_not_found_amb_007": true,
+    "unready_asset_returns_409_asset_not_ready": true
+  },
+  "tests": {
+    "file": "packages/api/test/p4-01-admission-and-quotas.test.mjs",
+    "suites": 6,
+    "total": 11,
+    "passed": 11,
+    "failed": 0
+  }
+}

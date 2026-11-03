@@ -29,6 +29,23 @@ import {
   validateDefaultsAgainstSchema,
   validateVariableSchema,
 } from '../templates/template-engine.js';
+import {
+  AdmissionServiceUnavailableError,
+  AssetNotReadyError,
+  DEFAULT_ACTIVE_JOB_SLOTS_MAX,
+  DEFAULT_MAX_ASSETS_PER_JOB,
+  DEFAULT_MAX_TOTAL_INPUT_BYTES_PER_JOB,
+  DEFAULT_NON_TERMINAL_JOBS_TOTAL_MAX,
+  DEFAULT_PENDING_ADMISSION_SLOTS_MAX,
+  JobTerminalError,
+  QuotaExceededError,
+  TenantPolicyLimits,
+  UnsupportedCapabilityError,
+  ValidatedJobAdmissionRequest,
+  WebhookNotVerifiedError,
+  calculateJobReservation,
+  validatePreviewBoundsAgainstComposition,
+} from '../admission/job-admission.js';
 
 export class ResourceNotFoundError extends Error {
   public readonly httpStatus = 404;
@@ -197,6 +214,110 @@ export class TenantRepository {
         'id = ?',
         [tenantId],
       );
+    });
+  }
+
+  public getTenantPolicyLimitsInTx(tx: TenantTransactionContext): TenantPolicyLimits {
+    const rows = tx.selectScoped<{
+      policy_version: string;
+      limits_json: string;
+      active: number;
+    }>('policies', 'active = 1', [], 'created_at DESC');
+
+    let parsed: Record<string, unknown> = {};
+    if (rows[0]?.limits_json) {
+      try {
+        parsed = JSON.parse(rows[0].limits_json) as Record<string, unknown>;
+      } catch {
+        // fallback to defaults
+      }
+    }
+
+    return {
+      active_job_slots_max:
+        typeof parsed['active_job_slots_max'] === 'number'
+          ? parsed['active_job_slots_max']
+          : DEFAULT_ACTIVE_JOB_SLOTS_MAX,
+      pending_admission_slots_max:
+        typeof parsed['pending_admission_slots_max'] === 'number'
+          ? parsed['pending_admission_slots_max']
+          : DEFAULT_PENDING_ADMISSION_SLOTS_MAX,
+      non_terminal_jobs_total_max:
+        typeof parsed['non_terminal_jobs_total_max'] === 'number'
+          ? parsed['non_terminal_jobs_total_max']
+          : DEFAULT_NON_TERMINAL_JOBS_TOTAL_MAX,
+      token_bucket_refill_per_second:
+        typeof parsed['token_bucket_refill_per_second'] === 'number'
+          ? parsed['token_bucket_refill_per_second']
+          : 1,
+      token_bucket_burst_capacity:
+        typeof parsed['token_bucket_burst_capacity'] === 'number'
+          ? parsed['token_bucket_burst_capacity']
+          : 20,
+      api_key_token_bucket_refill_per_second:
+        typeof parsed['api_key_token_bucket_refill_per_second'] === 'number'
+          ? parsed['api_key_token_bucket_refill_per_second']
+          : undefined,
+      api_key_token_bucket_burst_capacity:
+        typeof parsed['api_key_token_bucket_burst_capacity'] === 'number'
+          ? parsed['api_key_token_bucket_burst_capacity']
+          : undefined,
+      max_assets_per_job:
+        typeof parsed['max_assets_per_job'] === 'number'
+          ? parsed['max_assets_per_job']
+          : DEFAULT_MAX_ASSETS_PER_JOB,
+      max_total_input_bytes_per_job:
+        typeof parsed['max_total_input_bytes_per_job'] === 'number'
+          ? parsed['max_total_input_bytes_per_job']
+          : DEFAULT_MAX_TOTAL_INPUT_BYTES_PER_JOB,
+      max_reserved_vcpu_seconds:
+        typeof parsed['max_reserved_vcpu_seconds'] === 'number'
+          ? parsed['max_reserved_vcpu_seconds']
+          : undefined,
+      max_reserved_output_seconds:
+        typeof parsed['max_reserved_output_seconds'] === 'number'
+          ? parsed['max_reserved_output_seconds']
+          : undefined,
+      custom_code_enabled:
+        typeof parsed['custom_code_enabled'] === 'boolean'
+          ? parsed['custom_code_enabled']
+          : undefined,
+      canvas_engine_enabled:
+        typeof parsed['canvas_engine_enabled'] === 'boolean'
+          ? parsed['canvas_engine_enabled']
+          : undefined,
+      svg_engine_enabled:
+        typeof parsed['svg_engine_enabled'] === 'boolean'
+          ? parsed['svg_engine_enabled']
+          : undefined,
+      rtl_enabled:
+        typeof parsed['rtl_enabled'] === 'boolean' ? parsed['rtl_enabled'] : undefined,
+    };
+  }
+
+  public getTenantPolicyLimits(tenantId: string): TenantPolicyLimits {
+    return this.pool.withTransaction({ tenantId, role: 'cve_api' }, (tx) => {
+      return this.getTenantPolicyLimitsInTx(tx);
+    });
+  }
+
+  public updateTenantPolicyLimits(
+    tenantId: string,
+    updates: Partial<TenantPolicyLimits>,
+  ): TenantPolicyLimits {
+    return this.pool.withTransaction({ tenantId, role: 'cve_migrator' }, (tx) => {
+      const current = this.getTenantPolicyLimitsInTx(tx);
+      const merged: TenantPolicyLimits = {
+        ...current,
+        ...updates,
+      };
+      tx.updateScoped(
+        'policies',
+        { limits_json: JSON.stringify(merged) },
+        'active = 1',
+        [],
+      );
+      return merged;
     });
   }
 
@@ -842,6 +963,12 @@ export class TenantRepository {
               updated_at: nowIso,
             },
             'id = ?',
+            [job.id],
+          );
+          tx.updateScoped(
+            'usage_reservations',
+            { state: 'released', settled_at: nowIso },
+            "job_id = ? AND state = 'reserved'",
             [job.id],
           );
           revokedJobs.push(job.id);
@@ -1591,7 +1718,16 @@ export class TenantRepository {
     return this.pool.withTransaction({ tenantId, role: 'cve_api' }, (tx) => {
       const allErrors: ErrorDetail[] = [];
 
-      const unified = validateCompositionUnified(input.spec, { profile: 'mp4-720p-v1' });
+      const limits = this.getTenantPolicyLimitsInTx(tx);
+      const unified = validateCompositionUnified(input.spec, {
+        profile: 'mp4-720p-v1',
+        capabilityOptions: {
+          customCodeEnabled: limits.custom_code_enabled ?? false,
+          canvasEngineEnabled: limits.canvas_engine_enabled ?? true,
+          svgEngineEnabled: limits.svg_engine_enabled ?? true,
+          rtlEnabled: limits.rtl_enabled ?? false,
+        },
+      });
       if (!unified.valid) {
         allErrors.push(
           ...unified.all_errors.map((e) => ({
@@ -1805,7 +1941,16 @@ export class TenantRepository {
         );
       }
 
-      const unified = validateCompositionUnified(input.spec, { profile: 'mp4-720p-v1' });
+      const limits = this.getTenantPolicyLimitsInTx(tx);
+      const unified = validateCompositionUnified(input.spec, {
+        profile: 'mp4-720p-v1',
+        capabilityOptions: {
+          customCodeEnabled: limits.custom_code_enabled ?? false,
+          canvasEngineEnabled: limits.canvas_engine_enabled ?? true,
+          svgEngineEnabled: limits.svg_engine_enabled ?? true,
+          rtlEnabled: limits.rtl_enabled ?? false,
+        },
+      });
       if (!unified.valid) {
         allErrors.push(
           ...unified.all_errors.map((e) => ({
@@ -2045,6 +2190,30 @@ export class TenantRepository {
         mime_type: string;
       }>('artifacts', 'job_id = ? AND revoked_at IS NULL', [jobId]);
 
+      const reservations = tx.selectScoped<{
+        reserved_vcpu_seconds: number;
+        reserved_output_seconds: number;
+        state: string;
+      }>('usage_reservations', 'job_id = ?', [jobId]);
+
+      const usageEntries = tx.selectScoped<{
+        meter: string;
+        quantity: number;
+      }>('usage_entries', 'job_id = ?', [jobId]);
+
+      const usage: Record<string, number> = {};
+      if (reservations[0]) {
+        usage['output_seconds'] = Number(reservations[0].reserved_output_seconds);
+      }
+      for (const entry of usageEntries) {
+        if (entry.meter === 'cpu_seconds') {
+          usage['cpu_seconds'] = (usage['cpu_seconds'] ?? 0) + Number(entry.quantity);
+        } else if (entry.meter === 'billable_output_minutes') {
+          usage['billable_output_minutes'] =
+            (usage['billable_output_minutes'] ?? 0) + Number(entry.quantity);
+        }
+      }
+
       return {
         id: job.id,
         kind: job.kind,
@@ -2062,11 +2231,1249 @@ export class TenantRepository {
           kind: a.kind,
           mime_type: a.mime_type,
         })),
-        usage: {},
+        usage,
         error: job.error_json ? (JSON.parse(job.error_json) as Record<string, unknown>) : null,
         created_at: job.created_at,
         completed_at: job.completed_at,
       };
+    });
+  }
+
+  /**
+   * Validates and resolves all assets and fonts referenced by a composition inside
+   * the current transaction, enforcing readiness (`409 ASSET_NOT_READY`), existence/type
+   * (`422 ASSET_NOT_FOUND` / `UNKNOWN_FONT`), and per-job asset count (<= 50) & total input
+   * byte budget (<= 500 MiB) per docs/PRD.md lines 108-109 and docs/API.md line 56.
+   */
+  private validateAndResolveJobAssetsInTx(
+    tx: TenantTransactionContext,
+    spec: CompositionSpec,
+    limits: TenantPolicyLimits,
+  ): {
+    resolvedAssets: Array<{
+      asset_id: string;
+      version: number;
+      kind: string;
+      sha256: string;
+      bytes: number;
+      mime_type: string;
+    }>;
+    totalInputBytes: number;
+    totalAssetReferences: number;
+  } {
+    const details: ErrorDetail[] = [];
+    const declaredFontIds = new Set<string>();
+    const assetReferenceList: Array<{ pointer: string; assetId: string; expectedKind: string }> = [];
+
+    for (let i = 0; i < (spec.fonts ?? []).length; i++) {
+      const font = spec.fonts[i]!;
+      declaredFontIds.add(font.id);
+      assetReferenceList.push({
+        pointer: `/spec/fonts/${i}/asset_id`,
+        assetId: font.asset_id,
+        expectedKind: 'font',
+      });
+    }
+
+    for (let sIdx = 0; sIdx < (spec.scenes ?? []).length; sIdx++) {
+      const scene = spec.scenes[sIdx]!;
+      const layers = 'layers' in scene && Array.isArray(scene.layers) ? scene.layers : [];
+      for (let lIdx = 0; lIdx < layers.length; lIdx++) {
+        const layer = layers[lIdx]!;
+        const content = layer.content as unknown as Record<string, unknown>;
+        if (layer.type === 'text') {
+          const fontId = String(content['font_id'] ?? '');
+          if (!declaredFontIds.has(fontId)) {
+            details.push({
+              pointer: `/spec/scenes/${sIdx}/layers/${lIdx}/content/font_id`,
+              code: 'UNKNOWN_FONT',
+              message: `Referenced font_id '${fontId}' is not declared in composition fonts`,
+            });
+          }
+        } else if (layer.type === 'image' || layer.type === 'video' || layer.type === 'svg') {
+          const assetId = String(content['asset_id'] ?? '');
+          assetReferenceList.push({
+            pointer: `/spec/scenes/${sIdx}/layers/${lIdx}/content/asset_id`,
+            assetId,
+            expectedKind: layer.type,
+          });
+        }
+      }
+    }
+
+    for (let aIdx = 0; aIdx < (spec.audio_tracks ?? []).length; aIdx++) {
+      const track = spec.audio_tracks[aIdx]!;
+      assetReferenceList.push({
+        pointer: `/spec/audio_tracks/${aIdx}/asset_id`,
+        assetId: track.asset_id,
+        expectedKind: 'audio',
+      });
+    }
+
+    for (let subIdx = 0; subIdx < (spec.subtitles ?? []).length; subIdx++) {
+      const sub = spec.subtitles[subIdx]!;
+      if (sub.style && !declaredFontIds.has(sub.style.font_id)) {
+        details.push({
+          pointer: `/spec/subtitles/${subIdx}/style/font_id`,
+          code: 'UNKNOWN_FONT',
+          message: `Subtitle font_id '${sub.style.font_id}' is not declared in composition fonts`,
+        });
+      }
+    }
+
+    const resolvedMap = new Map<
+      string,
+      {
+        asset_id: string;
+        version: number;
+        kind: string;
+        sha256: string;
+        bytes: number;
+        mime_type: string;
+      }
+    >();
+
+    let totalInputBytes = 0;
+
+    for (const ref of assetReferenceList) {
+      const visibleAssets = tx.selectScoped<{
+        tenant_id: string;
+        id: string;
+        kind: string;
+        status: string;
+        current_version: number;
+      }>('assets', 'id = ?', [ref.assetId]);
+
+      const asset = visibleAssets[0];
+      if (!asset || asset.status === 'deleted' || asset.status === 'rejected') {
+        details.push({
+          pointer: ref.pointer,
+          code: 'ASSET_NOT_FOUND',
+          message: `Referenced asset '${ref.assetId}' was not found or has been revoked/deleted`,
+        });
+        continue;
+      }
+
+      if (asset.status === 'uploading' || asset.status === 'processing') {
+        throw new AssetNotReadyError(
+          `Asset '${ref.assetId}' is currently in '${asset.status}' state and not ready for job admission`,
+        );
+      }
+
+      if (asset.kind !== ref.expectedKind) {
+        details.push({
+          pointer: ref.pointer,
+          code: 'ASSET_NOT_FOUND',
+          message: `Asset '${ref.assetId}' of kind '${asset.kind}' does not match expected kind '${ref.expectedKind}'`,
+        });
+        continue;
+      }
+
+      const versions = tx.selectScoped<{
+        original_sha256: string;
+        normalized_sha256: string | null;
+        mime_type: string;
+        bytes: number;
+      }>(
+        'asset_versions',
+        'tenant_id = ? AND asset_id = ? AND version = ?',
+        [asset.tenant_id, asset.id, asset.current_version],
+      );
+      const ver = versions[0];
+      const bytes = ver?.bytes ?? 0;
+      const sha256 = ver?.normalized_sha256 ?? ver?.original_sha256 ?? '0'.repeat(64);
+      const mimeType = ver?.mime_type ?? 'application/octet-stream';
+
+      totalInputBytes += bytes;
+      if (!resolvedMap.has(asset.id)) {
+        resolvedMap.set(asset.id, {
+          asset_id: asset.id,
+          version: asset.current_version,
+          kind: asset.kind,
+          sha256,
+          bytes,
+          mime_type: mimeType,
+        });
+      }
+    }
+
+    if (details.length > 0) {
+      throw new BodyReferenceValidationError(details);
+    }
+
+    const totalAssetReferences = assetReferenceList.length;
+    if (totalAssetReferences > limits.max_assets_per_job) {
+      throw new UnsupportedCapabilityError(
+        [
+          {
+            pointer: '/spec',
+            code: 'PROFILE_CONSTRAINT_VIOLATED',
+            message: `Composition references ${totalAssetReferences} assets, exceeding per-job limit of ${limits.max_assets_per_job}`,
+          },
+        ],
+        `Job exceeds maximum assets per job limit (${limits.max_assets_per_job})`,
+      );
+    }
+
+    if (totalInputBytes > limits.max_total_input_bytes_per_job) {
+      throw new UnsupportedCapabilityError(
+        [
+          {
+            pointer: '/spec',
+            code: 'PROFILE_CONSTRAINT_VIOLATED',
+            message: `Total referenced asset input bytes (${totalInputBytes}) exceeds per-job limit of ${limits.max_total_input_bytes_per_job} bytes`,
+          },
+        ],
+        `Job exceeds maximum total input bytes per job (${limits.max_total_input_bytes_per_job})`,
+      );
+    }
+
+    return {
+      resolvedAssets: Array.from(resolvedMap.values()),
+      totalInputBytes,
+      totalAssetReferences,
+    };
+  }
+
+  /**
+   * Executes the full atomic admission transaction for `POST /v1/render-jobs` and
+   * `POST /v1/previews` (Task P4-01).
+   *
+   * Guarantees:
+   *   1. Validates immutable composition revision, preview timeline bounds, profile/engine
+   *      capabilities, approved custom scene bundles, asset readiness (`409 ASSET_NOT_READY`),
+   *      asset count/byte budgets, and verified webhook endpoint (`409 WEBHOOK_NOT_VERIFIED`).
+   *   2. Enforces tenant pending admission slots (`count(queued + retry_wait) < 20`),
+   *      non-terminal job cap (`count(non_terminal) < 22`), and reservation budgets
+   *      inside a single `BEGIN IMMEDIATE` transaction (`429 QUOTA_EXCEEDED`).
+   *   3. Atomically inserts `jobs`, `job_events`, `usage_reservations`, and marks
+   *      `idempotency_records` as `completed` in the same durable transaction before
+   *      returning the `202 Accepted` payload.
+   */
+  public admitJob(
+    tenantId: string,
+    input: {
+      id: string;
+      request: ValidatedJobAdmissionRequest;
+      idempotency?: {
+        method: 'POST';
+        normalizedPath: string;
+        key: string;
+        requestHash: string;
+      };
+      serverCapabilities?: {
+        customCodeEnabled?: boolean;
+      };
+      beforeCommitHook?: (tx: TenantTransactionContext) => void;
+      now?: Date;
+    },
+  ): {
+    replayed: boolean;
+    job: {
+      id: string;
+      kind: string;
+      state: string;
+      state_version: number;
+      composition_id: string;
+      revision: number;
+      profile: string;
+      created_at: string;
+      status_url: string;
+    };
+    reservation: {
+      job_id: string;
+      reserved_vcpu_seconds: number;
+      reserved_output_seconds: number;
+      state: string;
+    };
+  } {
+    const now = input.now ?? new Date();
+    const nowIso = now.toISOString();
+    const deadlineSeconds = input.request.kind === 'render' ? 1800 : 300;
+    const deadlineIso = new Date(now.getTime() + deadlineSeconds * 1000).toISOString();
+    const idemExpiresIso = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000).toISOString();
+
+    return this.pool.withTransaction({ tenantId, role: 'cve_api' }, (tx) => {
+      // 1. Check idempotency state inside transaction if provided
+      let existingIdemState: 'none' | 'in_progress' = 'none';
+      if (input.idempotency) {
+        const records = tx.selectScoped<{
+          request_hash: string;
+          state: 'in_progress' | 'completed';
+          http_status: number | null;
+          response_body_encrypted: string | null;
+          resource_id: string | null;
+          expires_at: string;
+        }>(
+          'idempotency_records',
+          'method = ? AND normalized_path = ? AND key = ?',
+          [input.idempotency.method, input.idempotency.normalizedPath, input.idempotency.key],
+        );
+        const rec = records[0];
+        if (rec) {
+          if (Date.parse(rec.expires_at) <= now.getTime()) {
+            tx.deleteScoped(
+              'idempotency_records',
+              'method = ? AND normalized_path = ? AND key = ?',
+              [input.idempotency.method, input.idempotency.normalizedPath, input.idempotency.key],
+            );
+          } else if (rec.request_hash !== input.idempotency.requestHash) {
+            throw new IdempotencyConflictError(
+              'Idempotency key reused with different request payload',
+            );
+          } else if (rec.state === 'completed') {
+            const replayedJob = JSON.parse(rec.response_body_encrypted ?? '{}') as {
+              id: string;
+              kind: string;
+              state: string;
+              state_version: number;
+              composition_id: string;
+              revision: number;
+              profile: string;
+              created_at: string;
+              status_url: string;
+            };
+            const existingRes = tx.selectScoped<{
+              job_id: string;
+              reserved_vcpu_seconds: number;
+              reserved_output_seconds: number;
+              state: string;
+            }>('usage_reservations', 'job_id = ?', [replayedJob.id])[0];
+
+            return {
+              replayed: true,
+              job: replayedJob,
+              reservation: existingRes ?? {
+                job_id: replayedJob.id,
+                reserved_vcpu_seconds: 0,
+                reserved_output_seconds: 0,
+                state: 'reserved',
+              },
+            };
+          } else {
+            existingIdemState = 'in_progress';
+          }
+        }
+      }
+
+      // 2. Load active tenant policy limits
+      const limits = this.getTenantPolicyLimitsInTx(tx);
+
+      // 3. Load immutable composition revision
+      const compRevs = tx.selectScoped<{
+        composition_id: string;
+        revision: number;
+        spec_json: string;
+        render_hash: string;
+      }>(
+        'composition_revisions',
+        'composition_id = ? AND revision = ?',
+        [input.request.compositionId, input.request.compositionRevision],
+      );
+
+      const compRev = compRevs[0];
+      if (!compRev) {
+        throw new BodyReferenceValidationError(
+          [
+            {
+              pointer: '/composition_id',
+              code: 'COMPOSITION_NOT_FOUND',
+              message: `Composition '${input.request.compositionId}' at revision ${input.request.compositionRevision} was not found`,
+            },
+          ],
+          `Composition ${input.request.compositionId}@${input.request.compositionRevision} was not found`,
+        );
+      }
+
+      const spec = JSON.parse(compRev.spec_json) as CompositionSpec;
+
+      // 4. Validate preview timeline bounds against composition.duration_frames
+      if (input.request.kind === 'preview') {
+        validatePreviewBoundsAgainstComposition(input.request, spec.duration_frames);
+      }
+
+      // 5. Validate capabilities and profile constraints
+      const customCodeAllowed =
+        input.serverCapabilities !== undefined
+          ? Boolean(input.serverCapabilities.customCodeEnabled && (limits.custom_code_enabled ?? true))
+          : Boolean(limits.custom_code_enabled);
+
+      const baseValidationProfile =
+        input.request.kind === 'preview' &&
+        ((spec.canvas.width === 1280 && spec.canvas.height === 720) ||
+          (spec.canvas.width === 720 && spec.canvas.height === 1280))
+          ? 'mp4-720p-v1'
+          : input.request.profile;
+
+      const unified = validateCompositionUnified(spec, {
+        profile: baseValidationProfile,
+        capabilityOptions: {
+          customCodeEnabled: customCodeAllowed,
+          canvasEngineEnabled: limits.canvas_engine_enabled ?? true,
+          svgEngineEnabled: limits.svg_engine_enabled ?? true,
+          rtlEnabled: limits.rtl_enabled ?? false,
+        },
+      });
+
+      if (!unified.valid) {
+        const hasCapErr = unified.all_errors.some((e) => e.stage === 'capability');
+        const mappedDetails: ErrorDetail[] = unified.all_errors.map((e) => ({
+          pointer: `/spec${e.pointer === '/' ? '' : e.pointer}`,
+          code: e.code,
+          message: e.message,
+        }));
+        if (hasCapErr) {
+          throw new UnsupportedCapabilityError(
+            mappedDetails,
+            'Composition violates profile constraints or requested capability is disabled',
+          );
+        }
+        throw new BodyReferenceValidationError(mappedDetails);
+      }
+
+      // Verify custom-html-v1 scene bundles if present
+      for (let sIdx = 0; sIdx < (spec.scenes ?? []).length; sIdx++) {
+        const scene = spec.scenes[sIdx]!;
+        if (scene.engine === 'custom-html-v1') {
+          const rawScene = scene as unknown as {
+            bundle?: { id?: string; revision?: number };
+            bundle_id?: string;
+            bundle_revision?: number;
+          };
+          const bundleId = rawScene.bundle?.id ?? rawScene.bundle_id ?? '';
+          const bundleRev = rawScene.bundle?.revision ?? rawScene.bundle_revision ?? 1;
+          const bundles = tx.selectScoped<{ id: string; status: string }>(
+            'scene_bundles',
+            'id = ?',
+            [bundleId],
+          );
+          const bundleRevs = tx.selectScoped<{
+            bundle_id: string;
+            revision: number;
+            security_gate_digest: string | null;
+          }>('scene_bundle_revisions', 'bundle_id = ? AND revision = ?', [bundleId, bundleRev]);
+
+          if (
+            !bundles[0] ||
+            bundles[0].status !== 'approved' ||
+            !bundleRevs[0] ||
+            !bundleRevs[0].security_gate_digest
+          ) {
+            throw new UnsupportedCapabilityError(
+              [
+                {
+                  pointer: `/spec/scenes/${sIdx}/bundle/id`,
+                  code: 'CAPABILITY_DISABLED',
+                  message: `Custom scene bundle '${bundleId}@${bundleRev}' is not approved or lacks security gate verification`,
+                },
+              ],
+              `Unapproved custom scene bundle '${bundleId}@${bundleRev}'`,
+            );
+          }
+        }
+      }
+
+      // 6. Re-verify referenced assets & fonts, readiness, and input byte/count budgets
+      const { resolvedAssets, totalInputBytes } = this.validateAndResolveJobAssetsInTx(
+        tx,
+        spec,
+        limits,
+      );
+
+      // 7. Validate webhook_endpoint_id if provided (must exist and be 'active')
+      if (input.request.webhookEndpointId) {
+        const endpoints = tx.selectScoped<{ id: string; state: string }>(
+          'webhook_endpoints',
+          'id = ?',
+          [input.request.webhookEndpointId],
+        );
+        const ep = endpoints[0];
+        if (!ep) {
+          throw new BodyReferenceValidationError(
+            [
+              {
+                pointer: '/webhook_endpoint_id',
+                code: 'WEBHOOK_ENDPOINT_NOT_FOUND',
+                message: `Webhook endpoint '${input.request.webhookEndpointId}' was not found`,
+              },
+            ],
+            `Webhook endpoint ${input.request.webhookEndpointId} not found`,
+          );
+        }
+        if (ep.state !== 'active') {
+          throw new WebhookNotVerifiedError(
+            `Webhook endpoint '${input.request.webhookEndpointId}' is in state '${ep.state}'; must be 'active' before job admission`,
+          );
+        }
+      }
+
+      // 8. Enforce tenant slot quotas & reservation budgets inside the transaction
+      const nonTerminalJobs = tx.selectScoped<{ id: string; state: string }>(
+        'jobs',
+        "state NOT IN ('succeeded', 'failed', 'canceled')",
+        [],
+      );
+      const pendingCount = nonTerminalJobs.filter(
+        (j) => j.state === 'queued' || j.state === 'retry_wait',
+      ).length;
+      const nonTerminalCount = nonTerminalJobs.length;
+
+      if (pendingCount >= limits.pending_admission_slots_max) {
+        throw new QuotaExceededError(
+          `Tenant pending admission slots limit reached (${pendingCount}/${limits.pending_admission_slots_max})`,
+          5,
+        );
+      }
+      if (nonTerminalCount >= limits.non_terminal_jobs_total_max) {
+        throw new QuotaExceededError(
+          `Tenant total non-terminal jobs limit reached (${nonTerminalCount}/${limits.non_terminal_jobs_total_max})`,
+          5,
+        );
+      }
+
+      const { reservedVcpuSeconds, reservedOutputSeconds } = calculateJobReservation(
+        input.request,
+        spec,
+      );
+
+      if (
+        limits.max_reserved_vcpu_seconds !== undefined ||
+        limits.max_reserved_output_seconds !== undefined
+      ) {
+        const activeReservations = tx.selectScoped<{
+          reserved_vcpu_seconds: number;
+          reserved_output_seconds: number;
+        }>('usage_reservations', "state = 'reserved'", []);
+
+        const currentVcpu = activeReservations.reduce(
+          (acc, r) => acc + Number(r.reserved_vcpu_seconds),
+          0,
+        );
+        const currentOutput = activeReservations.reduce(
+          (acc, r) => acc + Number(r.reserved_output_seconds),
+          0,
+        );
+
+        if (
+          limits.max_reserved_vcpu_seconds !== undefined &&
+          currentVcpu + reservedVcpuSeconds > limits.max_reserved_vcpu_seconds
+        ) {
+          throw new QuotaExceededError(
+            `Tenant reserved vCPU budget exceeded (${currentVcpu + reservedVcpuSeconds} > ${limits.max_reserved_vcpu_seconds})`,
+            5,
+          );
+        }
+        if (
+          limits.max_reserved_output_seconds !== undefined &&
+          currentOutput + reservedOutputSeconds > limits.max_reserved_output_seconds
+        ) {
+          throw new QuotaExceededError(
+            `Tenant reserved output seconds budget exceeded (${currentOutput + reservedOutputSeconds} > ${limits.max_reserved_output_seconds})`,
+            5,
+          );
+        }
+      }
+
+      // 9. Build immutable pinned job snapshot
+      const snapshotPayload = {
+        schema_version: '1.0',
+        kind: input.request.kind,
+        profile: input.request.profile,
+        composition_id: input.request.compositionId,
+        composition_revision: input.request.compositionRevision,
+        render_hash: compRev.render_hash,
+        compiler_version: '0.1.0',
+        seed: spec.seed ?? 0,
+        required_capabilities: unified.capabilities.required_capabilities.map((c) =>
+          c.startsWith('profile:') ? `profile:${input.request.profile}` : c,
+        ),
+        resolved_assets: resolvedAssets,
+        total_input_bytes: totalInputBytes,
+        ...(input.request.kind === 'preview'
+          ? {
+              preview: {
+                mode: input.request.mode,
+                frame_index: input.request.frameIndex ?? null,
+                start_frame: input.request.startFrame ?? null,
+                duration_frames: input.request.durationFrames ?? null,
+              },
+            }
+          : {}),
+        spec,
+      };
+
+      const jobSummary = {
+        id: input.id,
+        kind: input.request.kind,
+        state: 'queued' as const,
+        state_version: 1,
+        composition_id: input.request.compositionId,
+        revision: input.request.compositionRevision,
+        profile: input.request.profile,
+        created_at: nowIso,
+        status_url: `/v1/jobs/${input.id}`,
+      };
+
+      // 10. Insert job, initial job_event, usage_reservation, and complete idempotency record
+      tx.insertScoped('jobs', {
+        tenant_id: tenantId,
+        id: input.id,
+        kind: input.request.kind,
+        state: 'queued',
+        state_version: 1,
+        stage: 'queued',
+        progress: 0,
+        composition_id: input.request.compositionId,
+        composition_revision: input.request.compositionRevision,
+        profile: input.request.profile,
+        snapshot_json: JSON.stringify(snapshotPayload),
+        webhook_endpoint_id: input.request.webhookEndpointId ?? null,
+        client_reference: input.request.clientReference ?? null,
+        metadata_json: input.request.metadata ? JSON.stringify(input.request.metadata) : null,
+        attempt_count: 0,
+        max_attempts: 3,
+        active_attempt_id: null,
+        lease_epoch: 0,
+        lease_expires_at: null,
+        heartbeat_at: null,
+        cancel_requested_at: null,
+        deadline_at: deadlineIso,
+        completed_at: null,
+        error_json: null,
+        created_at: nowIso,
+        updated_at: nowIso,
+      });
+
+      tx.insertScoped('job_events', {
+        tenant_id: tenantId,
+        job_id: input.id,
+        event_seq: 1,
+        state: 'queued',
+        state_version: 1,
+        event_type: 'job.queued',
+        payload_json: JSON.stringify({
+          kind: input.request.kind,
+          profile: input.request.profile,
+          stage: 'queued',
+          progress_percent: 0,
+          message: 'Job admitted and queued for execution',
+        }),
+        created_at: nowIso,
+      });
+
+      tx.insertScoped('usage_reservations', {
+        tenant_id: tenantId,
+        job_id: input.id,
+        reserved_vcpu_seconds: reservedVcpuSeconds,
+        reserved_output_seconds: reservedOutputSeconds,
+        state: 'reserved',
+        created_at: nowIso,
+        settled_at: null,
+      });
+
+      if (input.idempotency) {
+        if (existingIdemState === 'in_progress') {
+          tx.updateScoped(
+            'idempotency_records',
+            {
+              state: 'completed',
+              http_status: 202,
+              response_body_encrypted: JSON.stringify(jobSummary),
+              resource_id: input.id,
+            },
+            'method = ? AND normalized_path = ? AND key = ?',
+            [input.idempotency.method, input.idempotency.normalizedPath, input.idempotency.key],
+          );
+        } else {
+          tx.insertScoped('idempotency_records', {
+            tenant_id: tenantId,
+            method: input.idempotency.method,
+            normalized_path: input.idempotency.normalizedPath,
+            key: input.idempotency.key,
+            request_hash: input.idempotency.requestHash,
+            state: 'completed',
+            http_status: 202,
+            response_body_encrypted: JSON.stringify(jobSummary),
+            resource_id: input.id,
+            secret_redacted: 0,
+            created_at: nowIso,
+            expires_at: idemExpiresIso,
+          });
+        }
+      }
+
+      if (input.beforeCommitHook) {
+        try {
+          input.beforeCommitHook(tx);
+        } catch (err) {
+          if (err instanceof AdmissionServiceUnavailableError) {
+            throw err;
+          }
+          throw new AdmissionServiceUnavailableError(
+            err instanceof Error ? err.message : 'Database commit failed during job admission',
+          );
+        }
+      }
+
+      return {
+        replayed: false,
+        job: jobSummary,
+        reservation: {
+          job_id: input.id,
+          reserved_vcpu_seconds: reservedVcpuSeconds,
+          reserved_output_seconds: reservedOutputSeconds,
+          state: 'reserved',
+        },
+      };
+    });
+  }
+
+  /**
+   * Cancels a job (`POST /v1/jobs/{id}/cancel`) per docs/API.md lines 139-158
+   * and docs/ARCHITECTURE.md line 61:
+   *   - `queued` / `retry_wait` -> immediately `canceled` (202 Accepted) + releases usage reservation
+   *   - `preparing` / `rendering` / `encoding` / `verifying` -> `cancel_requested` (202 Accepted)
+   *   - `cancel_requested` -> idempotent `cancel_requested` (202 Accepted)
+   *   - `canceled` -> idempotent `canceled` (200 OK)
+   *   - `succeeded` / `failed` -> 409 JOB_TERMINAL
+   */
+  public cancelJob(
+    tenantId: string,
+    jobId: string,
+    options: { now?: Date } = {},
+  ): {
+    httpStatus: 200 | 202;
+    body: {
+      id: string;
+      state: string;
+      state_version: number;
+    };
+  } {
+    const nowIso = (options.now ?? new Date()).toISOString();
+
+    return this.pool.withTransaction({ tenantId, role: 'cve_api' }, (tx) => {
+      const jobs = tx.selectScoped<{
+        id: string;
+        state: string;
+        state_version: number;
+        stage: string;
+      }>('jobs', 'id = ?', [jobId]);
+
+      const job = jobs[0];
+      if (!job) {
+        throw new ResourceNotFoundError(`Job ${jobId} not found`);
+      }
+
+      if (job.state === 'succeeded' || job.state === 'failed') {
+        throw new JobTerminalError(
+          `Job ${jobId} is already in terminal state '${job.state}' and cannot be canceled`,
+        );
+      }
+
+      if (job.state === 'canceled') {
+        return {
+          httpStatus: 200,
+          body: {
+            id: job.id,
+            state: 'canceled',
+            state_version: job.state_version,
+          },
+        };
+      }
+
+      if (job.state === 'cancel_requested') {
+        return {
+          httpStatus: 202,
+          body: {
+            id: job.id,
+            state: 'cancel_requested',
+            state_version: job.state_version,
+          },
+        };
+      }
+
+      const existingEvents = tx.selectScoped<{ event_seq: number }>(
+        'job_events',
+        'job_id = ?',
+        [jobId],
+        'event_seq DESC',
+      );
+      const nextEventSeq = (existingEvents[0]?.event_seq ?? 0) + 1;
+      const nextStateVersion = job.state_version + 1;
+
+      if (job.state === 'queued' || job.state === 'retry_wait') {
+        tx.updateScoped(
+          'jobs',
+          {
+            state: 'canceled',
+            stage: 'canceled',
+            state_version: nextStateVersion,
+            cancel_requested_at: nowIso,
+            completed_at: nowIso,
+            updated_at: nowIso,
+          },
+          'id = ?',
+          [jobId],
+        );
+
+        tx.updateScoped(
+          'usage_reservations',
+          {
+            state: 'released',
+            settled_at: nowIso,
+          },
+          "job_id = ? AND state = 'reserved'",
+          [jobId],
+        );
+
+        tx.insertScoped('job_events', {
+          tenant_id: tenantId,
+          job_id: jobId,
+          event_seq: nextEventSeq,
+          state: 'canceled',
+          state_version: nextStateVersion,
+          event_type: 'job.canceled',
+          payload_json: JSON.stringify({
+            stage: 'canceled',
+            message: `Job canceled while in ${job.state} state`,
+          }),
+          created_at: nowIso,
+        });
+
+        tx.insertScoped('outbox', {
+          tenant_id: tenantId,
+          id: `out_${crypto.randomBytes(6).toString('hex')}`,
+          event_type: 'job.canceled',
+          job_id: jobId,
+          state_version: nextStateVersion,
+          payload_json: JSON.stringify({
+            job_id: jobId,
+            state: 'canceled',
+            state_version: nextStateVersion,
+          }),
+          created_at: nowIso,
+          processed_at: null,
+        });
+
+        return {
+          httpStatus: 202,
+          body: {
+            id: jobId,
+            state: 'canceled',
+            state_version: nextStateVersion,
+          },
+        };
+      }
+
+      // Active states: preparing, rendering, encoding, verifying -> cancel_requested
+      tx.updateScoped(
+        'jobs',
+        {
+          state: 'cancel_requested',
+          state_version: nextStateVersion,
+          cancel_requested_at: nowIso,
+          updated_at: nowIso,
+        },
+        'id = ?',
+        [jobId],
+      );
+
+      tx.insertScoped('job_events', {
+        tenant_id: tenantId,
+        job_id: jobId,
+        event_seq: nextEventSeq,
+        state: 'cancel_requested',
+        state_version: nextStateVersion,
+        event_type: 'job.cancel_requested',
+        payload_json: JSON.stringify({
+          stage: job.stage,
+          message: 'Cancellation requested for active job',
+        }),
+        created_at: nowIso,
+      });
+
+      return {
+        httpStatus: 202,
+        body: {
+          id: jobId,
+          state: 'cancel_requested',
+          state_version: nextStateVersion,
+        },
+      };
+    });
+  }
+
+  /**
+   * Lists job events (`GET /v1/jobs/{id}/events`) per docs/API.md lines 129-137.
+   */
+  public listJobEvents(
+    tenantId: string,
+    jobId: string,
+    options: { afterSeq?: number; limit?: number; cursor?: string } = {},
+  ): {
+    data: Array<{
+      event_seq: number;
+      job_id: string;
+      timestamp: string;
+      state: string;
+      stage: string;
+      progress_percent: number;
+      message: string;
+    }>;
+    next_cursor: string | null;
+  } {
+    const limit = Math.min(100, Math.max(1, options.limit ?? 50));
+    const route = `/v1/jobs/${jobId}/events`;
+    let minSeqExclusive = options.afterSeq ?? 0;
+
+    if (options.cursor) {
+      const decoded = decodeSignedCursor({
+        cursor: options.cursor,
+        tenantId,
+        route,
+        secret: this.pepper,
+      });
+      if (!decoded) {
+        throw new InvalidCursorError();
+      }
+      const parsedSeq = Number(decoded.id);
+      if (Number.isInteger(parsedSeq) && parsedSeq > minSeqExclusive) {
+        minSeqExclusive = parsedSeq;
+      }
+    }
+
+    return this.pool.withTransaction({ tenantId, role: 'cve_api' }, (tx) => {
+      const jobs = tx.selectScoped<{ id: string }>('jobs', 'id = ?', [jobId]);
+      if (!jobs[0]) {
+        throw new ResourceNotFoundError(`Job ${jobId} not found`);
+      }
+
+      const events = tx.selectScoped<{
+        event_seq: number;
+        job_id: string;
+        state: string;
+        state_version: number;
+        event_type: string;
+        payload_json: string;
+        created_at: string;
+      }>(
+        'job_events',
+        'job_id = ? AND event_seq > ?',
+        [jobId, minSeqExclusive],
+        'event_seq ASC',
+      );
+
+      const slice = events.slice(0, limit);
+      const hasMore = events.length > limit;
+      const lastItem = slice[slice.length - 1];
+      const nextCursor =
+        hasMore && lastItem
+          ? encodeSignedCursor({
+              tenantId,
+              route,
+              createdAt: lastItem.created_at,
+              id: String(lastItem.event_seq),
+              secret: this.pepper,
+            })
+          : null;
+
+      return {
+        data: slice.map((ev) => {
+          let payload: Record<string, unknown> = {};
+          try {
+            payload = JSON.parse(ev.payload_json) as Record<string, unknown>;
+          } catch {
+            // ignore
+          }
+          return {
+            event_seq: ev.event_seq,
+            job_id: ev.job_id,
+            timestamp: ev.created_at,
+            state: ev.state,
+            stage: typeof payload['stage'] === 'string' ? payload['stage'] : ev.state,
+            progress_percent:
+              typeof payload['progress_percent'] === 'number' ? payload['progress_percent'] : 0,
+            message:
+              typeof payload['message'] === 'string' ? payload['message'] : ev.event_type,
+          };
+        }),
+        next_cursor: nextCursor,
+      };
+    });
+  }
+
+  /**
+   * Transitions a queued/retry_wait job into an active worker state (`preparing`, `rendering`,
+   * `encoding`, `verifying`) enforcing `active_job_slots_max` (default 2).
+   */
+  public transitionJobToActive(
+    tenantId: string,
+    jobId: string,
+    input: {
+      state?: 'preparing' | 'rendering' | 'encoding' | 'verifying';
+      workerId?: string;
+      attemptId?: string;
+      now?: Date;
+    } = {},
+  ): { id: string; state: string; state_version: number; lease_epoch: number } {
+    const now = input.now ?? new Date();
+    const nowIso = now.toISOString();
+    const leaseExpiresIso = new Date(now.getTime() + 30 * 1000).toISOString();
+    const targetState = input.state ?? 'preparing';
+
+    return this.pool.withTransaction({ tenantId, role: 'cve_dispatcher' }, (tx) => {
+      const limits = this.getTenantPolicyLimitsInTx(tx);
+      const jobs = tx.selectScoped<{
+        id: string;
+        state: string;
+        state_version: number;
+        attempt_count: number;
+        lease_epoch: number;
+      }>('jobs', 'id = ?', [jobId]);
+      const job = jobs[0];
+      if (!job) {
+        throw new ResourceNotFoundError(`Job ${jobId} not found`);
+      }
+
+      if (job.state === 'queued' || job.state === 'retry_wait') {
+        const activeJobs = tx.selectScoped<{ id: string }>(
+          'jobs',
+          "state IN ('preparing', 'rendering', 'encoding', 'verifying', 'cancel_requested')",
+          [],
+        );
+        if (activeJobs.length >= limits.active_job_slots_max) {
+          throw new QuotaExceededError(
+            `Tenant active job slots limit reached (${activeJobs.length}/${limits.active_job_slots_max})`,
+            2,
+          );
+        }
+      }
+
+      const nextStateVersion = job.state_version + 1;
+      const nextLeaseEpoch = job.lease_epoch + 1;
+      const nextAttemptCount =
+        job.state === 'queued' || job.state === 'retry_wait'
+          ? job.attempt_count + 1
+          : Math.max(1, job.attempt_count);
+      const attemptId = input.attemptId ?? `att_${crypto.randomBytes(6).toString('hex')}`;
+
+      tx.updateScoped(
+        'jobs',
+        {
+          state: targetState,
+          stage: targetState,
+          state_version: nextStateVersion,
+          attempt_count: nextAttemptCount,
+          active_attempt_id: attemptId,
+          lease_epoch: nextLeaseEpoch,
+          lease_expires_at: leaseExpiresIso,
+          heartbeat_at: nowIso,
+          updated_at: nowIso,
+        },
+        'id = ?',
+        [jobId],
+      );
+
+      return {
+        id: jobId,
+        state: targetState,
+        state_version: nextStateVersion,
+        lease_epoch: nextLeaseEpoch,
+      };
+    });
+  }
+
+  /**
+   * Transitions an already-admitted active job (`preparing/rendering/encoding/verifying`)
+   * back to `retry_wait` while retaining its existing non-terminal slot and usage reservation
+   * without re-running admission rejection (AMB-004).
+   */
+  public transitionJobToRetryWait(
+    tenantId: string,
+    jobId: string,
+    input: { reason?: string; now?: Date } = {},
+  ): { id: string; state: 'retry_wait'; state_version: number; lease_epoch: number } {
+    const nowIso = (input.now ?? new Date()).toISOString();
+
+    return this.pool.withTransaction({ tenantId, role: 'cve_dispatcher' }, (tx) => {
+      const jobs = tx.selectScoped<{
+        id: string;
+        state: string;
+        state_version: number;
+        lease_epoch: number;
+      }>('jobs', 'id = ?', [jobId]);
+      const job = jobs[0];
+      if (!job) {
+        throw new ResourceNotFoundError(`Job ${jobId} not found`);
+      }
+
+      const nextStateVersion = job.state_version + 1;
+      const nextLeaseEpoch = job.lease_epoch + 1;
+
+      tx.updateScoped(
+        'jobs',
+        {
+          state: 'retry_wait',
+          stage: 'retry_wait',
+          state_version: nextStateVersion,
+          active_attempt_id: null,
+          lease_epoch: nextLeaseEpoch,
+          lease_expires_at: null,
+          updated_at: nowIso,
+        },
+        'id = ?',
+        [jobId],
+      );
+
+      const existingEvents = tx.selectScoped<{ event_seq: number }>(
+        'job_events',
+        'job_id = ?',
+        [jobId],
+        'event_seq DESC',
+      );
+      const nextEventSeq = (existingEvents[0]?.event_seq ?? 0) + 1;
+
+      tx.insertScoped('job_events', {
+        tenant_id: tenantId,
+        job_id: jobId,
+        event_seq: nextEventSeq,
+        state: 'retry_wait',
+        state_version: nextStateVersion,
+        event_type: 'job.retry_wait',
+        payload_json: JSON.stringify({
+          stage: 'retry_wait',
+          message: input.reason ?? 'Active attempt failed; job scheduled for retry',
+        }),
+        created_at: nowIso,
+      });
+
+      return {
+        id: jobId,
+        state: 'retry_wait',
+        state_version: nextStateVersion,
+        lease_epoch: nextLeaseEpoch,
+      };
+    });
+  }
+
+  public getUsageReservation(
+    tenantId: string,
+    jobId: string,
+  ): {
+    job_id: string;
+    reserved_vcpu_seconds: number;
+    reserved_output_seconds: number;
+    state: 'reserved' | 'settled' | 'released';
+    created_at: string;
+    settled_at: string | null;
+  } | null {
+    return this.pool.withTransaction({ tenantId, role: 'cve_api' }, (tx) => {
+      const rows = tx.selectScoped<{
+        job_id: string;
+        reserved_vcpu_seconds: number;
+        reserved_output_seconds: number;
+        state: 'reserved' | 'settled' | 'released';
+        created_at: string;
+        settled_at: string | null;
+      }>('usage_reservations', 'job_id = ?', [jobId]);
+      return rows[0] ?? null;
+    });
+  }
+
+  public listUsageReservations(
+    tenantId: string,
+    stateFilter?: 'reserved' | 'settled' | 'released',
+  ): Array<{
+    job_id: string;
+    reserved_vcpu_seconds: number;
+    reserved_output_seconds: number;
+    state: 'reserved' | 'settled' | 'released';
+    created_at: string;
+    settled_at: string | null;
+  }> {
+    return this.pool.withTransaction({ tenantId, role: 'cve_api' }, (tx) => {
+      if (stateFilter) {
+        return tx.selectScoped(
+          'usage_reservations',
+          'state = ?',
+          [stateFilter],
+          'created_at ASC',
+        );
+      }
+      return tx.selectScoped('usage_reservations', '1=1', [], 'created_at ASC');
+    });
+  }
+
+  public setWebhookEndpointState(
+    tenantId: string,
+    endpointId: string,
+    state: 'pending_verification' | 'active' | 'disabled',
+    now = new Date(),
+  ): void {
+    this.pool.withTransaction({ tenantId, role: 'cve_api' }, (tx) => {
+      const updated = tx.updateScoped(
+        'webhook_endpoints',
+        { state, updated_at: now.toISOString() },
+        'id = ?',
+        [endpointId],
+      );
+      if (updated === 0) {
+        throw new ResourceNotFoundError(`Webhook endpoint ${endpointId} not found`);
+      }
+    });
+  }
+
+  public verifyWebhookEndpoint(
+    tenantId: string,
+    endpointId: string,
+    now = new Date(),
+  ): { id: string; state: 'active' } {
+    this.setWebhookEndpointState(tenantId, endpointId, 'active', now);
+    return { id: endpointId, state: 'active' };
+  }
+
+  public registerSceneBundle(
+    tenantId: string,
+    input: {
+      bundleId: string;
+      revision?: number;
+      name?: string;
+      status?: 'draft' | 'approved' | 'revoked' | 'disabled';
+      securityGateDigest?: string | null;
+      now?: Date;
+    },
+  ): { bundle_id: string; revision: number; status: string } {
+    const nowIso = (input.now ?? new Date()).toISOString();
+    const revision = input.revision ?? 1;
+    const status = input.status ?? 'approved';
+
+    return this.pool.withTransaction({ tenantId, role: 'cve_api' }, (tx) => {
+      tx.insertScoped('scene_bundles', {
+        tenant_id: tenantId,
+        id: input.bundleId,
+        name: input.name ?? input.bundleId,
+        current_revision: revision,
+        status,
+        created_at: nowIso,
+        updated_at: nowIso,
+      });
+
+      tx.insertScoped('scene_bundle_revisions', {
+        tenant_id: tenantId,
+        bundle_id: input.bundleId,
+        revision,
+        source_sha256: 'a'.repeat(64),
+        build_sha256: 'b'.repeat(64),
+        entrypoint: 'index.js',
+        parameters_schema: '{}',
+        capabilities_json: '["custom-html-v1"]',
+        security_gate_digest:
+          input.securityGateDigest === undefined ? 'c'.repeat(64) : input.securityGateDigest,
+        runtime_pin: 'chromium-130.0.6723.69',
+        created_at: nowIso,
+      });
+
+      return { bundle_id: input.bundleId, revision, status };
     });
   }
 
@@ -2432,6 +3839,7 @@ export class TenantRepository {
       httpStatus: number;
       responseBody: unknown;
       resourceId?: string;
+      secretRedacted?: boolean;
     },
   ): void {
     this.pool.withTransaction({ tenantId, role: 'cve_api' }, (tx) => {
@@ -2445,10 +3853,55 @@ export class TenantRepository {
               ? input.responseBody
               : JSON.stringify(input.responseBody),
           resource_id: input.resourceId ?? null,
+          secret_redacted: input.secretRedacted ? 1 : 0,
         },
         'method = ? AND normalized_path = ? AND key = ?',
         [input.method, input.normalizedPath, input.key],
       );
+    });
+  }
+
+  public getIdempotencyRecord(
+    tenantId: string,
+    input: {
+      method: 'POST';
+      normalizedPath: string;
+      key: string;
+    },
+  ): {
+    tenant_id: string;
+    method: string;
+    normalized_path: string;
+    key: string;
+    request_hash: string;
+    state: 'in_progress' | 'completed';
+    http_status: number | null;
+    response_body_encrypted: string | null;
+    resource_id: string | null;
+    secret_redacted: number;
+    created_at: string;
+    expires_at: string;
+  } | null {
+    return this.pool.withTransaction({ tenantId, role: 'cve_api' }, (tx) => {
+      const rows = tx.selectScoped<{
+        tenant_id: string;
+        method: string;
+        normalized_path: string;
+        key: string;
+        request_hash: string;
+        state: 'in_progress' | 'completed';
+        http_status: number | null;
+        response_body_encrypted: string | null;
+        resource_id: string | null;
+        secret_redacted: number;
+        created_at: string;
+        expires_at: string;
+      }>(
+        'idempotency_records',
+        'method = ? AND normalized_path = ? AND key = ?',
+        [input.method, input.normalizedPath, input.key],
+      );
+      return rows[0] ?? null;
     });
   }
 
