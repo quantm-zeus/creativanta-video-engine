@@ -4,11 +4,11 @@ Báo cáo nghiệm thu kỹ thuật cho nhiệm vụ `P3-01` (`A / P3` — Tenan
 
 ```text
 Task: P3-01
-Base / tested commit: 0f532f82d3c0294b5bba427e722aa074036e0897 / 0f532f82d3c0294b5bba427e722aa074036e0897
+Base / tested commit: 9469a1ad90108fffc56de02dfc8c0b54b9193e52 / 9469a1ad90108fffc56de02dfc8c0b54b9193e52
 Environment: Linux x86_64, Debian 12 container, Node v24.22.2 (built-in node:sqlite & node:crypto), pnpm 12.16.1, TypeScript 5.7.3, Python 3.11.2
 Command: PATH=/usr/local/lib/node_modules/corepack/shims:/usr/bin:$PATH pnpm build && pnpm typecheck && pnpm lint && pnpm test && node scripts/health-check.mjs && PATH=/usr/bin:$PATH python3 scripts/validate_repo.py
 Result: PASS
-Exit code / UTC started / duration: 0 / 2026-11-03T04:47:30Z / 16.4s
+Exit code / UTC started / duration: 0 / 2026-11-03T04:58:22Z / 52.4s
 Artifacts:
   - migrations/0001_tenant_foundation.up.sql, sha256=0e40b7b08c0dbcafba03bab072c6909b015e3f1127312105db615fbf6be69bcd, expires=N/A (repo-versioned)
   - migrations/0001_tenant_foundation.down.sql, sha256=f63b1e71801f4af73d53ab31c395ae4e99628b8876ce0263b1739d0a4626cde2, expires=N/A (repo-versioned)
@@ -20,8 +20,9 @@ Artifacts:
   - packages/api/src/db/migration-runner.ts, sha256=1d7ff0e7b35ed0087e4e5764845740399bb4a38b624551ddf73562593fab6c98, expires=N/A (repo-versioned)
   - packages/api/src/db/tenant-pool.ts, sha256=5783c68792e8816da48ea88f913951dcccc50ed3e88a31b829535d39838ea892, expires=N/A (repo-versioned)
   - packages/api/src/db/repository.ts, sha256=b355b667d1da476947db56c40f8bbf7a54937889d20a76fdcc93086f3cb7c138, expires=N/A (repo-versioned)
+  - packages/api/src/server.ts, sha256=b236016072e203541c6ebc6da885a710b8465a555c8dbfef8bdc83e3a818d394, expires=N/A (repo-versioned)
   - packages/api/test/p3-01-tenant-foundation.test.mjs, sha256=13827bd18c758fa9bd5f3e5620bdcc97144420ddfc152a7b9a8a89caf290adb4, expires=N/A (repo-versioned)
-  - evidence/P3-01/summary.json, sha256=b4d318e83a03ade2d5460010605103c15fdfc85fa55c1a04c8505d65dac6c511, expires=N/A (repo-versioned)
+  - evidence/P3-01/summary.json, sha256=efbeaaffa923ed0e33aa7798d4ad394a2dc335bc2b1bd3b8434dec117ce885df, expires=N/A (repo-versioned)
 Acceptance mapping:
   - DB migrations entities/FKs: PASS — Triển khai đầy đủ 21 bảng chuẩn thuộc 10 nhóm thực thể trong migrations/0001_tenant_foundation.up.sql và migrations/0002_seed_system_catalog.up.sql với khóa chính và khóa ngoại tổ hợp bắt buộc chứa tenant_id, cùng trigger khóa bất biến cho 6 bảng lịch sử/phiên bản (template_revisions, composition_revisions, asset_versions, scene_bundle_revisions, job_events, usage_entries).
   - RLS & service roles: PASS — Bật ENABLE ROW LEVEL SECURITY và FORCE ROW LEVEL SECURITY trên toàn bộ 21 bảng; phân tách 5 DB roles tối thiểu quyền (cve_migrator, cve_api, cve_dispatcher, cve_ingest, cve_sender) và thiết lập sentinel tenant system_catalog (00000000-0000-0000-0000-000000000000) chỉ đọc đối với cve_api.
@@ -29,7 +30,7 @@ Acceptance mapping:
   - Tenant pool-context isolation: PASS — Triển khai TenantConnectionPool thực thi SET LOCAL app.current_tenant_id trong phạm vi giao dịch, tự động xóa sạch ngữ cảnh khi COMMIT/ROLLBACK trước khi trả kết nối về pool, chặn tuyệt đối lệnh SET cấp độ phiên (SESSION_LEVEL_SET_FORBIDDEN) và đóng an toàn (fail-closed) khi thiếu ngữ cảnh tenant.
   - IDOR tests: PASS — Kiểm thử tự động toàn diện xác nhận truy cập ID của tenant khác trên đường dẫn URL luôn trả về 404 NOT_FOUND (không bao giờ trả 403), tham chiếu asset_id/font_id của tenant khác trong JSON body trả về 422 VALIDATION_FAILED (ASSET_NOT_FOUND / UNKNOWN_FONT theo AMB-007), và tái phát phân trang cursor sang tenant khác bị từ chối với 400 INVALID_CURSOR.
   - Rollback/recovery plan: PASS — Xây dựng tài liệu migrations/ROLLBACK_AND_RECOVERY.md, kịch bản .down.sql đảo ngược tuần tự và động cơ diễn tập khôi phục PITR (createDatabaseSnapshot, restoreAndReconcileSnapshot) đạt RPO=180s (<=15m), RTO<1s (<=4h), tự động khóa cờ custom/import/webhook và đối soát lease/upload/artifact/usage.
-Reviewer / reviewed commit / decision: pending independent reviewer / 0f532f82d3c0294b5bba427e722aa074036e0897 / local completion awaiting review
+Reviewer / reviewed commit / decision: pending independent reviewer / 9469a1ad90108fffc56de02dfc8c0b54b9193e52 / local completion awaiting review
 ```
 
 ---

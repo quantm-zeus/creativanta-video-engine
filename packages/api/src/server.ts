@@ -11,6 +11,9 @@ import {
   CompositionSpec,
   CveEnvConfig,
   ErrorDetail,
+  compileComposition,
+  materializeCompositionDefaults,
+  validateCompositionUnified,
 } from '@creativanta/contracts';
 import {
   ApiScope,
@@ -335,6 +338,99 @@ export function createServer({
       const caps = buildCapabilities(config);
       res.writeHead(200);
       res.end(JSON.stringify(caps));
+      return;
+    }
+
+    // Composition validation endpoint (P1-03)
+    if (pathname === '/v1/compositions/validate' && method === 'POST') {
+      if (req.headers['authorization'] !== undefined && repository) {
+        const auth = authenticateAndAuthorize(['compositions:write']);
+        if (!auth) return;
+      }
+
+      const bodyRes = await readJsonBody(req);
+      if (!bodyRes.ok) {
+        sendError(res, bodyRes.status, bodyRes.code, bodyRes.message, requestId);
+        return;
+      }
+
+      const spec = bodyRes.data['spec'];
+      const profile = (bodyRes.data['profile'] as string | undefined) ?? 'mp4-720p-v1';
+
+      if (!spec || typeof spec !== 'object') {
+        sendError(
+          res,
+          422,
+          'VALIDATION_FAILED',
+          'Missing or invalid spec property in body',
+          requestId,
+          false,
+          [
+            {
+              pointer: '/spec',
+              code: 'MISSING_REQUIRED_FIELD',
+              message: "Required field 'spec' is missing or not an object",
+            },
+          ],
+        );
+        return;
+      }
+
+      const unified = validateCompositionUnified(spec, {
+        profile,
+        capabilityOptions: {
+          customCodeEnabled: config.CVE_CUSTOM_CODE_ENABLED,
+        },
+      });
+
+      if (!unified.valid) {
+        const hasCapabilityError = unified.all_errors.some((e) => e.stage === 'capability');
+        const errorCode = hasCapabilityError ? 'UNSUPPORTED_CAPABILITY' : 'VALIDATION_FAILED';
+        const errorMessage = hasCapabilityError
+          ? 'Composition violates profile constraints or requested capability is disabled'
+          : 'Composition specification validation failed';
+
+        sendError(
+          res,
+          422,
+          errorCode,
+          errorMessage,
+          requestId,
+          false,
+          unified.all_errors.map((e) => ({
+            pointer: `/spec${e.pointer === '/' ? '' : e.pointer}`,
+            code: e.code,
+            message: e.message,
+          })),
+        );
+        return;
+      }
+
+      const manifest = compileComposition(spec as CompositionSpec, {
+        profile,
+        compilerVersion: '0.1.0',
+      });
+
+      const normalizedSpec = materializeCompositionDefaults(spec as CompositionSpec);
+      const estMinutes = manifest.duration_seconds / 60;
+      const estCost = Math.round(estMinutes * 0.05 * 10000) / 10000;
+
+      res.writeHead(200);
+      res.end(
+        JSON.stringify({
+          valid: true,
+          normalized_spec: normalizedSpec,
+          render_hash: manifest.render_hash,
+          required_capabilities: manifest.required_capabilities,
+          estimate: {
+            output_seconds: manifest.duration_seconds,
+            estimated_cost: estCost,
+            currency: 'USD',
+            rate_version: '2026-11-02-v1',
+          },
+          warnings: unified.warnings,
+        }),
+      );
       return;
     }
 

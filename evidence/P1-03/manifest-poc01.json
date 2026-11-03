@@ -1,0 +1,381 @@
+{
+  "manifest_version": "1.0",
+  "compiler_version": "0.1.0",
+  "composition_id": "cmp_poc01_promo",
+  "revision": 1,
+  "profile": "mp4-720p-v1",
+  "canvas": {
+    "width": 720,
+    "height": 1280,
+    "background": "#0F172A"
+  },
+  "fps": {
+    "num": 30,
+    "den": 1
+  },
+  "duration_frames": 450,
+  "duration_seconds": 15,
+  "seed": 1001,
+  "locale": "vi-VN",
+  "direction": "ltr",
+  "spec_hash": "8775a56bd7ef8458464938d0b04521c116231256a8e07c0db7ad1091713de498",
+  "render_hash": "d8198ac1d58a959d0218a9a55ee8f52c9e44a549cc071b62ffbb50d5a1985d40",
+  "scenes": [
+    {
+      "id": "scene_intro",
+      "revision": 1,
+      "scene_hash": "569f768d635f94331bda11ec8240ab1774b58cec28cff490cd4781c68ba36acb",
+      "start_frame": 0,
+      "duration_frames": 150,
+      "end_frame": 150,
+      "engine": "html-v1",
+      "background": "#0F172A",
+      "transition_out": {
+        "type": "cut",
+        "duration_frames": 0
+      },
+      "layers": [
+        {
+          "id": "badge",
+          "type": "shape",
+          "z_index": 1,
+          "global_start_frame": 0,
+          "global_end_frame": 150,
+          "local_start_frame": 0,
+          "local_duration_frames": 150,
+          "box": {
+            "x": 240,
+            "y": 280,
+            "width": 240,
+            "height": 60
+          },
+          "opacity": 1,
+          "transform": {
+            "translate_x": 0,
+            "translate_y": 0,
+            "scale_x": 1,
+            "scale_y": 1,
+            "rotate_deg": 0,
+            "origin_x": 0.5,
+            "origin_y": 0.5
+          },
+          "animations": [],
+          "content": {
+            "shape": "rect",
+            "fill": "#EF4444",
+            "stroke_width": 0,
+            "radius": 12,
+            "stroke": "transparent"
+          }
+        },
+        {
+          "id": "badge_text",
+          "type": "text",
+          "z_index": 2,
+          "global_start_frame": 0,
+          "global_end_frame": 150,
+          "local_start_frame": 0,
+          "local_duration_frames": 150,
+          "box": {
+            "x": 250,
+            "y": 292,
+            "width": 220,
+            "height": 40
+          },
+          "opacity": 1,
+          "transform": {
+            "translate_x": 0,
+            "translate_y": 0,
+            "scale_x": 1,
+            "scale_y": 1,
+            "rotate_deg": 0,
+            "origin_x": 0.5,
+            "origin_y": 0.5
+          },
+          "animations": [],
+          "content": {
+            "text": "SIÊU ƯU ĐÃI",
+            "font_id": "heading_bold",
+            "font_size": 24,
+            "color": "#FFFFFF",
+            "align": "center",
+            "overflow": "error",
+            "line_height": 1.2,
+            "max_lines": 5,
+            "min_font_size": 24
+          }
+        },
+        {
+          "id": "headline",
+          "type": "text",
+          "z_index": 3,
+          "global_start_frame": 15,
+          "global_end_frame": 150,
+          "local_start_frame": 15,
+          "local_duration_frames": 135,
+          "box": {
+            "x": 48,
+            "y": 420,
+            "width": 624,
+            "height": 180
+          },
+          "opacity": 1,
+          "transform": {
+            "translate_x": 0,
+            "translate_y": 0,
+            "scale_x": 1,
+            "scale_y": 1,
+            "rotate_deg": 0,
+            "origin_x": 0.5,
+            "origin_y": 0.5
+          },
+          "animations": [
+            {
+              "property": "translate_y",
+              "easing": "ease_out_quad",
+              "keyframes": [
+                {
+                  "frame": 0,
+                  "value": 40
+                },
+                {
+                  "frame": 30,
+                  "value": 0
+                }
+              ]
+            }
+          ],
+          "content": {
+            "text": "Bộ sưu tập Mùa Thu 2026",
+            "font_id": "heading_bold",
+            "font_size": 52,
+            "color": "#F8FAFC",
+            "align": "center",
+            "max_lines": 2,
+            "overflow": "error",
+            "line_height": 1.2,
+            "min_font_size": 52
+          }
+        }
+      ]
+    },
+    {
+      "id": "scene_showcase",
+      "revision": 1,
+      "scene_hash": "100057814db8b817f41e1ba99f62fbedd8cdb5c9beb1c50c4f50f2627703b0f0",
+      "start_frame": 150,
+      "duration_frames": 180,
+      "end_frame": 330,
+      "engine": "html-v1",
+      "background": "#0F172A",
+      "transition_out": {
+        "type": "cut",
+        "duration_frames": 0
+      },
+      "layers": [
+        {
+          "id": "product_image",
+          "type": "image",
+          "z_index": 1,
+          "global_start_frame": 150,
+          "global_end_frame": 330,
+          "local_start_frame": 0,
+          "local_duration_frames": 180,
+          "box": {
+            "x": 110,
+            "y": 200,
+            "width": 500,
+            "height": 500
+          },
+          "opacity": 1,
+          "transform": {
+            "translate_x": 0,
+            "translate_y": 0,
+            "scale_x": 1,
+            "scale_y": 1,
+            "rotate_deg": 0,
+            "origin_x": 0.5,
+            "origin_y": 0.5
+          },
+          "animations": [
+            {
+              "property": "scale_x",
+              "easing": "ease_out_quad",
+              "keyframes": [
+                {
+                  "frame": 0,
+                  "value": 0.8
+                },
+                {
+                  "frame": 45,
+                  "value": 1
+                }
+              ]
+            }
+          ],
+          "content": {
+            "asset_id": "ast_product_autumn",
+            "fit": "contain",
+            "anchor_x": 0.5,
+            "anchor_y": 0.5,
+            "alt": "Ảnh sản phẩm mùa thu"
+          }
+        },
+        {
+          "id": "price_tag",
+          "type": "text",
+          "z_index": 2,
+          "global_start_frame": 180,
+          "global_end_frame": 330,
+          "local_start_frame": 30,
+          "local_duration_frames": 150,
+          "box": {
+            "x": 60,
+            "y": 760,
+            "width": 600,
+            "height": 80
+          },
+          "opacity": 1,
+          "transform": {
+            "translate_x": 0,
+            "translate_y": 0,
+            "scale_x": 1,
+            "scale_y": 1,
+            "rotate_deg": 0,
+            "origin_x": 0.5,
+            "origin_y": 0.5
+          },
+          "animations": [],
+          "content": {
+            "text": "Chỉ từ 199.000 ₫",
+            "font_id": "heading_bold",
+            "font_size": 48,
+            "color": "#FACC15",
+            "align": "center",
+            "overflow": "error",
+            "line_height": 1.2,
+            "max_lines": 5,
+            "min_font_size": 48
+          }
+        }
+      ]
+    },
+    {
+      "id": "scene_cta",
+      "revision": 1,
+      "scene_hash": "d2ea084a0c9c25fb7df1656bdab003b0c614d7f973778be1e1efcf0ed93dba08",
+      "start_frame": 330,
+      "duration_frames": 120,
+      "end_frame": 450,
+      "engine": "html-v1",
+      "background": "#0F172A",
+      "transition_out": {
+        "type": "cut",
+        "duration_frames": 0
+      },
+      "layers": [
+        {
+          "id": "cta_button",
+          "type": "shape",
+          "z_index": 1,
+          "global_start_frame": 330,
+          "global_end_frame": 450,
+          "local_start_frame": 0,
+          "local_duration_frames": 120,
+          "box": {
+            "x": 160,
+            "y": 580,
+            "width": 400,
+            "height": 90
+          },
+          "opacity": 1,
+          "transform": {
+            "translate_x": 0,
+            "translate_y": 0,
+            "scale_x": 1,
+            "scale_y": 1,
+            "rotate_deg": 0,
+            "origin_x": 0.5,
+            "origin_y": 0.5
+          },
+          "animations": [],
+          "content": {
+            "shape": "rect",
+            "fill": "#3B82F6",
+            "stroke_width": 0,
+            "radius": 16,
+            "stroke": "transparent"
+          }
+        },
+        {
+          "id": "cta_text",
+          "type": "text",
+          "z_index": 2,
+          "global_start_frame": 330,
+          "global_end_frame": 450,
+          "local_start_frame": 0,
+          "local_duration_frames": 120,
+          "box": {
+            "x": 180,
+            "y": 605,
+            "width": 360,
+            "height": 50
+          },
+          "opacity": 1,
+          "transform": {
+            "translate_x": 0,
+            "translate_y": 0,
+            "scale_x": 1,
+            "scale_y": 1,
+            "rotate_deg": 0,
+            "origin_x": 0.5,
+            "origin_y": 0.5
+          },
+          "animations": [],
+          "content": {
+            "text": "Mua ngay hôm nay",
+            "font_id": "heading_bold",
+            "font_size": 32,
+            "color": "#FFFFFF",
+            "align": "center",
+            "overflow": "error",
+            "line_height": 1.2,
+            "max_lines": 5,
+            "min_font_size": 32
+          }
+        }
+      ]
+    }
+  ],
+  "audio_tracks": [],
+  "subtitles": [],
+  "fonts": [
+    {
+      "id": "heading_bold",
+      "asset_id": "ast_font_heading_bold",
+      "sha256": "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
+      "family": "Be Vietnam Pro",
+      "weight": 700,
+      "style": "normal"
+    },
+    {
+      "id": "body_regular",
+      "asset_id": "ast_font_body_regular",
+      "sha256": "123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0",
+      "family": "Be Vietnam Pro",
+      "weight": 400,
+      "style": "normal"
+    }
+  ],
+  "assets": {
+    "ast_product_autumn": {
+      "asset_id": "ast_product_autumn",
+      "kind": "image"
+    }
+  },
+  "required_capabilities": [
+    "engine:html-v1",
+    "profile:mp4-720p-v1"
+  ],
+  "compiled_at": "2026-11-03T04:27:40.624Z"
+}
