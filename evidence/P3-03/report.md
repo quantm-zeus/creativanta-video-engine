@@ -4,25 +4,25 @@ Báo cáo nghiệm thu kỹ thuật cho nhiệm vụ `P3-03` (`A+D / P3` — Tem
 
 ```text
 Task: P3-03
-Base / tested commit: 0e8dbe04f1f99193f6c69a20476745bb07fecca6 / a1eded86ca5ff49f5eb027b133013db8fbe4cfc9
+Base / tested commit: de614f462d0070069fb55cdde899572d907f543d / 2e8feae280f36d8cb4b1e38360cceeca0c288316
 Environment: Linux x86_64, Debian 12 container, Node v24.22.2 (built-in node:sqlite & node:crypto), pnpm 12.16.1, TypeScript 5.7.3, Python 3.11.2
 Command: PATH=/usr/local/lib/node_modules/corepack/shims:/home/whaleorcale/.local/bin:/usr/bin:$PATH pnpm build && pnpm typecheck && pnpm lint && pnpm test && node scripts/health-check.mjs && PATH=/usr/bin:$PATH python3 scripts/validate_repo.py
 Result: PASS
-Exit code / UTC started / duration: 0 / 2026-11-03T05:37:00Z / 48.2s
+Exit code / UTC started / duration: 0 / 2026-11-03T08:58:00Z / 95.8s
 Artifacts:
   - packages/api/src/templates/template-engine.ts, sha256=18301569af79c93083cabdb171e276b26d331f4c13177a8a7656acb1caa1258b, expires=N/A (repo-versioned)
-  - packages/api/src/db/repository.ts, sha256=df70c1ccc4fbcfb1475ca6edd6f61defbe4350cea0a677839ccfce8cf6d29620, expires=N/A (repo-versioned)
-  - packages/api/src/server.ts, sha256=9e153471b0f02a44e873da57c84701492a5af9760b7027b1e019706878570ded, expires=N/A (repo-versioned)
-  - packages/api/src/index.ts, sha256=c4e1ce41a20492fc8f79f4661d20aa2605d1bedabe48010135eadf5c3dabb469, expires=N/A (repo-versioned)
+  - packages/api/src/db/repository.ts, sha256=12f1d4a20732fa19e46693d0d3ffe0d08ec204d13c6bcd05f57b7de11e0dbf3e, expires=N/A (repo-versioned)
+  - packages/api/src/server.ts, sha256=6aea819fe2878b1b83c641b8ce77618adb6022fdc67a9b3de4b072585a915caf, expires=N/A (repo-versioned)
+  - packages/api/src/index.ts, sha256=14635666697bc7763d884fbebee5b97df7d16781335bbc4c0d795a0037670cad, expires=N/A (repo-versioned)
   - packages/api/test/p3-03-templates-and-revisions.test.mjs, sha256=a7a904a4f9fcc60ccc1a8cb251aacbded8a30fd3aed8c6d5060a661de5d8b601, expires=N/A (repo-versioned)
-  - evidence/P3-03/summary.json, sha256=b966c2705710b257fa122d1bf077b3c959759367214dbaf8f4d0cf2036a65d35, expires=N/A (repo-versioned)
+  - evidence/P3-03/summary.json, sha256=6d6245fe0a08c5cd8b1d540b99f16d3ba8df917c77f68f8c8529eee0d2da846e, expires=N/A (repo-versioned)
 Acceptance mapping:
   - Template catalog/variable schema/instantiate: PASS — Triển khai danh mục mẫu với phân quyền curated vs tenant, xác thực variables_schema (tối đa 64 biến, regex tên biến, kiểm tra kiểu JSON Schema, cấm remote $ref và executable defaults), kiểm tra ràng buộc vị trí binding v1, và endpoint POST /v1/templates/{id}/instantiate (yêu cầu compositions:write + templates:read) tạo ra bản composition Scene Spec 1.0 thuần túy không còn residual template metadata; giá trị default chỉ áp dụng khi biến vắng mặt (explicit null trả về 422 VALIDATION_FAILED); kiểm tra asset_id thuộc tenant RLS, status ready và kiểu layer phù hợp; thiết lập locale hợp lệ từ danh sách cho phép (vi-VN, en-US).
   - Composition revision/concurrency: PASS — Triển khai POST /v1/compositions/{id}/revisions yêu cầu base_revision bắt buộc; từ chối mọi yêu cầu có base_revision không khớp với revision hiện tại với HTTP 409 REVISION_CONFLICT; cơ chế kiểm soát tương tranh bảo vệ giao dịch ngăn chặn race condition (chỉ duy nhất 1 yêu cầu thành công tạo revision mới, các yêu cầu đồng thời dùng cùng base_revision đều nhận 409).
   - Immutable scene versions: PASS — Tính toán mã băm nội dung scene (computeSceneContentHash loại bỏ trường revision); nếu nội dung scene có thay đổi nhưng client giữ revision thấp hoặc không tăng, máy chủ tự động tăng revision của scene đó ("không tin revision client tự giữ thấp"); nếu nội dung scene hoàn toàn không đổi giữa hai composition revision, giữ nguyên scene revision; trigger cơ sở dữ liệu ngăn chặn hoàn toàn thao tác UPDATE/DELETE trực tiếp trên template_revisions và composition_revisions.
   - Stale base_revision 409: PASS — Kiểm thử tự động chuyên sâu xác nhận mã lỗi trả về là 409 Conflict với error code REVISION_CONFLICT và thông điệp chi tiết chỉ rõ base_revision đã cũ so với current_revision.
   - Curated fork path: PASS — Chặn hoàn toàn thao tác sửa đổi trực tiếp trên mẫu curated thuộc system_catalog (POST /v1/templates/tpl_promo_starter/revisions trả về 404 NOT_FOUND bảo vệ catalog); cung cấp luồng rẽ nhánh an toàn qua POST /v1/templates (kèm body.source_template) và POST /v1/templates/{id}/fork, ghi nhận đầy đủ nguồn gốc xuất xứ (source_template_id, source_template_revision, source_template_tenant_id) vào metadata của template mới.
-Reviewer / reviewed commit / decision: pending independent reviewer / a1eded86ca5ff49f5eb027b133013db8fbe4cfc9 / local completion awaiting review
+Reviewer / reviewed commit / decision: pending independent reviewer / 2e8feae280f36d8cb4b1e38360cceeca0c288316 / local completion awaiting review
 ```
 
 ---
