@@ -1,0 +1,10 @@
+{
+  "template_revision": 3,
+  "name": "Khuyến mãi tháng 11",
+  "variables": {
+    "headline": "Ưu đãi hôm nay",
+    "price": "199.000 ₫",
+    "image_asset_id": "ast_product_autumn"
+  },
+  "locale": "vi-VN"
+}

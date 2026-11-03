@@ -1,0 +1,164 @@
+{
+  "schema_version": "1.0",
+  "canvas": {
+    "width": 720,
+    "height": 1280,
+    "background": "#000000"
+  },
+  "fps": {
+    "num": 30,
+    "den": 1
+  },
+  "duration_frames": 1350,
+  "seed": 3030,
+  "locale": "vi-VN",
+  "direction": "ltr",
+  "fonts": [
+    {
+      "id": "font_caption",
+      "asset_id": "ast_font_inter_medium",
+      "sha256": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+      "family": "Inter",
+      "weight": 500,
+      "style": "normal"
+    }
+  ],
+  "scenes": [
+    {
+      "id": "scene_clip_a",
+      "revision": 1,
+      "start_frame": 0,
+      "duration_frames": 675,
+      "engine": "html-v1",
+      "layers": [
+        {
+          "id": "video_clip_a",
+          "type": "video",
+          "start_frame": 0,
+          "duration_frames": 675,
+          "z_index": 1,
+          "box": {
+            "x": 0,
+            "y": 0,
+            "width": 720,
+            "height": 1280
+          },
+          "content": {
+            "asset_id": "ast_video_footage_a",
+            "fit": "cover",
+            "source_in_frame": 30,
+            "playback_rate": 1,
+            "loop": false,
+            "anchor_x": 0.5,
+            "anchor_y": 0.5
+          }
+        }
+      ],
+      "transition_out": {
+        "type": "cut",
+        "duration_frames": 0
+      }
+    },
+    {
+      "id": "scene_clip_b",
+      "revision": 1,
+      "start_frame": 675,
+      "duration_frames": 675,
+      "engine": "html-v1",
+      "layers": [
+        {
+          "id": "video_clip_b",
+          "type": "video",
+          "start_frame": 0,
+          "duration_frames": 675,
+          "z_index": 1,
+          "box": {
+            "x": 0,
+            "y": 0,
+            "width": 720,
+            "height": 1280
+          },
+          "content": {
+            "asset_id": "ast_video_footage_b",
+            "fit": "cover",
+            "source_in_frame": 0,
+            "playback_rate": 1,
+            "loop": false,
+            "anchor_x": 0.5,
+            "anchor_y": 0.5
+          }
+        }
+      ],
+      "transition_out": {
+        "type": "cut",
+        "duration_frames": 0
+      }
+    }
+  ],
+  "audio_tracks": [
+    {
+      "id": "bg_music",
+      "asset_id": "ast_audio_music_ambient",
+      "start_frame": 0,
+      "duration_frames": 1350,
+      "source_in_samples": 0,
+      "gain_db": -14.0,
+      "role": "music",
+      "fade_in_frames": 30,
+      "fade_out_frames": 45
+    },
+    {
+      "id": "narration_speech",
+      "asset_id": "ast_audio_speech_guide",
+      "start_frame": 30,
+      "duration_frames": 1290,
+      "source_in_samples": 0,
+      "gain_db": -1.5,
+      "role": "voice",
+      "fade_in_frames": 0,
+      "fade_out_frames": 10
+    }
+  ],
+  "subtitles": [
+    {
+      "id": "subtitles_vi",
+      "locale": "vi-VN",
+      "burn_in": true,
+      "style": {
+        "font_id": "font_caption",
+        "font_size": 26,
+        "color": "#FFFFFF",
+        "background": "#000000B3",
+        "align": "center",
+        "max_lines": 2,
+        "safe_margin_px": 56
+      },
+      "cues": [
+        {
+          "id": "cue_1",
+          "start_frame": 45,
+          "end_frame": 330,
+          "text": "Khám phá vẻ đẹp kỳ vĩ của thiên nhiên Việt Nam."
+        },
+        {
+          "id": "cue_2",
+          "start_frame": 345,
+          "end_frame": 660,
+          "text": "Những cánh rừng bạt ngàn tại vùng cao nguyên Đắk Lắk."
+        },
+        {
+          "id": "cue_3",
+          "start_frame": 690,
+          "end_frame": 990,
+          "text": "Hành trình trải nghiệm kết nối con người và cộng đồng."
+        },
+        {
+          "id": "cue_4",
+          "start_frame": 1005,
+          "end_frame": 1320,
+          "text": "Lưu giữ từng khoảnh khắc đáng nhớ qua những thước phim sống động."
+        }
+      ]
+    }
+  ]
+}

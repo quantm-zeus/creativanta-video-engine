@@ -1,0 +1,10 @@
+{
+  "composition_id": "cmp_promo",
+  "revision": 1,
+  "profile": "mp4-720p-v1",
+  "webhook_endpoint_id": "wh_demo",
+  "client_reference": "campaign-2026-11-001",
+  "metadata": {
+    "campaign": "november"
+  }
+}
