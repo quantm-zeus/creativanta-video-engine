@@ -13,9 +13,9 @@ Artifacts:
   - packages/api/src/assets/upload-grant.ts, sha256=37d2c67059034163b3df3b988a6f7942f85a7a559db9150c3d03d81c13d6a9b0, expires=N/A (repo-versioned)
   - packages/api/src/assets/quarantine-store.ts, sha256=8fe5766d13a34c7760ecc3748717d86ea34535cc9b06a57d186d1032a0b22f70, expires=N/A (repo-versioned)
   - packages/api/src/storage/sweeper.ts, sha256=73204ad48b531801773973dd6b218c1e51affda90da7761af1ef417e75b51aeb, expires=N/A (repo-versioned)
-  - packages/api/src/db/repository.ts, sha256=24a8c57578bd73580ba5564a1bfde377922571f05bc0d24bdcd519101316a23e, expires=N/A (repo-versioned)
-  - packages/api/src/server.ts, sha256=e456b5944e93e2a33d4bc86e6fa02ce152040127da6580a861baeb61675d8dad, expires=N/A (repo-versioned)
-  - packages/api/src/index.ts, sha256=eb95c4bb3c70dd7ac58cb9524a4bfa5472cb21d8eb2ca02fa7587e3cf589b693, expires=N/A (repo-versioned)
+  - packages/api/src/db/repository.ts, sha256=b4e08b417fa522e7fbdb4db77912f9373f0643877e4da024a2559a80a52e727d, expires=N/A (repo-versioned)
+  - packages/api/src/server.ts, sha256=088262530c9eee575756a6775d7ac8654644ef70964be3039337189b32a2e82c, expires=N/A (repo-versioned)
+  - packages/api/src/index.ts, sha256=80eff0872a422d447cce3c44d081088c1718e5ef52ba913a1f05be7785692d7b, expires=N/A (repo-versioned)
   - packages/api/test/p3-05-storage-retention-sweeper.test.mjs, sha256=d6d2e4e7e80547f49aadbc5671691b72a6573a837965aa3f577c32bf9362948e, expires=N/A (repo-versioned)
 Acceptance mapping:
   - Storage grants (upload & download grants, signed HMAC-SHA256, TTL enforcement: max 600s upload, max 300s download, constant-time validation): PASS — Triển khai đầy đủ mô hình capability URL có chữ ký bảo mật HMAC-SHA256. Upload grant có thời hạn tối đa 600 giây; download grant có thời hạn tối đa 300 giây theo docs/DEPLOYMENT.md:97 và docs/SECURITY.md:23. Sử dụng crypto.timingSafeEqual ngăn chặn triệt để tấn công timing oracle. Grant giả mạo bị từ chối 403 INVALID_GRANT_SIGNATURE; grant hết hạn bị từ chối 410 DOWNLOAD_GRANT_EXPIRED / UPLOAD_GRANT_EXPIRED. Endpoint download nhị phân hỗ trợ Content-Type, Content-Length và ETag hex SHA-256.
@@ -135,13 +135,12 @@ Bộ kiểm thử tích hợp chuyên biệt `packages/api/test/p3-05-storage-re
 ℹ skipped 0
 ```
 
-Toàn bộ gói `@creativanta/api` chạy tổng cộng **172 ca kiểm thử** đều đạt 100% kết quả PASS:
+Toàn bộ gói `@creativanta/api` chạy tổng cộng **183 ca kiểm thử** đều đạt 100% kết quả PASS:
 ```text
-ℹ tests 172
-ℹ suites 45
-ℹ pass 172
+ℹ tests 183
+ℹ suites 51
+ℹ pass 183
 ℹ fail 0
-ℹ duration_ms 7557.984515
 ```
 
 ---
