@@ -36,22 +36,22 @@ flowchart LR
 
 MVP chọn PostgreSQL làm source of truth và queue (`FOR UPDATE SKIP LOCKED`, transaction ngắn, lease/fencing token). Điều này giảm dịch vụ và cho phép atomic admission/outbox. Không cần Redis/BullMQ ở MVP; chỉ thêm broker thông báo khi benchmark chứng minh DB dispatch không đủ, vẫn giữ DB authoritative. Không giữ transaction suốt render.
 
-Lease 60s, heartbeat 15s. Mỗi attempt có `attempt_id`, monotonic `lease_epoch`; progress/renew/publish phải khớp cả hai. Lease expiry requeue bằng transaction có fence mới. Queue at-least-once, single logical publication; không hứa exactly-once execution. Round-robin tenant có pending job, FIFO trong tenant. Counters/locks giới hạn 2 running/tenant và slots global. Preview ưu tiên trọng số 2:1, tối đa 50% slots khi render chờ; không preempt/starve render.
+Lease render job 60s, heartbeat 15s (tách biệt hoàn toàn với coding task lease 10min trong [AGY execution](AGENTS.md)). Mọi mốc thời gian lease (`lease_expires_at`, `heartbeat_at`) phải tính bằng đồng hồ PostgreSQL server (`now()`), không dùng đồng hồ cục bộ của worker để tránh lệch nhịp clock skew. Mỗi attempt có `attempt_id` và monotonic `lease_epoch`; lệnh renew/progress/publish bắt buộc khớp `(job_id, attempt_id, lease_epoch) AND lease_expires_at > now()`. Nếu renew trả về 0 dòng cập nhật, controller lập tức hủy tiến trình render của attempt đó. Lease expiry requeue bằng transaction có fence mới. Queue at-least-once, single logical publication; không hứa exactly-once execution. Round-robin tenant có pending job, FIFO trong tenant. Counters/locks giới hạn 2 active/tenant (`preparing/rendering/encoding/verifying/cancel_requested`), 20 pending admission (`queued + retry_wait`, tổng ≤22 non-terminal jobs/tenant) và slots global. Preview ưu tiên trọng số 2:1, tối đa 50% slots khi render chờ; không preempt/starve render.
 
-| Entity | Invariant |
+| Nhóm thực thể (21 bảng chuẩn) | Invariant & Composite Keys |
 | --- | --- |
-| tenants, api_keys, policies | API key hash/scopes; tenant từ auth, không body |
-| templates, template_revisions | `(tenant_id, template_id, revision)` immutable; curated catalog global read-only, fork để sửa |
-| compositions, composition_revisions | Immutable JSON/hash/schema version; scene revision/hash nằm trong snapshot |
-| assets, asset_versions | Tenant, SHA-256, probe/MIME, bytes, rights, status; ready bytes immutable |
-| scene_bundles | Source/build digests, capability manifest, review/security gate và runtime pin |
-| jobs, job_attempts, job_events | Snapshot, profile, state_version, attempt/fence, cancel timestamp, event sequence |
-| artifacts | Unique `(job_id, kind)` publication; checksum, bytes, expiry, private key |
-| idempotency_records | Unique `(tenant_id, method, normalized_path, key)` + request hash/response/expiry |
-| outbox, webhook_endpoints, deliveries | Event cùng transaction terminal job; endpoint version snapshot |
-| usage_reservations, usage_entries | Reserve maximum budget; settle/release một lần `(job_id, meter, ledger_version)` |
+| `tenants`, `api_keys`, `policies` | API key hash/scopes (`key_prefix`, `key_hash`); tenant lấy từ auth, không từ body; `policies` lưu quota/rate versioned |
+| `templates`, `template_revisions` | PK/FK `(tenant_id, template_id, revision)` immutable; curated catalog dùng sentinel tenant `00000000-0000-0000-0000-000000000000` (`visibility='curated_public'`) read-only, fork sang tenant để sửa |
+| `compositions`, `composition_revisions` | PK/FK `(tenant_id, composition_id, revision)` immutable JSON/hash/schema version; scene revision/hash nằm trong snapshot |
+| `assets`, `asset_versions` | PK/FK `(tenant_id, asset_id, version)`; SHA-256, probe/MIME, bytes, rights, status (`uploading/processing/ready/rejected/deleted`); ready bytes immutable |
+| `scene_bundles`, `scene_bundle_revisions` | PK/FK `(tenant_id, bundle_id, revision)`; source/build digests, capability manifest, review/security gate và runtime pin |
+| `jobs`, `job_attempts`, `job_events` | PK/FK `(tenant_id, job_id)`; snapshot, profile, `state_version`, `attempt_id`/`lease_epoch` fence, cancel timestamp, monotonic `event_seq` |
+| `artifacts` | Unique `(tenant_id, job_id, kind)` publication; checksum, bytes, expiry, private storage key |
+| `idempotency_records` | Unique `(tenant_id, method, normalized_path, key)` + RFC 8785 `request_hash`, status/response encrypted-at-rest cho grants, `expires_at` (7d) |
+| `outbox`, `webhook_endpoints`, `webhook_deliveries` | Event ghi vào `outbox` cùng transaction terminal job; `webhook_endpoints` và `webhook_deliveries` gắn composite FK `tenant_id` |
+| `usage_reservations`, `usage_entries` | Reserve maximum budget khi admission; settle/release đúng một lần theo unique `(tenant_id, job_id, meter, ledger_version)` |
 
-Mọi tenant-owned FK chứa `tenant_id`; RLS cộng application authorization. Tenant context dùng transaction-local, không rò qua connection pool. Dispatcher role riêng chỉ dispatch; API role không bypass RLS. Curated template không chứa tenant asset. Không dedupe/cache tenant-private bytes xuyên tenant ở MVP.
+Mọi bảng thuộc sở hữu tenant đều có cột `tenant_id NOT NULL` và composite FK chứa `tenant_id`; áp dụng `ENABLE ROW LEVEL SECURITY` và `FORCE ROW LEVEL SECURITY` cộng kiểm tra tầng ứng dụng. Context tenant đặt qua `SET LOCAL app.current_tenant_id = '<uuid>'` trong từng transaction, tuyệt đối không dùng session-level `SET` rò qua connection pool. Năm DB roles tách biệt quyền tối thiểu cho `P3-01`: `cve_migrator` (DDL & seed `system_catalog`), `cve_api` (CRUD theo RLS tenant + chỉ đọc `system_catalog` khi `visibility='curated_public'`), `cve_dispatcher` (claim/reap/publish jobs), `cve_ingest` (probe/normalize quarantine sang ready assets), `cve_sender` (đọc `outbox` và ghi `webhook_deliveries`). Curated template không chứa tenant asset. Không dedupe/cache tenant-private bytes xuyên tenant ở MVP. Xem chi tiết quyết định hợp đồng tại [P0-04 report](../evidence/P0-04/report.md).
 
 ## Lifecycle và publication
 
@@ -70,18 +70,20 @@ stateDiagram-v2
   retry_wait --> queued: backoff
   queued --> canceled: cancel
   retry_wait --> canceled: cancel
+  queued --> failed: deadline / asset revoked
+  retry_wait --> failed: deadline / asset revoked
   preparing --> cancel_requested: cancel
   rendering --> cancel_requested: cancel
   encoding --> cancel_requested: cancel
   verifying --> cancel_requested: cancel wins lock
-  cancel_requested --> canceled: process stopped
-  preparing --> failed: permanent / exhausted
-  rendering --> failed: permanent / exhausted
-  encoding --> failed: invalid output / exhausted
-  verifying --> failed: invalid output / exhausted
+  cancel_requested --> canceled: process stopped / reaped
+  preparing --> failed: permanent / exhausted / asset revoked
+  rendering --> failed: permanent / exhausted / asset revoked
+  encoding --> failed: invalid output / exhausted / asset revoked
+  verifying --> failed: invalid output / exhausted / asset revoked
 ```
 
-`succeeded`, `failed`, `canceled` terminal. Queued/retry_wait cũng có thể failed vì deadline/attempt exhaustion. Validation trước admission không tạo job. Terminal không hồi sinh: retry nghiệp vụ cần job mới/key mới. Event sequence/state_version tăng đơn điệu; percentage chỉ là gợi ý, có thể giảm sau retry.
+`succeeded`, `failed`, `canceled` là ba trạng thái terminal. `queued`/`retry_wait` chuyển sang `failed` khi vượt `job_deadline_seconds` (`JOB_DEADLINE_EXCEEDED`), hết số lần thử hoặc khi asset đầu vào bị xóa/thu hồi (`ASSET_REVOKED`). Một khi job đã vào `cancel_requested` (do lệnh `POST /jobs/{id}/cancel` của khách thắng khóa dòng trước publication), trạng thái terminal hợp lệ duy nhất của nó là `canceled` (kể cả khi worker chết và được reaper thu hồi). Ngược lại, khi tenant gọi `DELETE /assets/{id}` thu hồi asset đang được tham chiếu bởi job chưa terminal, job đó bị chuyển sang `failed` với `error.code = "ASSET_REVOKED"` (`retryable: false`). Validation trước admission không tạo job. Terminal không hồi sinh: retry nghiệp vụ cần job mới/key mới. Event sequence/state_version tăng đơn điệu; percentage chỉ là gợi ý, có thể giảm sau retry.
 
 1. Auth/scopes → schema/capability → asset ready/quyền → snapshot revisions/assets/runtime/seed → quota/estimate. Một DB transaction ghi idempotency claim, job, reservation, event. Trả 202 chỉ sau commit; DB fail trả 503.
 2. Claim lease; controller stage approved bytes vào workspace riêng. Sandbox chỉ thấy manifest/assets read-only và output giới hạn. Asset revoked/quarantined thì fail, không fetch URL thay thế.

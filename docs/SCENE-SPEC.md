@@ -47,7 +47,7 @@ Root schema minh họa cấu trúc (fragment có chủ ý; `$defs` phải đư�
 }
 ```
 
-Validation có ba tầng: JSON Schema cho shape/bounds → semantic validator cho timeline/references/conflicts → policy/capability validator cho tenant/quota/engine/license status. Schema không tự làm được cross-field sums, asset existence hoặc byte budgets. Error trả JSON Pointer chính xác, stable code, không tự sửa payload không báo.
+Validation có ba tầng: JSON Schema cho shape/bounds (trả HTTP `422 VALIDATION_FAILED`) → semantic validator cho timeline/references/conflicts (trả HTTP `422 VALIDATION_FAILED`) → policy/capability validator cho tenant/quota/engine/profile/license status (trả HTTP `422 UNSUPPORTED_CAPABILITY` kèm detail code `PROFILE_CONSTRAINT_VIOLATED` hoặc `CAPABILITY_DISABLED`). Schema không tự làm được cross-field sums, asset existence hoặc byte budgets. Error trả JSON Pointer chính xác, stable code, không tự sửa payload không báo. Xem chi tiết quyết định tại [P0-04 report](../evidence/P0-04/report.md).
 
 ## Scene và layer
 
@@ -65,7 +65,7 @@ Layer bắt buộc `id`, `type`, `start_frame`, `duration_frames`, `z_index`, `b
 | image | `asset_id`, `fit` | fit contain/cover/stretch; `anchor_x/y` [0,1] default .5; optional `alt` metadata; asset ready image |
 | video | `asset_id`, `fit`, `source_in_frame` | source_in_frame ≥0 ở normalized source fps bằng composition; `playback_rate` v1 const 1; `loop` default false; `anchor_x/y` .5; audio luôn muted |
 | shape | `shape`, `fill` | shape rect/ellipse; `stroke` default transparent, `stroke_width` ≥0 ≤100 default 0; `radius` ≥0 default 0 chỉ rect |
-| svg | `asset_id`, `fit` | SVG sanitize trước ready; không script/foreignObject/external href/filter quá budget |
+| svg | `asset_id`, `fit` | SVG sanitize trước ready (≤5 MiB, ≤5000 DOM nodes, depth ≤16); cấm `<!DOCTYPE>`/`<!ENTITY>`, `<script>`, `<foreignObject>`, `on*`, external `href`/`url()` và filter vượt budget |
 
 Asset IDs opaque server-issued; ready record chứa version/hash. Client không được gửi filesystem path, arbitrary URI, inline base64 media, CSS `url()`. Fonts bind bằng font_id từ fonts array; font fallback Internet bị cấm. Rich text, arbitrary shader, filters, 3D và video speed change là extension sau MVP, không tự thêm khi agent thiếu feature.
 
@@ -75,7 +75,7 @@ Một composition N frames ở p/q fps có duration chính xác `N*q/p` giây. F
 
 Animation item: `{property,keyframes,easing}`. Property enum `opacity`, `translate_x`, `translate_y`, `scale_x`, `scale_y`, `rotate_deg`; keyframes array 2..64 `{frame,value}` với frame integer local layer, tăng nghiêm ngặt trong [0,layer.duration_frames-1]. Giá trị theo bounds property, opacity [0,1]. Easing `linear`, `ease_in_quad`, `ease_out_quad`, `ease_in_out_quad`; easing áp dụng mỗi segment. Trước key đầu/sau key cuối giữ giá trị đầu/cuối. Một property chỉ một animation/layer. Không string expression/eval; compiler tính giá trị rồi đặt WAAPI currentTime hoặc style; không phụ thuộc raf thực.
 
-Transition v1 `cut` hoặc `fade_to_background`; fade F frames chiếm **F frames cuối scene đi**, opacity scene = `(end-1-k)/(F-1)` tại frames end-F..end-1, với F≥2. Cảnh kế tiếp bắt đầu nguyên opacity tại end. Cut duration=0. Fade không làm đổi tổng frames; `crossfade` cần future schema extension xác định overlap rõ ràng, không giả hỗ trợ sẵn. Animation và fade nhân opacity.
+Transition v1 `cut` hoặc `fade_to_background` (schema `oneOf`): khi `type="cut"` bắt buộc `duration_frames=0`; khi `type="fade_to_background"` bắt buộc số nguyên `2 <= F <= min(300, scene.duration_frames)` (nếu `F > scene.duration_frames` thì semantic validator trả `TIMELINE_BOUNDS` tại `/scenes/{i}/transition_out/duration_frames`). Fade `F` frames chiếm **F frames cuối scene đi**, áp dụng hợp lệ trên mọi scene kể cả scene cuối cùng; opacity cấp scene `scene_alpha(k) = (end-1-k)/(F-1)` tại global frames `k` thuộc `[end-F, end-1]` xuống màu `canvas.background`. Cảnh kế tiếp bắt đầu nguyên opacity tại `end`. Fade không làm đổi tổng frames; `crossfade` cần future schema extension xác định overlap rõ ràng, không giả hỗ trợ sẵn. Opacity hiệu dụng của mỗi layer tại frame `k` bằng `layer_alpha(k) * scene_alpha(k)`.
 
 Renderer phải freeze wall clock/locale/timezone/seed, disable animations không được compiler điều khiển, await `document.fonts.ready`, image decode, video seek/decode ready và adapter readiness promise. Browser media `currentTime` không tự chứng minh frame đúng: normalize CFR/source PTS, dùng decoded frame mapping test hoặc stage frames trước khi cần. Pinned software rasterization/fonts/DPR=1/sRGB. Không network sau staging, không Date.now cho motion. Seek ngẫu nhiên frame phải cho cùng pixel trong cùng runtime/profile; stateful canvas phải reset/recompute từ seed hoặc pure frame function. Video bitstream có thể khác giữa encoder/CPU version; invariant chính là frame content/timing và provenance.
 
@@ -128,6 +128,8 @@ Ví dụ 150 frames = 5s ở 30fps, cần font asset ready hợp lệ; SHA dư�
 | Text quá box/không glyph | TEXT_OVERFLOW/MISSING_GLYPH lúc preflight, không silently crop |
 | Hai opacity animations | ANIMATION_CONFLICT |
 | Source video trim quá dài | SOURCE_RANGE_INVALID |
+| `fade_to_background` có `F > scene.duration_frames` | `/scenes/0/transition_out/duration_frames`, TIMELINE_BOUNDS, semantic |
+| `duration_frames=3600` trên profile `mp4-720p-v1` (max 1800) | `/duration_frames`, PROFILE_CONSTRAINT_VIOLATED, policy/capability |
 
 ## Editable revisions, migrations, reproducibility
 

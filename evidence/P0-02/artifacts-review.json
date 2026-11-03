@@ -1,0 +1,221 @@
+{
+  "task_id": "P0-02",
+  "evaluated_on": "2026-11-02",
+  "stream": "C+B",
+  "base_commit": "eea986e879b70920c0a3c2c5579545ee3f509882",
+  "method": "Package metadata inspection, npm registry audit, lifecycle scripts analysis, license and NOTICE evaluation, vulnerability and supply chain triage. No unreviewed code installed or executed in production/runtime.",
+  "review_summary": {
+    "hyperframes_cli": "BLOCKED",
+    "hyperframes_engine": "BLOCKED",
+    "hyperframes_core": "CONDITIONALLY_ALLOWED_FOR_SPIKE_AFTER_AUDIT",
+    "puppeteer_full": "BLOCKED",
+    "puppeteer_core": "ALLOWED",
+    "playwright_core": "ALLOWED",
+    "ffmpeg_gpl_libx264": "ALLOWED_INTERNAL_BACKEND_ONLY",
+    "ffmpeg_nonfree": "BLOCKED",
+    "fonts_vietnamese_local": "ALLOWED",
+    "fonts_remote_cdn": "BLOCKED"
+  },
+  "artifacts": [
+    {
+      "name": "hyperframes",
+      "scope": "cli_and_distribution",
+      "version": "0.9.3",
+      "pushed_at": "2026-11-02T12:41:10Z",
+      "git_head": "f6536e9f5deab41ffe30132543ed1586e2b16088",
+      "tarball_url": "https://registry.npmjs.org/hyperframes/-/hyperframes-0.9.3.tgz",
+      "shasum": "6c5e8081511ca35899227af1006fc99095c5320c",
+      "integrity": "sha512-HzwnvrO7Njsw5qDeWPp5tX9orwSPrRgXR6gSLey5dHX+7NeHrFu1NGd8i+RSRNiSDMxFIfuKnm1DjW4xuEIUWQ==",
+      "license": "Apache-2.0",
+      "install_scripts": {
+        "has_lifecycle_scripts": false
+      },
+      "findings": [
+        "Vendors GreenSock GSAP (dist/vendor/npm/gsap@3.15.0/dist/gsap.min.js, CustomEase.min.js, MotionPathPlugin.min.js). GSAP is subject to commercial license restrictions under GreenSock terms and is not freely redistributable under Apache-2.0.",
+        "Contains direct integration with third-party cloud services: Google GenAI (@google/genai@1.52.0), ONNX Runtime, HeyGen billing (dist/billing-*.js), HeyGen authentication (dist/auth-*.js), telemetry (dist/telemetry-*.js), auto-update checks (dist/autoUpdate-*.js), and cloud TTS/transcribe endpoints.",
+        "Depends on giget and undici for remote template downloading and network fetches, violating zero-egress offline renderer requirements.",
+        "Transitively depends on puppeteer which executes node install.mjs postinstall script."
+      ],
+      "verdict": "BLOCKED",
+      "usage_policy": "STRICTLY BLOCKED from production, staging, and container runtimes. Never install in root workspace."
+    },
+    {
+      "name": "@hyperframes/engine",
+      "scope": "render_loop_engine",
+      "version": "0.9.3",
+      "pushed_at": "2026-11-02T12:38:10Z",
+      "tarball_url": "https://registry.npmjs.org/@hyperframes/engine/-/engine-0.9.3.tgz",
+      "shasum": "f968372065c35ffd708ca8ec1c6690d7095f6916",
+      "integrity": "sha512-F1uyEq9l2eBF088fN+mI7iKNS0nW2RUE1+0BrU2o5kGU4d1nzlBtIcRnx7CfvT+aI/X98kn1zMjgIPF9I1W0rA==",
+      "license": "Apache-2.0",
+      "install_scripts": {
+        "has_lifecycle_scripts": true,
+        "detail": "Direct dependency on puppeteer@~25.11.0 triggers 'node install.mjs' postinstall script which downloads unpinned Chromium binary over internet."
+      },
+      "findings": [
+        "Unpinned binary download during installation violates reproducible builds and zero-egress security policy.",
+        "Engine hardcodes Chrome startup parameters and attempts host memory introspection (dist/services/wslHost.js, dist/services/chromeHostCeiling.js)."
+      ],
+      "verdict": "BLOCKED",
+      "usage_policy": "BLOCKED. Do not install. In P2-01, engine rendering will use internal Chromium frame capture and direct CDP/Puppeteer-core integration."
+    },
+    {
+      "name": "@hyperframes/core",
+      "scope": "animation_and_timing_runtime",
+      "version": "0.9.3",
+      "pushed_at": "2026-11-02T12:35:16Z",
+      "tarball_url": "https://registry.npmjs.org/@hyperframes/core/-/core-0.9.3.tgz",
+      "shasum": "b93797c9d06e5244b2fe69cb7b6477df2bd3a62b",
+      "integrity": "sha512-haRf9MVzmwdiZvHD4VUhnUj8EwvNg+FSk775FJic2bws1anSYpFxUpqdRvIOM4/wUFKFYGDRZc0q7EM44RLPSQ==",
+      "license": "Apache-2.0",
+      "install_scripts": {
+        "has_lifecycle_scripts": false
+      },
+      "findings": [
+        "Contains core time-attribute parsing, scene timeline scheduling, linkedom DOM parsing, wawoff2, and CSS tree evaluation.",
+        "Contains adapter stubs for GSAP (dist/adapters/gsap.js) and WebGPU fragment shaders (dist/vfx/*.frag.js).",
+        "Does not contain postinstall scripts or HeyGen cloud billing/telemetry hooks."
+      ],
+      "verdict": "CONDITIONALLY_ALLOWED_FOR_SPIKE_AFTER_AUDIT",
+      "usage_policy": "Allowed for evaluation in P2-01 spike within a network-isolated, sandboxed container only after line-by-line source audit. Must be installed with --ignore-scripts. If GSAP is required by its runtime, it must be replaced by native WAAPI or linear CSS transforms."
+    },
+    {
+      "name": "puppeteer",
+      "scope": "browser_automation_distribution",
+      "version": "25.11.0",
+      "license": "Apache-2.0",
+      "install_scripts": {
+        "has_lifecycle_scripts": true,
+        "detail": "postinstall: node install.mjs"
+      },
+      "findings": [
+        "Automatically downloads Chromium binary from Google CDN during npm install. Violates isolated build policy."
+      ],
+      "verdict": "BLOCKED",
+      "usage_policy": "STRICTLY BLOCKED. Never add 'puppeteer' to package.json."
+    },
+    {
+      "name": "puppeteer-core",
+      "scope": "browser_automation_driver",
+      "version": "25.11.0",
+      "license": "Apache-2.0",
+      "install_scripts": {
+        "has_lifecycle_scripts": false
+      },
+      "findings": [
+        "Lightweight CDP wrapper without browser bundle or install scripts. Requires explicitly provided executablePath or wsEndpoint.",
+        "Fully compatible with sandboxed system-installed Chromium."
+      ],
+      "verdict": "ALLOWED",
+      "usage_policy": "ALLOWED as primary browser automation driver for Chromium headless frame capture."
+    },
+    {
+      "name": "playwright-core",
+      "scope": "browser_automation_driver",
+      "version": "1.64.1",
+      "license": "Apache-2.0",
+      "install_scripts": {
+        "has_lifecycle_scripts": false
+      },
+      "findings": [
+        "Alternative CDP and browser protocol wrapper. Zero lifecycle scripts, no automatic downloads."
+      ],
+      "verdict": "ALLOWED",
+      "usage_policy": "ALLOWED as viable challenger / fallback automation driver."
+    },
+    {
+      "name": "chromium_headless_binary",
+      "scope": "rendering_browser_runtime",
+      "pinned_version": "131.0.6778.85 or Ubuntu 24.04 package chromium-browser",
+      "license": "BSD-3-Clause and others",
+      "security_configuration": {
+        "sandbox_mode": "ENFORCED (User namespace sandbox, no-sandbox strictly prohibited)",
+        "user": "non-root (UID 10001)",
+        "network": "none (--net=none, zero external egress)",
+        "flags": [
+          "--headless=new",
+          "--disable-gpu",
+          "--disable-dev-shm-usage",
+          "--disable-background-networking",
+          "--disable-default-apps",
+          "--disable-sync",
+          "--no-first-run",
+          "--mute-audio"
+        ]
+      },
+      "verdict": "ALLOWED",
+      "usage_policy": "Must be pre-installed in container base image, never fetched at runtime. Sandboxing is non-negotiable."
+    },
+    {
+      "name": "ffmpeg",
+      "scope": "media_mux_encode_probe",
+      "pinned_version": "7.1 / 6.1.1 LTS",
+      "license_configurations": {
+        "core_lgpl": {
+          "flags": "--disable-gpl --disable-nonfree",
+          "license": "LGPL-2.1-or-later",
+          "h264_encoder": "OpenH264 (Cisco binary module) or libvpx/AV1",
+          "distribution_risk": "Low (LGPL clean)"
+        },
+        "gpl_libx264": {
+          "flags": "--enable-gpl --enable-libx264 --disable-nonfree",
+          "license": "GPL-2.0-or-later",
+          "h264_encoder": "libx264",
+          "distribution_risk": "Acceptable for private backend SaaS execution; triggers GPL copyleft source-offer obligations if container/binary is distributed externally."
+        },
+        "nonfree_fdk": {
+          "flags": "--enable-nonfree --enable-libfdk-aac",
+          "license": "NON_FREE",
+          "verdict": "BLOCKED",
+          "distribution_risk": "Unredistributable; strictly forbidden."
+        }
+      },
+      "security_hardening": [
+        "-protocol_whitelist 'file,pipe' is mandatory to prevent SSRF and local file leak exploits.",
+        "Argv array subprocess execution only (no shell command string concatenation).",
+        "Resource bounded by cgroup CPU/memory/time limits."
+      ],
+      "verdict": "ALLOWED_WITH_STRICT_SECURITY_FLAGS",
+      "usage_policy": "ALLOWED for internal video/audio probe, CFR normalization, and MP4 encoding. Non-free build is BLOCKED. Native AAC (-c:a aac) is mandatory."
+    },
+    {
+      "name": "fonts_vietnamese",
+      "scope": "typography_and_localization",
+      "artifacts": [
+        {
+          "family": "Inter",
+          "version": "4.1",
+          "license": "OFL-1.1",
+          "coverage": "Complete Vietnamese Latin diacritics (NFC/NFD), currency symbol ₫ (U+20AB)",
+          "verdict": "ALLOWED"
+        },
+        {
+          "family": "Noto Sans",
+          "version": "2.014",
+          "license": "OFL-1.1",
+          "coverage": "Complete Vietnamese Unicode coverage, robust diacritics placement",
+          "verdict": "ALLOWED"
+        },
+        {
+          "family": "Roboto",
+          "version": "3.008",
+          "license": "Apache-2.0",
+          "coverage": "Full Vietnamese diacritics and numeral support",
+          "verdict": "ALLOWED"
+        }
+      ],
+      "storage_and_loading_policy": {
+        "remote_google_fonts_cdn": "BLOCKED (violates zero-egress, non-deterministic)",
+        "local_offline_staging": "MANDATORY (.woff2/.ttf with SHA-256 integrity checksums)",
+        "rendering_check": "Must await document.fonts.ready prior to frame capture"
+      },
+      "verdict": "ALLOWED",
+      "usage_policy": "Staged locally in assets registry. Commercial embedding permitted under OFL-1.1 and Apache-2.0 with copyright notices preserved."
+    }
+  ],
+  "enforcement_status": {
+    "unreviewed_third_party_code_installed": false,
+    "worktree_clean_of_node_modules": true,
+    "runtime_execution_gated": true
+  }
+}
