@@ -2334,11 +2334,88 @@ export function createServer({
         if (pathname === '/v1/usage' && method === 'GET') {
           const auth = authenticateAndAuthorize(['usage:read']);
           if (!auth) return;
-          const from = parsedUrl.searchParams.get('from') ?? '2026-11-01T00:00:00Z';
-          const to = parsedUrl.searchParams.get('to') ?? '2026-11-30T23:59:59Z';
-          const usage = repository.getUsageSummary(auth.tenantId, from, to);
+
+          if (parsedUrl.searchParams.get('reconcile') === 'true') {
+            const report = repository.reconcileUsage(auth.tenantId);
+            res.writeHead(200);
+            res.end(JSON.stringify(report));
+            return;
+          }
+
+          const fromParam = parsedUrl.searchParams.get('from');
+          const toParam = parsedUrl.searchParams.get('to');
+
+          if (fromParam !== null && isNaN(Date.parse(fromParam))) {
+            sendError(
+              res,
+              400,
+              'INVALID_QUERY_PARAM',
+              "Query parameter 'from' must be a valid ISO 8601 date-time string",
+              requestId,
+            );
+            return;
+          }
+          if (toParam !== null && isNaN(Date.parse(toParam))) {
+            sendError(
+              res,
+              400,
+              'INVALID_QUERY_PARAM',
+              "Query parameter 'to' must be a valid ISO 8601 date-time string",
+              requestId,
+            );
+            return;
+          }
+
+          let fromIso = fromParam;
+          let toIso = toParam;
+
+          if (fromIso && toIso) {
+            const fromMs = Date.parse(fromIso);
+            const toMs = Date.parse(toIso);
+            if (toMs < fromMs) {
+              sendError(
+                res,
+                400,
+                'INVALID_QUERY_PARAM',
+                "Query parameter 'to' must not be earlier than 'from'",
+                requestId,
+              );
+              return;
+            }
+            const MAX_WINDOW_MS = 31 * 24 * 60 * 60 * 1000;
+            if (toMs - fromMs > MAX_WINDOW_MS) {
+              sendError(
+                res,
+                400,
+                'INVALID_QUERY_PARAM',
+                'Usage query window cannot exceed 31 days',
+                requestId,
+              );
+              return;
+            }
+          } else if (!fromIso && !toIso) {
+            fromIso = '2026-11-01T00:00:00Z';
+            toIso = '2026-11-30T23:59:59Z';
+          } else if (fromIso && !toIso) {
+            const fromMs = Date.parse(fromIso);
+            toIso = new Date(fromMs + 30 * 24 * 60 * 60 * 1000).toISOString();
+          } else if (!fromIso && toIso) {
+            const toMs = Date.parse(toIso);
+            fromIso = new Date(toMs - 30 * 24 * 60 * 60 * 1000).toISOString();
+          }
+
+          const usage = repository.getUsageSummary(auth.tenantId, fromIso!, toIso!);
           res.writeHead(200);
           res.end(JSON.stringify(usage));
+          return;
+        }
+
+        if (pathname === '/v1/usage/reconcile' && method === 'GET') {
+          const auth = authenticateAndAuthorize(['usage:read']);
+          if (!auth) return;
+          const report = repository.reconcileUsage(auth.tenantId);
+          res.writeHead(200);
+          res.end(JSON.stringify(report));
           return;
         }
 

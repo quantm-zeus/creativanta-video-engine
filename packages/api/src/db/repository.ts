@@ -131,6 +131,103 @@ export interface IssuedApiKeyResult {
   createdAt: string;
 }
 
+export interface UsageEntryRecord {
+  id: string;
+  job_id: string;
+  attempt_id: string | null;
+  usage_class: string;
+  meter: string;
+  ledger_version: number;
+  quantity: number;
+  rate_version: string;
+  reason: string | null;
+  created_at: string;
+}
+
+export interface UsageEntriesFilter {
+  jobId?: string;
+  from?: string;
+  to?: string;
+  usageClass?: 'operational' | 'billable' | 'compensating';
+  meter?: 'cpu_seconds' | 'reserved_vcpu_seconds' | 'billable_output_minutes' | 'storage_byte_hours' | 'egress_bytes';
+}
+
+export interface UsageSummaryResponse {
+  from: string;
+  to: string;
+  operational_attempts: number;
+  billable_output_minutes: number;
+  estimated_cost: number;
+  currency: string;
+  operational_cpu_seconds: number;
+  billable_jobs: number;
+  preview_jobs: number;
+  reservations: {
+    pending_count: number;
+    pending_vcpu_seconds: number;
+    pending_output_seconds: number;
+    settled_count: number;
+    released_count: number;
+  };
+  canceled_units: {
+    jobs_count: number;
+    attempts_count: number;
+    operational_cpu_seconds: number;
+    released_output_seconds: number;
+    billable_output_minutes: number;
+  };
+  failed_units: {
+    jobs_count: number;
+    attempts_count: number;
+    operational_cpu_seconds: number;
+    released_output_seconds: number;
+    billable_output_minutes: number;
+  };
+  succeeded_units: {
+    jobs_count: number;
+    attempts_count: number;
+    operational_cpu_seconds: number;
+    settled_output_seconds: number;
+    billable_output_minutes: number;
+  };
+  reconciliation: {
+    clean: boolean;
+    double_debit_detected: boolean;
+    discrepancies: string[];
+  };
+}
+
+export interface UsageReconciliationReport {
+  clean: boolean;
+  tenant_id: string;
+  evaluated_at: string;
+  summary: {
+    succeeded_jobs_count: number;
+    failed_jobs_count: number;
+    canceled_jobs_count: number;
+    non_terminal_jobs_count: number;
+    settled_reservations_count: number;
+    released_reservations_count: number;
+    pending_reservations_count: number;
+    total_billable_output_minutes: number;
+    total_operational_cpu_seconds: number;
+  };
+  discrepancies: Array<{
+    type: 'DOUBLE_DEBIT' | 'UNEXPECTED_BILLABLE_ENTRY' | 'MISSING_BILLABLE_ENTRY' | 'RESERVATION_STATE_MISMATCH';
+    job_id: string;
+    message: string;
+  }>;
+}
+
+export interface CompensatingUsageEntryInput {
+  jobId: string;
+  meter: 'cpu_seconds' | 'reserved_vcpu_seconds' | 'billable_output_minutes' | 'storage_byte_hours' | 'egress_bytes';
+  quantity: number;
+  reason: string;
+  rateVersion?: string;
+  now?: Date;
+}
+
 export class TenantRepository {
   private readonly pool: TenantConnectionPool;
   private readonly pepper: string;
@@ -3801,45 +3898,51 @@ export class TenantRepository {
 
   public listUsageEntries(
     tenantId: string,
-    jobId?: string,
-  ): Array<{
-    id: string;
-    job_id: string;
-    attempt_id: string | null;
-    usage_class: string;
-    meter: string;
-    ledger_version: number;
-    quantity: number;
-    rate_version: string;
-    reason: string | null;
-    created_at: string;
-  }> {
+    filterOrJobId?: string | UsageEntriesFilter,
+  ): Array<UsageEntryRecord> {
     return this.pool.withTransaction({ tenantId, role: 'cve_api' }, (tx) => {
-      const rows = jobId
-        ? tx.selectScoped<{
-            id: string;
-            job_id: string;
-            attempt_id: string | null;
-            usage_class: string;
-            meter: string;
-            ledger_version: number;
-            quantity: number;
-            rate_version: string;
-            reason: string | null;
-            created_at: string;
-          }>('usage_entries', 'job_id = ?', [jobId], 'created_at ASC, ledger_version ASC')
-        : tx.selectScoped<{
-            id: string;
-            job_id: string;
-            attempt_id: string | null;
-            usage_class: string;
-            meter: string;
-            ledger_version: number;
-            quantity: number;
-            rate_version: string;
-            reason: string | null;
-            created_at: string;
-          }>('usage_entries', '1=1', [], 'created_at ASC, ledger_version ASC');
+      const conditions: string[] = [];
+      const params: (string | number | null)[] = [];
+
+      if (typeof filterOrJobId === 'string') {
+        conditions.push('job_id = ?');
+        params.push(filterOrJobId);
+      } else if (filterOrJobId && typeof filterOrJobId === 'object') {
+        if (filterOrJobId.jobId) {
+          conditions.push('job_id = ?');
+          params.push(filterOrJobId.jobId);
+        }
+        if (filterOrJobId.from) {
+          conditions.push('created_at >= ?');
+          params.push(filterOrJobId.from);
+        }
+        if (filterOrJobId.to) {
+          conditions.push('created_at <= ?');
+          params.push(filterOrJobId.to);
+        }
+        if (filterOrJobId.usageClass) {
+          conditions.push('usage_class = ?');
+          params.push(filterOrJobId.usageClass);
+        }
+        if (filterOrJobId.meter) {
+          conditions.push('meter = ?');
+          params.push(filterOrJobId.meter);
+        }
+      }
+
+      const whereClause = conditions.length > 0 ? conditions.join(' AND ') : '1=1';
+      const rows = tx.selectScoped<{
+        id: string;
+        job_id: string;
+        attempt_id: string | null;
+        usage_class: string;
+        meter: string;
+        ledger_version: number;
+        quantity: number;
+        rate_version: string;
+        reason: string | null;
+        created_at: string;
+      }>('usage_entries', whereClause, params, 'created_at ASC, ledger_version ASC');
 
       return rows.map((r) => ({
         ...r,
@@ -4150,44 +4253,549 @@ export class TenantRepository {
     tenantId: string,
     fromIso: string,
     toIso: string,
-  ): {
-    from: string;
-    to: string;
-    operational_attempts: number;
-    billable_output_minutes: number;
-    estimated_cost: number;
-    currency: string;
-  } {
+  ): UsageSummaryResponse {
     return this.pool.withTransaction({ tenantId, role: 'cve_api' }, (tx) => {
+      // 1. Fetch usage entries in the specified time window
       const entries = tx.selectScoped<{
+        id: string;
+        job_id: string;
+        attempt_id: string | null;
         usage_class: string;
         meter: string;
+        ledger_version: number;
         quantity: number;
+        reason: string | null;
+        created_at: string;
       }>(
         'usage_entries',
         'created_at >= ? AND created_at <= ?',
         [fromIso, toIso],
+        'created_at ASC',
       );
 
+      // 2. Fetch reservations relevant to the window or currently active
+      const reservations = tx.selectScoped<{
+        job_id: string;
+        reserved_vcpu_seconds: number;
+        reserved_output_seconds: number;
+        state: 'reserved' | 'settled' | 'released';
+        created_at: string;
+        settled_at: string | null;
+      }>(
+        'usage_reservations',
+        '(created_at >= ? AND created_at <= ?) OR (settled_at >= ? AND settled_at <= ?) OR state = ?',
+        [fromIso, toIso, fromIso, toIso, 'reserved'],
+      );
+
+      // 3. Collect all referenced job IDs to inspect final terminal state and kind
+      const referencedJobIds = Array.from(
+        new Set([
+          ...entries.map((e) => e.job_id),
+          ...reservations.map((r) => r.job_id),
+        ]),
+      );
+
+      const jobMap = new Map<
+        string,
+        { id: string; kind: 'render' | 'preview'; state: string; completed_at: string | null }
+      >();
+      for (const jid of referencedJobIds) {
+        const jrows = tx.selectScoped<{
+          id: string;
+          kind: 'render' | 'preview';
+          state: string;
+          completed_at: string | null;
+        }>('jobs', 'id = ?', [jid]);
+        if (jrows[0]) {
+          jobMap.set(jid, jrows[0]);
+        }
+      }
+
+      // Also include jobs created or completed in this window that might have been canceled before claim
+      const jobsInWindow = tx.selectScoped<{
+        id: string;
+        kind: 'render' | 'preview';
+        state: string;
+        completed_at: string | null;
+      }>(
+        'jobs',
+        '(created_at >= ? AND created_at <= ?) OR (completed_at >= ? AND completed_at <= ?)',
+        [fromIso, toIso, fromIso, toIso],
+      );
+      for (const j of jobsInWindow) {
+        if (!jobMap.has(j.id)) {
+          jobMap.set(j.id, j);
+        }
+      }
+
+      // 4. Summarize usage metrics
       let operationalAttempts = 0;
+      let operationalCpuSeconds = 0;
       let billableMinutes = 0;
+      let renderJobsCount = 0;
+      let previewJobsCount = 0;
+      const countedRenderJobs = new Set<string>();
+      const countedPreviewJobs = new Set<string>();
+
+      const canceledUnits = {
+        jobs_count: 0,
+        attempts_count: 0,
+        operational_cpu_seconds: 0,
+        released_output_seconds: 0,
+        billable_output_minutes: 0,
+      };
+
+      const failedUnits = {
+        jobs_count: 0,
+        attempts_count: 0,
+        operational_cpu_seconds: 0,
+        released_output_seconds: 0,
+        billable_output_minutes: 0,
+      };
+
+      const succeededUnits = {
+        jobs_count: 0,
+        attempts_count: 0,
+        operational_cpu_seconds: 0,
+        settled_output_seconds: 0,
+        billable_output_minutes: 0,
+      };
+
+      const billableEntriesByJob = new Map<string, number>();
+      const doubleDebitJobIds = new Set<string>();
+
       for (const e of entries) {
+        const qty = Number(e.quantity);
+        const job = jobMap.get(e.job_id);
+
         if (e.usage_class === 'operational' && e.meter === 'cpu_seconds') {
           operationalAttempts += 1;
+          operationalCpuSeconds += qty;
+
+          if (job?.state === 'canceled') {
+            canceledUnits.attempts_count += 1;
+            canceledUnits.operational_cpu_seconds += qty;
+          } else if (job?.state === 'failed') {
+            failedUnits.attempts_count += 1;
+            failedUnits.operational_cpu_seconds += qty;
+          } else if (job?.state === 'succeeded') {
+            succeededUnits.attempts_count += 1;
+            succeededUnits.operational_cpu_seconds += qty;
+          }
+        } else if (
+          (e.usage_class === 'billable' || e.usage_class === 'compensating') &&
+          e.meter === 'billable_output_minutes'
+        ) {
+          billableMinutes += qty;
+
+          if (e.usage_class === 'billable') {
+            const currentCount = (billableEntriesByJob.get(e.job_id) ?? 0) + 1;
+            billableEntriesByJob.set(e.job_id, currentCount);
+            if (currentCount > 1) {
+              doubleDebitJobIds.add(e.job_id);
+            }
+
+            if (job?.kind === 'preview') {
+              if (!countedPreviewJobs.has(e.job_id)) {
+                countedPreviewJobs.add(e.job_id);
+                previewJobsCount += 1;
+              }
+            } else {
+              if (!countedRenderJobs.has(e.job_id)) {
+                countedRenderJobs.add(e.job_id);
+                renderJobsCount += 1;
+              }
+            }
+
+            if (job?.state === 'succeeded' || !job) {
+              succeededUnits.billable_output_minutes += qty;
+            }
+          }
         }
-        if (e.usage_class === 'billable' && e.meter === 'billable_output_minutes') {
-          billableMinutes += Number(e.quantity);
+      }
+
+      // Count distinct jobs by outcome
+      for (const job of jobMap.values()) {
+        if (job.state === 'succeeded') {
+          succeededUnits.jobs_count += 1;
+        } else if (job.state === 'failed') {
+          failedUnits.jobs_count += 1;
+        } else if (job.state === 'canceled') {
+          canceledUnits.jobs_count += 1;
+        }
+      }
+
+      // 5. Reservation metrics
+      let pendingCount = 0;
+      let pendingVcpu = 0;
+      let pendingOutput = 0;
+      let settledCount = 0;
+      let releasedCount = 0;
+
+      for (const r of reservations) {
+        const vcpu = Number(r.reserved_vcpu_seconds);
+        const outSec = Number(r.reserved_output_seconds);
+
+        if (r.state === 'reserved') {
+          pendingCount += 1;
+          pendingVcpu += vcpu;
+          pendingOutput += outSec;
+        } else if (r.state === 'settled') {
+          settledCount += 1;
+          succeededUnits.settled_output_seconds += outSec;
+        } else if (r.state === 'released') {
+          releasedCount += 1;
+          const job = jobMap.get(r.job_id);
+          if (job?.state === 'canceled') {
+            canceledUnits.released_output_seconds += outSec;
+          } else if (job?.state === 'failed') {
+            failedUnits.released_output_seconds += outSec;
+          } else {
+            canceledUnits.released_output_seconds += outSec;
+          }
         }
       }
 
       const roundedMinutes = Number(billableMinutes.toFixed(6));
+      const roundedCpuSec = Number(operationalCpuSeconds.toFixed(6));
+      const roundedEstimatedCost = Number((roundedMinutes * 0.05).toFixed(6));
+
+      canceledUnits.operational_cpu_seconds = Number(canceledUnits.operational_cpu_seconds.toFixed(6));
+      canceledUnits.released_output_seconds = Number(canceledUnits.released_output_seconds.toFixed(6));
+      failedUnits.operational_cpu_seconds = Number(failedUnits.operational_cpu_seconds.toFixed(6));
+      failedUnits.released_output_seconds = Number(failedUnits.released_output_seconds.toFixed(6));
+      succeededUnits.operational_cpu_seconds = Number(succeededUnits.operational_cpu_seconds.toFixed(6));
+      succeededUnits.settled_output_seconds = Number(succeededUnits.settled_output_seconds.toFixed(6));
+      succeededUnits.billable_output_minutes = Number(succeededUnits.billable_output_minutes.toFixed(6));
+
+      // 6. Reconciliation analysis
+      const discrepancies: string[] = [];
+      if (doubleDebitJobIds.size > 0) {
+        for (const jid of doubleDebitJobIds) {
+          discrepancies.push(`Job ${jid} has multiple billable output minute entries (double debit detected)`);
+        }
+      }
+      for (const e of entries) {
+        if (e.usage_class === 'billable' && e.meter === 'billable_output_minutes' && Number(e.quantity) > 0) {
+          const job = jobMap.get(e.job_id);
+          if (job && (job.state === 'canceled' || job.state === 'failed')) {
+            discrepancies.push(`Job ${e.job_id} is in terminal state '${job.state}' but has billable output minutes entry`);
+          }
+        }
+      }
+
       return {
         from: fromIso,
         to: toIso,
         operational_attempts: operationalAttempts,
         billable_output_minutes: roundedMinutes,
-        estimated_cost: Number((roundedMinutes * 0.05).toFixed(6)),
+        estimated_cost: roundedEstimatedCost,
         currency: 'USD',
+        operational_cpu_seconds: roundedCpuSec,
+        billable_jobs: renderJobsCount,
+        preview_jobs: previewJobsCount,
+        reservations: {
+          pending_count: pendingCount,
+          pending_vcpu_seconds: Number(pendingVcpu.toFixed(6)),
+          pending_output_seconds: Number(pendingOutput.toFixed(6)),
+          settled_count: settledCount,
+          released_count: releasedCount,
+        },
+        canceled_units: canceledUnits,
+        failed_units: failedUnits,
+        succeeded_units: succeededUnits,
+        reconciliation: {
+          clean: discrepancies.length === 0,
+          double_debit_detected: doubleDebitJobIds.size > 0,
+          discrepancies,
+        },
+      };
+    });
+  }
+
+  public reconcileUsage(
+    tenantId: string,
+    options: { from?: string; to?: string } = {},
+  ): UsageReconciliationReport {
+    return this.pool.withTransaction({ tenantId, role: 'cve_api' }, (tx) => {
+      const nowIso = new Date().toISOString();
+      const whereConditions: string[] = ['1=1'];
+      const params: (string | number | null)[] = [];
+      if (options.from) {
+        whereConditions.push('created_at >= ?');
+        params.push(options.from);
+      }
+      if (options.to) {
+        whereConditions.push('created_at <= ?');
+        params.push(options.to);
+      }
+      const whereClause = whereConditions.join(' AND ');
+
+      const jobs = tx.selectScoped<{
+        id: string;
+        kind: 'render' | 'preview';
+        state: string;
+        attempt_count: number;
+        created_at: string;
+        completed_at: string | null;
+      }>('jobs', whereClause, params, 'created_at ASC');
+
+      const reservations = tx.selectScoped<{
+        job_id: string;
+        reserved_vcpu_seconds: number;
+        reserved_output_seconds: number;
+        state: 'reserved' | 'settled' | 'released';
+        created_at: string;
+        settled_at: string | null;
+      }>('usage_reservations', '1=1', []);
+
+      const reservationMap = new Map<
+        string,
+        {
+          reserved_vcpu_seconds: number;
+          reserved_output_seconds: number;
+          state: 'reserved' | 'settled' | 'released';
+        }
+      >();
+      for (const r of reservations) {
+        reservationMap.set(r.job_id, r);
+      }
+
+      const entries = tx.selectScoped<{
+        id: string;
+        job_id: string;
+        attempt_id: string | null;
+        usage_class: string;
+        meter: string;
+        ledger_version: number;
+        quantity: number;
+        created_at: string;
+      }>('usage_entries', '1=1', []);
+
+      const entriesByJob = new Map<
+        string,
+        Array<{
+          id: string;
+          attempt_id: string | null;
+          usage_class: string;
+          meter: string;
+          ledger_version: number;
+          quantity: number;
+        }>
+      >();
+      for (const e of entries) {
+        const list = entriesByJob.get(e.job_id) ?? [];
+        list.push(e);
+        entriesByJob.set(e.job_id, list);
+      }
+
+      const discrepancies: UsageReconciliationReport['discrepancies'] = [];
+      let succeededJobsCount = 0;
+      let failedJobsCount = 0;
+      let canceledJobsCount = 0;
+      let nonTerminalJobsCount = 0;
+      let settledReservationsCount = 0;
+      let releasedReservationsCount = 0;
+      let pendingReservationsCount = 0;
+      let totalBillableOutputMinutes = 0;
+      let totalOperationalCpuSeconds = 0;
+
+      for (const job of jobs) {
+        const jobEntries = entriesByJob.get(job.id) ?? [];
+        const res = reservationMap.get(job.id);
+
+        const billableEntries = jobEntries.filter(
+          (e) =>
+            (e.usage_class === 'billable' || e.usage_class === 'compensating') &&
+            e.meter === 'billable_output_minutes',
+        );
+        const operationalCpuEntries = jobEntries.filter(
+          (e) => e.usage_class === 'operational' && e.meter === 'cpu_seconds',
+        );
+
+        for (const b of billableEntries) {
+          totalBillableOutputMinutes += Number(b.quantity);
+        }
+        for (const o of operationalCpuEntries) {
+          totalOperationalCpuSeconds += Number(o.quantity);
+        }
+
+        if (res) {
+          if (res.state === 'settled') settledReservationsCount += 1;
+          else if (res.state === 'released') releasedReservationsCount += 1;
+          else if (res.state === 'reserved') pendingReservationsCount += 1;
+        }
+
+        if (job.state === 'succeeded') {
+          succeededJobsCount += 1;
+          if (job.kind === 'render') {
+            const rawBillable = jobEntries.filter(
+              (e) => e.usage_class === 'billable' && e.meter === 'billable_output_minutes',
+            );
+            if (rawBillable.length > 1) {
+              discrepancies.push({
+                type: 'DOUBLE_DEBIT',
+                job_id: job.id,
+                message: `Job ${job.id} has ${rawBillable.length} billable output minute entries (double debit)`,
+              });
+            } else if (rawBillable.length === 0) {
+              discrepancies.push({
+                type: 'MISSING_BILLABLE_ENTRY',
+                job_id: job.id,
+                message: `Succeeded render job ${job.id} has no billable output minutes entry`,
+              });
+            }
+          }
+          if (res && res.state !== 'settled') {
+            discrepancies.push({
+              type: 'RESERVATION_STATE_MISMATCH',
+              job_id: job.id,
+              message: `Succeeded job ${job.id} has reservation in state '${res.state}', expected 'settled'`,
+            });
+          }
+        } else if (job.state === 'failed') {
+          failedJobsCount += 1;
+          const positiveBillable = jobEntries.filter(
+            (e) =>
+              e.usage_class === 'billable' &&
+              e.meter === 'billable_output_minutes' &&
+              Number(e.quantity) > 0,
+          );
+          if (positiveBillable.length > 0) {
+            discrepancies.push({
+              type: 'UNEXPECTED_BILLABLE_ENTRY',
+              job_id: job.id,
+              message: `Failed job ${job.id} has positive billable entry ${positiveBillable[0]?.id ?? 'unknown'}`,
+            });
+          }
+          if (res && res.state !== 'released') {
+            discrepancies.push({
+              type: 'RESERVATION_STATE_MISMATCH',
+              job_id: job.id,
+              message: `Failed job ${job.id} has reservation in state '${res.state}', expected 'released'`,
+            });
+          }
+        } else if (job.state === 'canceled') {
+          canceledJobsCount += 1;
+          const positiveBillable = jobEntries.filter(
+            (e) =>
+              e.usage_class === 'billable' &&
+              e.meter === 'billable_output_minutes' &&
+              Number(e.quantity) > 0,
+          );
+          if (positiveBillable.length > 0) {
+            discrepancies.push({
+              type: 'UNEXPECTED_BILLABLE_ENTRY',
+              job_id: job.id,
+              message: `Canceled job ${job.id} has positive billable entry ${positiveBillable[0]?.id ?? 'unknown'}`,
+            });
+          }
+          if (res && res.state !== 'released') {
+            discrepancies.push({
+              type: 'RESERVATION_STATE_MISMATCH',
+              job_id: job.id,
+              message: `Canceled job ${job.id} has reservation in state '${res.state}', expected 'released'`,
+            });
+          }
+        } else {
+          // non-terminal
+          nonTerminalJobsCount += 1;
+          const positiveBillable = jobEntries.filter(
+            (e) =>
+              e.usage_class === 'billable' &&
+              e.meter === 'billable_output_minutes' &&
+              Number(e.quantity) > 0,
+          );
+          if (positiveBillable.length > 0) {
+            discrepancies.push({
+              type: 'UNEXPECTED_BILLABLE_ENTRY',
+              job_id: job.id,
+              message: `Non-terminal job ${job.id} (state: ${job.state}) has billable entry before completion`,
+            });
+          }
+          if (res && res.state !== 'reserved') {
+            discrepancies.push({
+              type: 'RESERVATION_STATE_MISMATCH',
+              job_id: job.id,
+              message: `Non-terminal job ${job.id} has reservation in state '${res.state}', expected 'reserved'`,
+            });
+          }
+        }
+      }
+
+      return {
+        clean: discrepancies.length === 0,
+        tenant_id: tenantId,
+        evaluated_at: nowIso,
+        summary: {
+          succeeded_jobs_count: succeededJobsCount,
+          failed_jobs_count: failedJobsCount,
+          canceled_jobs_count: canceledJobsCount,
+          non_terminal_jobs_count: nonTerminalJobsCount,
+          settled_reservations_count: settledReservationsCount,
+          released_reservations_count: releasedReservationsCount,
+          pending_reservations_count: pendingReservationsCount,
+          total_billable_output_minutes: Number(totalBillableOutputMinutes.toFixed(6)),
+          total_operational_cpu_seconds: Number(totalOperationalCpuSeconds.toFixed(6)),
+        },
+        discrepancies,
+      };
+    });
+  }
+
+  public insertCompensatingUsageEntry(
+    tenantId: string,
+    input: CompensatingUsageEntryInput,
+  ): {
+    id: string;
+    job_id: string;
+    attempt_id: string | null;
+    usage_class: 'compensating';
+    meter: string;
+    ledger_version: number;
+    quantity: number;
+    rate_version: string;
+    reason: string;
+    created_at: string;
+  } {
+    const now = input.now ?? new Date();
+    const nowIso = now.toISOString();
+
+    return this.pool.withTransaction({ tenantId, role: 'cve_dispatcher' }, (tx) => {
+      const existing = tx.selectScoped<{ ledger_version: number }>(
+        'usage_entries',
+        'job_id = ? AND meter = ?',
+        [input.jobId, input.meter],
+        'ledger_version DESC',
+      );
+      const nextLedgerVersion = Number(existing[0]?.ledger_version ?? 0) + 1;
+      const entryId = `use_comp_${input.jobId}_v${nextLedgerVersion}_${crypto.randomBytes(4).toString('hex')}`;
+
+      tx.insertScoped('usage_entries', {
+        tenant_id: tenantId,
+        id: entryId,
+        job_id: input.jobId,
+        attempt_id: null,
+        usage_class: 'compensating',
+        meter: input.meter,
+        ledger_version: nextLedgerVersion,
+        quantity: Number(input.quantity.toFixed(6)),
+        rate_version: input.rateVersion ?? 'starter-v1',
+        reason: input.reason,
+        created_at: nowIso,
+      });
+
+      return {
+        id: entryId,
+        job_id: input.jobId,
+        attempt_id: null,
+        usage_class: 'compensating',
+        meter: input.meter,
+        ledger_version: nextLedgerVersion,
+        quantity: Number(input.quantity.toFixed(6)),
+        rate_version: input.rateVersion ?? 'starter-v1',
+        reason: input.reason,
+        created_at: nowIso,
       };
     });
   }

@@ -2566,7 +2566,10 @@ export class JobDispatcher {
             dbNowIso,
           });
 
-          const billableOutputMinutes = Number((effectiveOutputSeconds / 60).toFixed(6));
+          const isPreview = job.kind === 'preview';
+          const billableOutputMinutes = isPreview
+            ? 0
+            : Number((effectiveOutputSeconds / 60).toFixed(6));
           tx.insertScoped('usage_entries', {
             tenant_id: input.tenantId,
             id: `use_bill_${job.id}`,
@@ -2577,7 +2580,7 @@ export class JobDispatcher {
             ledger_version: 1,
             quantity: billableOutputMinutes,
             rate_version: 'starter-v1',
-            reason: 'terminal_succeeded_settlement',
+            reason: isPreview ? 'terminal_preview_exempt' : 'terminal_succeeded_settlement',
             created_at: dbNowIso,
           });
 
