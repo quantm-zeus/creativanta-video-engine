@@ -10,6 +10,7 @@ export * from './auth/api-key.js';
 export * from './db/migration-runner.js';
 export * from './db/tenant-pool.js';
 export * from './db/repository.js';
+export * from './templates/template-engine.js';
 export * from './assets/upload-grant.js';
 export * from './assets/quarantine-store.js';
 export * from './assets/media-guard.js';
