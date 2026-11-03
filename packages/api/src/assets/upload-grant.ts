@@ -438,4 +438,3 @@ export class StorageGrantRevocationStore {
 }
 
 export const defaultGrantRevocationStore = new StorageGrantRevocationStore();
-

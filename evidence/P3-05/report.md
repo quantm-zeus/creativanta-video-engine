@@ -10,7 +10,7 @@ Command: pnpm -F @creativanta/api build && pnpm -F @creativanta/api test && pnpm
 Result: PASS
 Exit code / UTC started: 0 / 2026-11-03T09:41:00Z
 Artifacts:
-  - packages/api/src/assets/upload-grant.ts, sha256=508ddb630596f66b4ffbe098d9b1ca09ebe3eaa178ab22e495ca4a41303d6442, expires=N/A (repo-versioned)
+  - packages/api/src/assets/upload-grant.ts, sha256=37d2c67059034163b3df3b988a6f7942f85a7a559db9150c3d03d81c13d6a9b0, expires=N/A (repo-versioned)
   - packages/api/src/assets/quarantine-store.ts, sha256=8fe5766d13a34c7760ecc3748717d86ea34535cc9b06a57d186d1032a0b22f70, expires=N/A (repo-versioned)
   - packages/api/src/storage/sweeper.ts, sha256=73204ad48b531801773973dd6b218c1e51affda90da7761af1ef417e75b51aeb, expires=N/A (repo-versioned)
   - packages/api/src/db/repository.ts, sha256=24a8c57578bd73580ba5564a1bfde377922571f05bc0d24bdcd519101316a23e, expires=N/A (repo-versioned)
