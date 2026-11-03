@@ -16,6 +16,8 @@ export * from './assets/quarantine-store.js';
 export * from './assets/media-guard.js';
 export * from './assets/ssrf-guard.js';
 export * from './assets/import-connector.js';
+export * from './admission/rate-limiter.js';
+export * from './admission/job-admission.js';
 
 export function main(): void {
   const config = loadEnvConfig();
