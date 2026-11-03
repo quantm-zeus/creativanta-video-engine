@@ -1,0 +1,242 @@
+{
+  "manifest_version": "1.0",
+  "compiler_version": "0.1.0",
+  "composition_id": "cmp_poc03_footage",
+  "revision": 2,
+  "profile": "mp4-720p-v1",
+  "canvas": {
+    "width": 720,
+    "height": 1280,
+    "background": "#000000"
+  },
+  "fps": {
+    "num": 30,
+    "den": 1
+  },
+  "duration_frames": 1350,
+  "duration_seconds": 45,
+  "seed": 3030,
+  "locale": "vi-VN",
+  "direction": "ltr",
+  "spec_hash": "3f24f7bae289cb41b7afb8bc2c12b3d272947d498eaaa3db488ddffd17841fa8",
+  "render_hash": "aff08b935c7b7c7dd42527eedecbdc8bd7d8c59255981dfb35ce3d5903ca893d",
+  "scenes": [
+    {
+      "id": "scene_clip_a",
+      "revision": 1,
+      "scene_hash": "5b288a223c7d781ea0fff3004719ea550447b69c2e519a186f2534cd8fc9219d",
+      "start_frame": 0,
+      "duration_frames": 600,
+      "end_frame": 600,
+      "engine": "html-v1",
+      "background": "#000000",
+      "transition_out": {
+        "type": "cut",
+        "duration_frames": 0
+      },
+      "layers": [
+        {
+          "id": "video_clip_a",
+          "type": "video",
+          "z_index": 1,
+          "global_start_frame": 0,
+          "global_end_frame": 600,
+          "local_start_frame": 0,
+          "local_duration_frames": 600,
+          "box": {
+            "x": 0,
+            "y": 0,
+            "width": 720,
+            "height": 1280
+          },
+          "opacity": 1,
+          "transform": {
+            "translate_x": 0,
+            "translate_y": 0,
+            "scale_x": 1,
+            "scale_y": 1,
+            "rotate_deg": 0,
+            "origin_x": 0.5,
+            "origin_y": 0.5
+          },
+          "animations": [],
+          "content": {
+            "asset_id": "ast_video_footage_a",
+            "fit": "cover",
+            "source_in_frame": 30,
+            "playback_rate": 1,
+            "loop": false,
+            "anchor_x": 0.5,
+            "anchor_y": 0.5
+          }
+        }
+      ]
+    },
+    {
+      "id": "scene_clip_b",
+      "revision": 2,
+      "scene_hash": "92e9676763594c0cc68ca145fb03de8a557b189b53fd61d69df619368b1bace1",
+      "start_frame": 600,
+      "duration_frames": 750,
+      "end_frame": 1350,
+      "engine": "html-v1",
+      "background": "#000000",
+      "transition_out": {
+        "type": "cut",
+        "duration_frames": 0
+      },
+      "layers": [
+        {
+          "id": "video_clip_b",
+          "type": "video",
+          "z_index": 1,
+          "global_start_frame": 600,
+          "global_end_frame": 1350,
+          "local_start_frame": 0,
+          "local_duration_frames": 750,
+          "box": {
+            "x": 0,
+            "y": 0,
+            "width": 720,
+            "height": 1280
+          },
+          "opacity": 1,
+          "transform": {
+            "translate_x": 0,
+            "translate_y": 0,
+            "scale_x": 1,
+            "scale_y": 1,
+            "rotate_deg": 0,
+            "origin_x": 0.5,
+            "origin_y": 0.5
+          },
+          "animations": [],
+          "content": {
+            "asset_id": "ast_video_footage_b",
+            "fit": "cover",
+            "source_in_frame": 0,
+            "playback_rate": 1,
+            "loop": false,
+            "anchor_x": 0.5,
+            "anchor_y": 0.5
+          }
+        }
+      ]
+    }
+  ],
+  "audio_tracks": [
+    {
+      "id": "bg_music",
+      "asset_id": "ast_audio_music_ambient",
+      "start_frame": 0,
+      "duration_frames": 1350,
+      "end_frame": 1350,
+      "sample_start": 0,
+      "sample_count": 2160000,
+      "source_in_samples": 0,
+      "gain_db": -14,
+      "role": "music",
+      "fade_in_frames": 30,
+      "fade_out_frames": 45,
+      "gain_keyframes": []
+    },
+    {
+      "id": "narration_speech",
+      "asset_id": "ast_audio_speech_guide",
+      "start_frame": 30,
+      "duration_frames": 1290,
+      "end_frame": 1320,
+      "sample_start": 48000,
+      "sample_count": 2064000,
+      "source_in_samples": 0,
+      "gain_db": -1.5,
+      "role": "voice",
+      "fade_in_frames": 0,
+      "fade_out_frames": 10,
+      "gain_keyframes": []
+    }
+  ],
+  "subtitles": [
+    {
+      "id": "subtitles_vi",
+      "locale": "vi-VN",
+      "burn_in": true,
+      "style": {
+        "font_id": "font_caption",
+        "font_size": 26,
+        "color": "#FFFFFF",
+        "background": "#000000B3",
+        "align": "center",
+        "max_lines": 2,
+        "safe_margin_px": 56
+      },
+      "cues": [
+        {
+          "id": "cue_1",
+          "start_frame": 45,
+          "end_frame": 330,
+          "start_ms": 1500,
+          "end_ms": 11000,
+          "text": "Khám phá hương vị cà phê nồng nàn từ vùng cao nguyên Đắk Lắk."
+        },
+        {
+          "id": "cue_2",
+          "start_frame": 345,
+          "end_frame": 660,
+          "start_ms": 11500,
+          "end_ms": 22000,
+          "text": "Hành trình gìn giữ văn hóa truyền thống qua từng nương rẫy xanh ngát."
+        },
+        {
+          "id": "cue_3",
+          "start_frame": 690,
+          "end_frame": 990,
+          "start_ms": 23000,
+          "end_ms": 33000,
+          "text": "Kết nối cộng đồng nông dân với chuỗi giá trị nông nghiệp bền vững."
+        },
+        {
+          "id": "cue_4",
+          "start_frame": 1005,
+          "end_frame": 1320,
+          "start_ms": 33500,
+          "end_ms": 44000,
+          "text": "Creativanta kiến tạo giá trị qua từng khung hình chân thực và giàu cảm xúc."
+        }
+      ]
+    }
+  ],
+  "fonts": [
+    {
+      "id": "font_caption",
+      "asset_id": "ast_font_inter_medium",
+      "sha256": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+      "family": "Inter",
+      "weight": 500,
+      "style": "normal"
+    }
+  ],
+  "assets": {
+    "ast_video_footage_a": {
+      "asset_id": "ast_video_footage_a",
+      "kind": "video"
+    },
+    "ast_video_footage_b": {
+      "asset_id": "ast_video_footage_b",
+      "kind": "video"
+    },
+    "ast_audio_music_ambient": {
+      "asset_id": "ast_audio_music_ambient",
+      "kind": "audio"
+    },
+    "ast_audio_speech_guide": {
+      "asset_id": "ast_audio_speech_guide",
+      "kind": "audio"
+    }
+  },
+  "required_capabilities": [
+    "engine:html-v1",
+    "profile:mp4-720p-v1"
+  ],
+  "compiled_at": "2026-11-03T05:12:14.997Z"
+}

@@ -138,7 +138,9 @@ export function buildLayerHtml(
     }
     case 'video': {
       const vidContent = content as VideoLayerContent;
-      innerHtml = `<div class="cve-video-placeholder" data-asset="${escapeHtml(vidContent.asset_id)}" style="width: 100%; height: 100%; background: #000;"></div>`;
+      const sourceIn = vidContent.source_in_frame || 0;
+      const fit = vidContent.fit || 'cover';
+      innerHtml = `<div class="cve-video-footage" data-asset="${escapeHtml(vidContent.asset_id)}" data-source-in-frame="${sourceIn}" data-fit="${escapeHtml(fit)}" style="width: 100%; height: 100%; background: #0a0a0a; overflow: hidden; display: flex; align-items: center; justify-content: center;"><span style="color: rgba(255,255,255,0.4); font-size: 14px; font-family: monospace;">[CFR Video: ${escapeHtml(vidContent.asset_id)} | trim_in: ${sourceIn}f | fit: ${escapeHtml(fit)}]</span></div>`;
       break;
     }
     case 'svg': {
@@ -210,6 +212,32 @@ export function buildFrameHtml(
     sceneAttrs += ` data-scene-id="${escapeHtml(scene.id)}" data-local-frame="${scene.local_frame}" data-scene-alpha="${scene.scene_alpha.toFixed(4)}"`;
   }
 
+  // Subtitle Burn-In Overlay
+  let subtitleHtml = '';
+  if (manifest.subtitles && manifest.subtitles.length > 0) {
+    for (const track of manifest.subtitles) {
+      if (!track.burn_in) continue;
+      const cues = track.cues || [];
+      const activeCue = cues.find(
+        (c) => frameEval.frame_index >= c.start_frame && frameEval.frame_index < c.end_frame
+      );
+      if (activeCue) {
+        const style = track.style;
+        const safeMargin = style?.safe_margin_px ?? 56;
+        const fontSize = style?.font_size ?? 26;
+        const color = style?.color ?? '#FFFFFF';
+        const bg = style?.background ?? '#000000B3';
+        const align = style?.align ?? 'center';
+
+        subtitleHtml = `
+    <div id="cve-subtitle-overlay" class="cve-subtitle-box" style="position: absolute; left: ${safeMargin}px; right: ${safeMargin}px; bottom: ${safeMargin}px; background-color: ${bg}; border-radius: 8px; padding: 12px 24px; text-align: ${align}; z-index: 900; pointer-events: none;">
+      <span class="cve-subtitle-text" style="color: ${color}; font-size: ${fontSize}px; font-weight: 500; font-family: 'Inter', 'Roboto', sans-serif; line-height: 1.3; text-shadow: 0 1px 3px rgba(0,0,0,0.8);">${escapeHtml(activeCue.text.normalize('NFC'))}</span>
+    </div>`;
+        break;
+      }
+    }
+  }
+
   return `<!DOCTYPE html>
 <html lang="${manifest.locale}">
 <head>
@@ -226,6 +254,7 @@ export function buildFrameHtml(
     <div class="cve-canvas-layers">
       ${layersHtml}
     </div>
+    ${subtitleHtml}
   </div>
 </body>
 </html>`;

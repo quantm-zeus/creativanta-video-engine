@@ -11,3 +11,6 @@ export * from './common/ffmpeg-builder.js';
 export * from './chromium/chromium-adapter.js';
 export * from './hyperframes/hyperframes-adapter.js';
 export * from './comparison/adapter-comparator.js';
+export * from './footage/cfr-trimmer.js';
+export * from './subtitles/subtitle-generator.js';
+export * from './audio/audio-mixer.js';

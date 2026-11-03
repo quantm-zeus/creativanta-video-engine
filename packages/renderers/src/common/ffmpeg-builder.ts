@@ -103,8 +103,11 @@ export function buildFfmpegCommand(
   const filtergraphClauses: string[] = [];
 
   if (options.burnInSubtitles && options.subtitleFilePath) {
+    const styleStr =
+      options.forceStyle ||
+      `FontName=Inter,FontSize=20,PrimaryColour=&H00FFFFFF&`;
     filtergraphClauses.push(
-      `[${videoLabel}]subtitles=${options.subtitleFilePath}:force_style='FontName=Inter,FontSize=20,PrimaryColour=&H00FFFFFF&'[v_sub]`
+      `[${videoLabel}]subtitles=${options.subtitleFilePath}:force_style='${styleStr}'[v_sub]`
     );
     videoLabel = 'v_sub';
   }

@@ -72,6 +72,8 @@ export interface FfmpegCommandOptions {
   crf?: number;
   preset?: 'ultrafast' | 'fast' | 'medium' | 'slow';
   profile?: 'mp4-720p-v1' | 'preview-360p-v1';
+  fpsMode?: 'cfr' | 'vfr';
+  forceStyle?: string;
 }
 
 export interface FfmpegArgvResult {
@@ -157,4 +159,27 @@ export interface RendererSession {
   verifyRandomSeek(sampleFrames?: number[]): Promise<RandomSeekVerificationResult>;
   generateFfmpegCommand(options: FfmpegCommandOptions): FfmpegArgvResult;
   dispose(): Promise<void>;
+}
+
+export interface Poc03EvaluationResult {
+  fixtureId: 'POC-03';
+  manifestId: string;
+  durationFrames: number;
+  durationSeconds: number;
+  fps: { num: number; den: number };
+  canvas: { width: number; height: number };
+  scenesCount: number;
+  cfrTrimCropPassed: boolean;
+  explicitAudioMixPassed: boolean;
+  subtitlesBurnInAndSidecarsPassed: boolean;
+  sourceHashesVerified: boolean;
+  syncAnchorsPassed: boolean;
+  noClippingPassed: boolean;
+  audioVideoDurationParityPassed: boolean;
+  measuredPeakDbtp: number;
+  measuredLoudnessLufs: number;
+  srtContent: string;
+  vttContent: string;
+  audioWavSha256: string;
+  goldenFrameChecksums: Record<number, string>;
 }
