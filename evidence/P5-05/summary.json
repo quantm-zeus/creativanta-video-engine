@@ -2,7 +2,7 @@
   "task_id": "P5-05",
   "stream": "D+C",
   "phase": "P5",
-  "generated_at": "2026-11-04T03:39:04.478Z",
+  "generated_at": "2026-11-04T03:58:50.582Z",
   "status": "PASS",
   "regression_matrix": {
     "total_tests": 17,
@@ -79,15 +79,15 @@
   },
   "artifact_hashes": {
     "samples/beta-sample-retail-promo.json": "d7af6acfa68edea99d60b2a11c1f1ad03e33e7b61b20812e69407a1e13b67cc2",
-    "samples/beta-sample-retail-promo.vi.srt": "070a9a158543a3b158a8892cca3252cc799a9b894da2347b052a161b6a527714",
-    "samples/beta-sample-retail-promo.vi.vtt": "ac05ae7f2f76d0381dc0cd4780631e0ffade32d883e2b810b246704d4d52c106",
+    "samples/beta-sample-retail-promo.vi.srt": "fb3baed643a520ac8003dd55c3d41933a206662706426c6e6722b8a3368e3ffe",
+    "samples/beta-sample-retail-promo.vi.vtt": "47c81b9b1f85d980daa95214411871559a05f95ca302f1d946f61660f3e5db64",
     "samples/beta-sample-narrated-explainer.json": "4c4734a6b9b521ea6cbe3efb096099e45ad5f26f39cf3ae70fdb7d4528daae40",
-    "samples/beta-sample-narrated-explainer.vi.srt": "5aa71f1f91e32bc6d7bee84ad48c50ba7a2c101eb290721cf9eeb261f74ed729",
-    "samples/beta-sample-narrated-explainer.vi.vtt": "ba5fb43566b261274039990120c9838209feb19e1569ead7774eb2e2745a6ba3",
+    "samples/beta-sample-narrated-explainer.vi.srt": "4cd7342bdced71ecb4faa882237b5200103d0ffb268456063064b72f65b28733",
+    "samples/beta-sample-narrated-explainer.vi.vtt": "bb00fc90a2581028f548eef8442fe98a2a4bcd742721b691ad0f6c4bfdc714f9",
     "samples/beta-sample-captioned-story.json": "e91e452322fa5eca58962212b807e2b2c1f1bd50cf007c0d64cee47ac3188d15",
-    "samples/beta-sample-captioned-story.vi.srt": "d4dd3d0382b33edb53cede2d812ef8a31f4b0a6a1387a129b9930d32836bc6cd",
-    "samples/beta-sample-captioned-story.vi.vtt": "66b42afa6f07effb92316820eeaac8262b99eb1f5be0f93eba00b530d4f701bc",
-    "regression-matrix.json": "cb09dccf56a962db3da05b2a158825c021faa84f58e0552d563d4ed8c007cd4e",
+    "samples/beta-sample-captioned-story.vi.srt": "94e91f3dc020998a8f47489cf5f6c97edbf5bcf5b6c9731764d5f91eee7bec62",
+    "samples/beta-sample-captioned-story.vi.vtt": "2c05e466b3eb1c42b303e11c1201f3b4e476202d09c363e1797c5fd596f3db30",
+    "regression-matrix.json": "b5661f17406819f3402a1e7d7c15f543dd1b2c73177e231983da1453c1344435",
     "reviewer-signoff.json": "d37572b3407a384e1ee6b7fcfb9b5a4d044ce9ed63763e4e22d21db2ca29be8f"
   }
 }

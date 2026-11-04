@@ -71,6 +71,7 @@ export function generateSrtSidecar(
   fps: RationalFps = DEFAULT_FPS
 ): string {
   const cues = track.cues || [];
+  if (cues.length === 0) return '';
   const blocks: string[] = [];
 
   for (let idx = 0; idx < cues.length; idx++) {
@@ -82,11 +83,11 @@ export function generateSrtSidecar(
     blocks.push(
       `${idx + 1}\n` +
       `${formatTimestampSrt(startMs)} --> ${formatTimestampSrt(endMs)}\n` +
-      `${normalizedText}\n`
+      `${normalizedText}`
     );
   }
 
-  return blocks.join('\n');
+  return blocks.join('\n\n') + '\n';
 }
 
 /**
@@ -97,25 +98,27 @@ export function generateVttSidecar(
   fps: RationalFps = DEFAULT_FPS
 ): string {
   const cues = track.cues || [];
-  const blocks: string[] = [
-    'WEBVTT - Creativanta Video Engine Subtitles',
-    `NOTE Language: ${track.locale || 'vi-VN'}`,
-    '',
-  ];
+  const cueBlocks: string[] = [];
 
   for (const cue of cues) {
     const startMs = frameToMs(cue.start_frame, fps);
     const endMs = frameToMs(cue.end_frame, fps);
     const normalizedText = cue.text.normalize('NFC');
 
-    blocks.push(
+    cueBlocks.push(
       `${cue.id}\n` +
       `${formatTimestampVtt(startMs)} --> ${formatTimestampVtt(endMs)}\n` +
-      `${normalizedText}\n`
+      `${normalizedText}`
     );
   }
 
-  return blocks.join('\n');
+  const sections = [
+    'WEBVTT - Creativanta Video Engine Subtitles',
+    `NOTE Language: ${track.locale || 'vi-VN'}`,
+    ...cueBlocks,
+  ];
+
+  return sections.join('\n\n') + '\n';
 }
 
 /**

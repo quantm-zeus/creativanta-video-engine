@@ -14,6 +14,10 @@
       "types": "./dist/tts/index.d.ts",
       "default": "./dist/tts/index.js"
     },
+    "./client": {
+      "types": "./dist/client/index.d.ts",
+      "default": "./dist/client/index.js"
+    },
     "./subtitles": {
       "types": "./dist/subtitles/index.d.ts",
       "default": "./dist/subtitles/index.js"

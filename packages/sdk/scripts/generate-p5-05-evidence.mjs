@@ -31,8 +31,8 @@ function main() {
   const promoVttPath = resolve(samplesDir, 'beta-sample-retail-promo.vi.vtt');
 
   writeFileSync(promoJsonPath, JSON.stringify(promo.spec, null, 2) + '\n');
-  writeFileSync(promoSrtPath, promo.sidecars.srt + '\n');
-  writeFileSync(promoVttPath, promo.sidecars.vtt + '\n');
+  writeFileSync(promoSrtPath, promo.sidecars.srt);
+  writeFileSync(promoVttPath, promo.sidecars.vtt);
 
   fileMap['samples/beta-sample-retail-promo.json'] = computeSha256(promoJsonPath);
   fileMap['samples/beta-sample-retail-promo.vi.srt'] = computeSha256(promoSrtPath);
@@ -45,8 +45,8 @@ function main() {
   const explainerVttPath = resolve(samplesDir, 'beta-sample-narrated-explainer.vi.vtt');
 
   writeFileSync(explainerJsonPath, JSON.stringify(explainer.spec, null, 2) + '\n');
-  writeFileSync(explainerSrtPath, explainer.sidecars.srt + '\n');
-  writeFileSync(explainerVttPath, explainer.sidecars.vtt + '\n');
+  writeFileSync(explainerSrtPath, explainer.sidecars.srt);
+  writeFileSync(explainerVttPath, explainer.sidecars.vtt);
 
   fileMap['samples/beta-sample-narrated-explainer.json'] = computeSha256(explainerJsonPath);
   fileMap['samples/beta-sample-narrated-explainer.vi.srt'] = computeSha256(explainerSrtPath);
@@ -59,8 +59,8 @@ function main() {
   const storyVttPath = resolve(samplesDir, 'beta-sample-captioned-story.vi.vtt');
 
   writeFileSync(storyJsonPath, JSON.stringify(story.spec, null, 2) + '\n');
-  writeFileSync(storySrtPath, story.sidecars.srt + '\n');
-  writeFileSync(storyVttPath, story.sidecars.vtt + '\n');
+  writeFileSync(storySrtPath, story.sidecars.srt);
+  writeFileSync(storyVttPath, story.sidecars.vtt);
 
   fileMap['samples/beta-sample-captioned-story.json'] = computeSha256(storyJsonPath);
   fileMap['samples/beta-sample-captioned-story.vi.srt'] = computeSha256(storySrtPath);

@@ -1,4 +1,5 @@
 WEBVTT - Creativanta Video Engine Subtitles
+
 NOTE Language: vi-VN
 
 cue_1
@@ -16,4 +17,3 @@ Tối ưu hoá cho vi xử lý CPU, hạ thấp chi phí vận hành và bảo v
 cue_4
 00:00:23.500 --> 00:00:29.500
 Bắt đầu tích hợp quy trình render video tự động ngay hôm nay.
-
