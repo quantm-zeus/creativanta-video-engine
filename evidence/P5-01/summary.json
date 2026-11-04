@@ -1,0 +1,161 @@
+{
+  "$schema": "creativanta.video-engine.p5-01-summary.v1",
+  "task_id": "P5-01",
+  "stream": "D+B",
+  "phase": "P5",
+  "base_commit": "ce234331b0a0c56b6e6ec1d9be4a23ffd1009d0c",
+  "tested_commit": "HEAD (agy/p5-01)",
+  "acceptance_ref": "docs/IMPLEMENTATION_PLAN.md: P5-01",
+  "template_families": {
+    "count": 3,
+    "families": [
+      {
+        "family_id": "retail_promo",
+        "name": "Bộ bản mẫu Khuyến mãi Bán lẻ (Retail Promo)",
+        "description": "Video quảng cáo dọc 9:16 (720x1280) 15s gồm 3 phân cảnh, định dạng tiền tệ Việt Nam (₫), hỗ trợ lồng tiếng TTS và upload audio fallback.",
+        "canvas": {
+          "width": 720,
+          "height": 1280,
+          "aspect_ratio": "9:16",
+          "background": "#1A1A2E"
+        },
+        "duration_frames": 450,
+        "duration_seconds": 15.0,
+        "fps": "30/1",
+        "supported_locales": ["vi-VN", "en-US"],
+        "required_capabilities": ["engine:html-v1", "profile:mp4-720p-v1"],
+        "revisions": [
+          {
+            "revision": 1,
+            "template_id": "tpl_retail_promo_v1",
+            "name": "Bản mẫu Khuyến mãi Bán lẻ Dọc 15s (Rev 1)",
+            "change_note": "Khởi tạo bản mẫu khuyến mãi bán lẻ dọc 15s ban đầu (POC-01 family baseline)"
+          },
+          {
+            "revision": 2,
+            "template_id": "tpl_retail_promo_v1",
+            "base_revision": 1,
+            "name": "Bản mẫu Khuyến mãi Bán lẻ Dọc 15s (Rev 2)",
+            "change_note": "Cập nhật tiêu đề xả kho mùa hè, điều chỉnh mức giá 149.000 ₫ và nâng cao độ tương phản màu sắc"
+          }
+        ],
+        "referenced_assets": [
+          "ast_font_noto_sans_bold",
+          "ast_font_noto_sans_regular",
+          "ast_audio_promo_fallback"
+        ]
+      },
+      {
+        "family_id": "narrated_explainer",
+        "name": "Bộ bản mẫu Giải thích Thuyết minh (Narrated Explainer)",
+        "description": "Video giải thích ngang 16:9 (1280x720) 30s gồm 4 phân cảnh, phụ đề tiếng Việt, hỗ trợ thuyết minh tự động qua TTS với kênh âm thanh tải lên dự phòng.",
+        "canvas": {
+          "width": 1280,
+          "height": 720,
+          "aspect_ratio": "16:9",
+          "background": "#0B132B"
+        },
+        "duration_frames": 900,
+        "duration_seconds": 30.0,
+        "fps": "30/1",
+        "supported_locales": ["vi-VN", "en-US"],
+        "required_capabilities": ["engine:html-v1", "profile:mp4-720p-v1"],
+        "revisions": [
+          {
+            "revision": 1,
+            "template_id": "tpl_narrated_explainer_v1",
+            "name": "Bản mẫu Explainer Thuyết minh Tiếng Việt 30s (Rev 1)",
+            "change_note": "Khởi tạo bản mẫu thuyết minh giải thích 30s 16:9 ban đầu (POC-02 family baseline)"
+          },
+          {
+            "revision": 2,
+            "template_id": "tpl_narrated_explainer_v1",
+            "base_revision": 1,
+            "name": "Bản mẫu Explainer Thuyết minh Tiếng Việt 30s (Rev 2)",
+            "change_note": "Định hình lại thông điệp hướng đến phân khúc doanh nghiệp, bổ sung lời kêu gọi hành động nâng cao"
+          }
+        ],
+        "referenced_assets": [
+          "ast_font_noto_sans_bold",
+          "ast_font_noto_sans_regular",
+          "ast_audio_narration_poc02"
+        ]
+      },
+      {
+        "family_id": "captioned_story",
+        "name": "Bộ bản mẫu Phóng sự Phụ đề (Captioned Story)",
+        "description": "Video phóng sự dọc 9:16 (720x1280) 45s gồm 3 phân cảnh, tích hợp 2 đoạn phim thực tế, hòa âm giọng nói & nhạc nền ducking, phụ đề tiếng Việt chuẩn.",
+        "canvas": {
+          "width": 720,
+          "height": 1280,
+          "aspect_ratio": "9:16",
+          "background": "#000000"
+        },
+        "duration_frames": 1350,
+        "duration_seconds": 45.0,
+        "fps": "30/1",
+        "supported_locales": ["vi-VN", "en-US"],
+        "required_capabilities": ["engine:html-v1", "profile:mp4-720p-v1"],
+        "revisions": [
+          {
+            "revision": 1,
+            "template_id": "tpl_captioned_story_v1",
+            "name": "Bản mẫu Phóng sự Phụ đề Dọc 45s (Rev 1)",
+            "change_note": "Khởi tạo bản mẫu phóng sự video kèm phụ đề 45s ban đầu (POC-03 family baseline)"
+          },
+          {
+            "revision": 2,
+            "template_id": "tpl_captioned_story_v1",
+            "base_revision": 1,
+            "name": "Bản mẫu Phóng sự Phụ đề Dọc 45s (Rev 2)",
+            "change_note": "Cập nhật phiên bản di sản 2026, tinh chỉnh lời kết và màu sắc nổi bật"
+          }
+        ],
+        "referenced_assets": [
+          "ast_font_roboto_bold",
+          "ast_font_roboto_regular",
+          "ast_poc03_clip1_daklak",
+          "ast_poc03_clip2_workshop",
+          "ast_poc03_narration_vi",
+          "ast_poc03_music_track"
+        ]
+      }
+    ]
+  },
+  "safe_brand_tokens": {
+    "package": "@creativanta/sdk",
+    "validator": "validateBrandTokens",
+    "applicator": "applyBrandTokens",
+    "enforced_rules": [
+      "Strict hex color format (#RGB, #RRGGBB, #RRGGBBAA)",
+      "Rejection of CSS injection traps (; url() expression() javascript:)",
+      "Rejection of HTML script and tag injection",
+      "Enforcement of pinned font references in template fonts array",
+      "Asset ID pattern enforcement (ast_*)"
+    ]
+  },
+  "text_overflow_guard": {
+    "package": "@creativanta/sdk",
+    "layout_engine": "calculateTextLayout",
+    "validator": "validateCompositionTextOverflow",
+    "error_class": "TextOverflowError",
+    "supported_modes": ["error", "shrink", "ellipsis"],
+    "vietnamese_typography": {
+      "unicode_normalization": "NFC",
+      "combining_marks_zero_advance": true,
+      "tone_marks_handled": true,
+      "currency_symbol_handled": "₫"
+    }
+  },
+  "license_provenance": {
+    "total_assets_verified": 22,
+    "missing_evidence_count": 0,
+    "commercial_use_allowed": true,
+    "rights_manifest_aligned": true
+  },
+  "verification_suite": {
+    "sdk_tests_passed": 36,
+    "template_tests_passed": 17,
+    "repo_validation_status": "PASS"
+  }
+}
