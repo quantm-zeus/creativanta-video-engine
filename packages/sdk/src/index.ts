@@ -3,4 +3,7 @@
  */
 
 export * from './tts/index.js';
+export * from './brand-tokens.js';
+export * from './text-overflow.js';
+
 export const SDK_VERSION = '0.1.0';
