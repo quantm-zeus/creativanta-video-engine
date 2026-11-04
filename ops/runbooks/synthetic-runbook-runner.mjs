@@ -9,6 +9,11 @@ import { RedactedLogger } from '../logging/redacted-logger.mjs';
 import { AlertEvaluator } from '../alerts/alert-evaluator.mjs';
 import path from 'node:path';
 import crypto from 'node:crypto';
+import { DatabaseSync } from 'node:sqlite';
+import { BackupManager } from '../recovery/backup-manager.mjs';
+import { MemoryStorageBackend } from '../recovery/object-reconciler.mjs';
+import { RestoreDrillRunner } from '../recovery/restore-drill-runner.mjs';
+import { MigrationRunner } from '../../packages/api/dist/index.js';
 
 export class SyntheticRunbookRunner {
   constructor() {
@@ -212,25 +217,121 @@ export class SyntheticRunbookRunner {
   async runRunbook5DbStorageOutage() {
     const syntheticTenantId = 'tenant-synth-epsilon-55555555';
     const syntheticJobId = 'job-synth-res-005';
+    const syntheticArtifactId = 'art-synth-res-005';
 
-    // Measure RPO and RTO
-    const measuredRpoMinutes = 11.5; // <= 15 min SLO
-    const measuredRtoMinutes = 24.0; // <= 240 min (4h) SLO
+    const sourceDb = new DatabaseSync(':memory:');
+    const runner = new MigrationRunner(sourceDb);
+    runner.migrateUp({ role: 'cve_migrator', targetVersion: '0002' });
 
-    // Verify object hash parity
+    const now = new Date();
+    const tMinus10m = new Date(now.getTime() - 10 * 60 * 1000).toISOString();
+    const tMinus5m = new Date(now.getTime() - 5 * 60 * 1000).toISOString();
+    const tPlus30m = new Date(now.getTime() + 30 * 60 * 1000).toISOString();
+
     const expectedSha256 = 'e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855';
-    const restoredSha256 = 'e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855';
-    const objectConsistent = expectedSha256 === restoredSha256;
+    const storageKey = `tenant/${syntheticTenantId}/jobs/${syntheticJobId}/video.mp4`;
+
+    sourceDb.exec('BEGIN IMMEDIATE;');
+    try {
+      sourceDb.prepare('INSERT INTO tenants (id, name, status, created_at, updated_at) VALUES (?, ?, ?, ?, ?)').run(
+        syntheticTenantId,
+        'Synthetic Epsilon Corp',
+        'active',
+        tMinus10m,
+        tMinus10m
+      );
+      sourceDb.prepare(
+        `INSERT INTO compositions (tenant_id, id, name, current_revision, editable, created_at, updated_at)
+         VALUES (?, ?, ?, ?, ?, ?, ?)`
+      ).run(syntheticTenantId, 'cmp_synth_05', 'Epsilon Comp', 1, 1, tMinus10m, tMinus10m);
+      sourceDb.prepare(
+        `INSERT INTO composition_revisions (tenant_id, composition_id, revision, schema_version, spec_json, render_hash, created_at)
+         VALUES (?, ?, ?, ?, ?, ?, ?)`
+      ).run(syntheticTenantId, 'cmp_synth_05', 1, '1.0', '{}', '0'.repeat(64), tMinus10m);
+      sourceDb.prepare(
+        `INSERT INTO jobs (tenant_id, id, kind, state, stage, state_version, progress, composition_id, composition_revision, profile, snapshot_json, attempt_count, max_attempts, lease_epoch, deadline_at, created_at, updated_at)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+      ).run(
+        syntheticTenantId,
+        syntheticJobId,
+        'render',
+        'succeeded',
+        'completed',
+        1,
+        1.0,
+        'cmp_synth_05',
+        1,
+        'mp4-720p-v1',
+        '{}',
+        1,
+        3,
+        1,
+        tPlus30m,
+        tMinus10m,
+        tMinus5m
+      );
+      sourceDb.prepare(
+        `INSERT INTO job_attempts (tenant_id, job_id, attempt_id, lease_epoch, worker_id, state, started_at, heartbeat_at, lease_expires_at, ended_at)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+      ).run(
+        syntheticTenantId,
+        syntheticJobId,
+        'att_005',
+        1,
+        'worker_005',
+        'succeeded',
+        tMinus10m,
+        tMinus5m,
+        tMinus5m,
+        tMinus5m
+      );
+      sourceDb.prepare(
+        `INSERT INTO artifacts (tenant_id, id, job_id, attempt_id, kind, mime_type, sha256, bytes, storage_key, expires_at, created_at)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+      ).run(
+        syntheticTenantId,
+        syntheticArtifactId,
+        syntheticJobId,
+        'att_005',
+        'video',
+        'video/mp4',
+        expectedSha256,
+        0,
+        storageKey,
+        tPlus30m,
+        tMinus5m
+      );
+      sourceDb.exec('COMMIT;');
+    } catch (err) {
+      sourceDb.exec('ROLLBACK;');
+      throw err;
+    }
+
+    const snapshot = BackupManager.createSnapshot(sourceDb, { cutoffTimestamp: now.toISOString() });
+    const storage = new MemoryStorageBackend();
+    storage.put(storageKey, Buffer.alloc(0)); // empty buffer matches sha256 e3b0c442...
+
+    const drillRunner = new RestoreDrillRunner();
+    const drillReport = await drillRunner.runDrill({
+      targetCutoffTimestamp: now.toISOString(),
+      snapshotPayloadJson: snapshot.payloadJson,
+      expectedSnapshotSha256: snapshot.metadata.sha256,
+      storage,
+    });
+
+    const objectConsistent = drillReport.reconciliation.missingStorageArtifacts.length === 0;
 
     return {
       runbook: 'RUNBOOK-05-DB-STORAGE-OUTAGE',
-      success: true,
+      success: drillReport.status === 'SUCCESS',
       syntheticIds: { syntheticTenantId, syntheticJobId },
-      measuredRpoMinutes,
-      measuredRtoMinutes,
-      rpoSloMet: measuredRpoMinutes <= 15,
-      rtoSloMet: measuredRtoMinutes <= 240,
+      measuredRpoMinutes: drillReport.rpo.rpoMinutes,
+      measuredRtoMinutes: drillReport.rto.rtoMinutes,
+      rpoSloMet: drillReport.rpo.rpoTargetMet,
+      rtoSloMet: drillReport.rto.rtoTargetMet,
       objectConsistent,
+      safetyFlags: drillReport.safetyFlags,
+      drillReport,
     };
   }
 
