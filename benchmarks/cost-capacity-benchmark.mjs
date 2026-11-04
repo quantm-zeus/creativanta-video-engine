@@ -1,9 +1,15 @@
 /**
  * Creativanta Video Engine - Cost Model & Capacity Envelope Benchmark
  * Simulates workload execution and validates cost ceilings at 10%, 50%, and 80% utilization.
+ *
+ * Canonical specifications:
+ *   - docs/OPERATIONS.md ("Usage/cost ledger và report", lines 41-56)
+ *   - docs/TESTING.md ("Benchmark protocol và cost", lines 58-68)
+ *   - docs/IMPLEMENTATION_PLAN.md (Task P6-03: "cost model at 10/50/80% utilization")
  */
 
 import { calculateTenantCostSummary } from '../ops/cost/cost-calculator.mjs';
+import { buildMultiScenarioCostModel, formatCostModelMarkdown } from '../ops/cost/cost-model.mjs';
 
 export function runCostCapacityBenchmark(jobCount = 100) {
   const syntheticJobs = [];
@@ -31,6 +37,12 @@ export function runCostCapacityBenchmark(jobCount = 100) {
 
   const summary = calculateTenantCostSummary('tenant-benchmark', syntheticJobs);
   const sc = summary.utilizationScenarios;
+
+  // Build extended multi-scenario cost model
+  const extendedModel = buildMultiScenarioCostModel({
+    averageRtf: summary.metrics.averageRtf,
+    averageOutputDurationSeconds: 30.0,
+  });
 
   return {
     jobCount,
@@ -62,6 +74,8 @@ export function runCostCapacityBenchmark(jobCount = 100) {
         meetsBudgetCeiling: sc[80].meetsBudgetCeiling,
       },
     },
+    extendedModel,
+    markdownReport: formatCostModelMarkdown(extendedModel),
   };
 }
 

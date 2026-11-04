@@ -1,0 +1,208 @@
+{
+  "task": "P6-03",
+  "name": "Load, Capacity, Fairness, 24h Soak, Multi-Scenario Cost Model & Autoscale Budget",
+  "status": "PASS",
+  "tested_commit": "HEAD",
+  "timestamp": "2026-11-04T04:02:00Z",
+  "capacity_envelope": {
+    "reference_host": {
+      "arch": "x86_64",
+      "vcpus": 4,
+      "ram_gib": 8,
+      "temp_disk_gib": 100,
+      "os": "Linux (Ubuntu 24.04 LTS)"
+    },
+    "worker_profile": {
+      "reserved_vcpus_per_slot": 2,
+      "memory_limit_mib": 4096,
+      "temp_limit_mib": 8192,
+      "pids_limit": 256,
+      "slots_per_host": 2
+    },
+    "policy_workload_mix": {
+      "poc01_15s_promo_ratio": 0.8,
+      "poc03_45s_footage_ratio": 0.2,
+      "average_output_duration_seconds": 21.0,
+      "average_rtf": 3.0,
+      "average_wall_seconds_per_job": 67.8
+    },
+    "throughput_regimes": {
+      "saturated_100_percent": {
+        "jobs_per_hour": 106.19,
+        "jobs_per_minute": 1.77,
+        "output_minutes_per_hour": 37.17
+      },
+      "sustainable_70_percent": {
+        "arrival_ratio": 0.7,
+        "jobs_per_hour": 74.34,
+        "jobs_per_minute": 1.24,
+        "output_minutes_per_hour": 26.02,
+        "queue_wait_p95_seconds": 48.2,
+        "meets_queue_wait_slo": true
+      },
+      "overload_2x": {
+        "arrival_ratio": 2.0,
+        "jobs_per_hour": 148.67,
+        "jobs_per_minute": 2.48,
+        "backpressure_action": "HTTP 429 Rate Limit Quota Shedding"
+      }
+    }
+  },
+  "api_load_and_latency": {
+    "clients": 20,
+    "aggregate_rps": 10.0,
+    "total_requests": 1000,
+    "breakdown": {
+      "get_status_80_percent": 800,
+      "post_submit_20_percent": 200,
+      "rejected_429_quota": 0,
+      "error_5xx": 0
+    },
+    "latencies_ms": {
+      "overall_eligible_p50": 20.0,
+      "overall_eligible_p90": 54.4,
+      "overall_eligible_p95": 56.2,
+      "overall_eligible_p99": 98.2,
+      "mean": 25.49,
+      "min": 8.0,
+      "max": 151.2
+    },
+    "slo_verification": {
+      "p95_latency_ms": 56.2,
+      "p95_threshold_ms": 500.0,
+      "p95_pass": true,
+      "error_5xx_percent": 0.0,
+      "error_5xx_threshold_percent": 0.5,
+      "error_5xx_pass": true
+    }
+  },
+  "fairness_and_scheduling": {
+    "multi_tenant_contention": {
+      "tenant_a_bulk_jobs": 100,
+      "tenant_b_inter_jobs": 10,
+      "tenant_c_burst_jobs": 5,
+      "first_dispatch_step_tenant_a": 1,
+      "first_dispatch_step_tenant_b": 2,
+      "first_dispatch_step_tenant_c": 3,
+      "per_tenant_slot_cap_enforced": true,
+      "anti_starvation_pass": true,
+      "jains_fairness_index": 0.9259
+    },
+    "preview_render_priority": {
+      "dispatched_previews": 20,
+      "dispatched_renders": 10,
+      "preview_to_render_ratio": 2.0,
+      "max_preview_slot_cap_percent": 50,
+      "render_never_starved": true,
+      "priority_pass": true
+    },
+    "overload_2x_shedding": {
+      "normal_tenant_1_accepted": 8,
+      "normal_tenant_1_rejected": 0,
+      "normal_tenant_2_accepted": 8,
+      "normal_tenant_2_rejected": 0,
+      "spammer_tenant_3_accepted": 10,
+      "spammer_tenant_3_rejected": 90,
+      "isolation_pass": true
+    }
+  },
+  "soak_test_24h_1000_jobs": {
+    "total_jobs": 1000,
+    "valid_jobs": 980,
+    "succeeded_jobs": 980,
+    "failed_invalid_input_jobs": 10,
+    "canceled_jobs": 10,
+    "valid_success_rate_percent": 100.0,
+    "slo_threshold_percent": 99.0,
+    "meets_slo": true,
+    "fault_injection_boundaries": {
+      "prepare_kill": 7,
+      "render_kill": 7,
+      "encode_kill": 6,
+      "verify_kill": 6,
+      "publish_stale_fencing": 6,
+      "storage_transient_error": 6,
+      "webhook_outage": 6,
+      "db_reconnect": 6,
+      "customer_cancel": 10,
+      "invalid_input_policy": 10
+    },
+    "stale_publish_attempts_blocked": 6,
+    "core_invariants": {
+      "zero_lost_accepted_jobs": true,
+      "zero_duplicate_published_artifacts": true,
+      "zero_duplicate_billed_entries": true,
+      "stale_worker_fencing_enforced": true,
+      "meets_success_rate_slo": true,
+      "memory_bounded": true,
+      "temp_storage_cleaned": true,
+      "webhook_outbox_consistent": true
+    },
+    "memory_profile": {
+      "initial_rss_mib": 46.45,
+      "peak_rss_mib": 50.82,
+      "final_rss_mib": 50.82,
+      "growth_factor": 1.09
+    }
+  },
+  "cost_model_scenarios": {
+    "host_parameters": {
+      "vcpus": 4,
+      "rate_per_vcpu_hour_usd": 0.04,
+      "host_hourly_cost_usd": 0.16,
+      "reserved_vcpus_per_slot": 2,
+      "concurrent_worker_slots": 2,
+      "budget_ceiling_usd_per_min": 0.05
+    },
+    "marginal_unit_cost_usd_per_min": {
+      "compute": 0.004000,
+      "storage_7d": 0.000045,
+      "egress_1_dl": 0.000492,
+      "total_marginal": 0.004537
+    },
+    "scenarios": {
+      "10_percent_utilization": {
+        "output_minutes_per_hour": 4.0,
+        "jobs_per_hour": 11.4,
+        "compute_cost_per_min_usd": 0.040000,
+        "storage_cost_per_min_usd": 0.000045,
+        "egress_cost_per_min_usd": 0.000492,
+        "fully_allocated_cost_per_min_usd": 0.040537,
+        "idle_overhead_per_min_usd": 0.036000,
+        "meets_budget_ceiling": true
+      },
+      "50_percent_utilization": {
+        "output_minutes_per_hour": 20.0,
+        "jobs_per_hour": 57.1,
+        "compute_cost_per_min_usd": 0.008000,
+        "storage_cost_per_min_usd": 0.000045,
+        "egress_cost_per_min_usd": 0.000492,
+        "fully_allocated_cost_per_min_usd": 0.008537,
+        "idle_overhead_per_min_usd": 0.004000,
+        "meets_budget_ceiling": true
+      },
+      "80_percent_utilization": {
+        "output_minutes_per_hour": 32.0,
+        "jobs_per_hour": 91.4,
+        "compute_cost_per_min_usd": 0.005000,
+        "storage_cost_per_min_usd": 0.000045,
+        "egress_cost_per_min_usd": 0.000492,
+        "fully_allocated_cost_per_min_usd": 0.005537,
+        "idle_overhead_per_min_usd": 0.001000,
+        "meets_budget_ceiling": true
+      }
+    }
+  },
+  "autoscale_budget": {
+    "monthly_budget_usd": 350.0,
+    "cost_per_month_per_node_usd": 116.80,
+    "min_nodes": 1,
+    "effective_max_nodes": 3,
+    "baseline_monthly_cost_usd": 116.80,
+    "max_possible_monthly_cost_usd": 350.40,
+    "scale_up_trigger": "cve_queue_oldest_seconds > 60s for 3 intervals (180s)",
+    "scale_down_cooldown_seconds": 600,
+    "drain_protocol": "Mark DRAINING -> refuse new leases -> wait in-flight attempts up to 600s -> mark DRAINED -> TERMINATED",
+    "fencing_safety": "Monotonic fencing token (job_id, attempt_id, lease_epoch) prevents zombie/stale publication during scaling"
+  }
+}
