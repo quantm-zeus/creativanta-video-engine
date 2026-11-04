@@ -4,8 +4,8 @@
   "totalChecks": 14,
   "passedChecks": 14,
   "failedChecks": 0,
-  "durationMs": 1169,
-  "timestamp": "2026-11-04T15:53:32.228Z",
+  "durationMs": 1157,
+  "timestamp": "2026-11-04T16:00:08.369Z",
   "checks": [
     {
       "id": "AUT-01",
@@ -13,7 +13,7 @@
       "category": "adapter_contract",
       "status": "PASS",
       "passed": true,
-      "durationMs": 0,
+      "durationMs": 1,
       "details": {
         "providersCount": 5,
         "defaultProvider": "mock-deterministic"
@@ -37,9 +37,9 @@
       "category": "mock_generation",
       "status": "PASS",
       "passed": true,
-      "durationMs": 12,
+      "durationMs": 11,
       "details": {
-        "jobId": "auth-job-842c3add-b08",
+        "jobId": "auth-job-468ff29e-151",
         "filePaths": [
           "index.html",
           "scene.mjs",
@@ -55,7 +55,7 @@
       "category": "determinism",
       "status": "PASS",
       "passed": true,
-      "durationMs": 3,
+      "durationMs": 4,
       "details": {
         "sourceSha256": "27be75f87697d36ec4e59e2c264ff16bac8f9a88e3bb5bb4b5d9eee544794392",
         "buildSha256": "21f14c4c04bb0c7082f209e2c28c542b8bb2e66e836afdffea660dcb674fe6f6",
@@ -68,7 +68,7 @@
       "category": "scene_spec_compliance",
       "status": "PASS",
       "passed": true,
-      "durationMs": 4,
+      "durationMs": 3,
       "details": {
         "preservesVietnamese": true,
         "sampleHeadline": "Khám Phá Nền Tảng Video Creati"
@@ -106,7 +106,7 @@
       "category": "time_budget",
       "status": "PASS",
       "passed": true,
-      "durationMs": 1020,
+      "durationMs": 1019,
       "details": {
         "timedOutAsExpected": true,
         "finalState": "canceled"
@@ -118,10 +118,10 @@
       "category": "cost_budget",
       "status": "PASS",
       "passed": true,
-      "durationMs": 1,
+      "durationMs": 0,
       "details": {
         "budgetCapTested": true,
-        "jobId": "auth-job-b2d6052f-d96",
+        "jobId": "auth-job-651e29c4-827",
         "maxCostUsd": 0.000001
       }
     },
@@ -131,7 +131,7 @@
       "category": "cancellation",
       "status": "PASS",
       "passed": true,
-      "durationMs": 107,
+      "durationMs": 103,
       "details": {
         "state": "canceled",
         "reason": "User canceled generation"
@@ -143,7 +143,7 @@
       "category": "source_only_security",
       "status": "PASS",
       "passed": true,
-      "durationMs": 1,
+      "durationMs": 0,
       "details": {
         "evalBlocked": true,
         "fetchBlocked": true
@@ -155,7 +155,7 @@
       "category": "secret_leak_defense",
       "status": "PASS",
       "passed": true,
-      "durationMs": 0,
+      "durationMs": 1,
       "details": {
         "canaryCaughtAsExpected": true
       }
@@ -178,11 +178,11 @@
       "category": "registry_integration",
       "status": "PASS",
       "passed": true,
-      "durationMs": 8,
+      "durationMs": 5,
       "details": {
-        "bundleId": "bundle-ai-e6e34138",
+        "bundleId": "bundle-ai-ac0f5186",
         "authoringType": "ai",
-        "provenanceDigest": "021a416453fc181d799c71397c0a69e6f9dcd362734cd10c1a5b401c65a5d9ee"
+        "provenanceDigest": "d59b88bf7e82bea29f9e32f10300d9aa0093d25b925d04492872b2a01205a856"
       }
     }
   ],

@@ -961,4 +961,3 @@ export function validateAuthoringOpenApiSpecification(spec: Record<string, unkno
   errors: string[];
 };
 export function extendOpenApiWithAuthoring(baseSpec: Record<string, unknown>): Record<string, unknown>;
-

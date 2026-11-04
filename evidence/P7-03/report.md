@@ -7,11 +7,20 @@
 | **Task ID** | `P7-03` |
 | **Phase / Owner** | `P7` / `D+C` |
 | **Branch / Worktree** | `agy/p7-03` (`/workspace/repo/.worktrees/p7-03`) |
-| **Base Commit** | `5ca14c330f81d11ff2bfa32bf14170d10b7b137f` |
+| **Base Commit** | `bcfc977d3dc7d03d0b38ca39926dc7c92292a9df` (staging sau khi tích hợp P7-02 qua PR #42) |
 | **Allowed Paths** | `["evidence/P7-03/", "packages/custom-runtime/"]` |
 | **Dependencies** | `P7-02` |
 | **Acceptance Criteria** | `Provider-neutral authoring adapter contract và ít nhất một non-premium-required route + deterministic mock; token/time/cost budgets, cancellation, source-only output. Codex/AGY/OpenCode/DeepSeek là tùy chọn, không bắt buộc subscription` |
 | **Tài liệu chuẩn tắc đối chiếu** | [AGENTS.md](../../AGENTS.md), [docs/AGENTS.md](../../docs/AGENTS.md), [docs/IMPLEMENTATION_PLAN.md](../../docs/IMPLEMENTATION_PLAN.md), [docs/SECURITY.md](../../docs/SECURITY.md), [docs/TESTING.md](../../docs/TESTING.md), [docs/SCENE-SPEC.md](../../docs/SCENE-SPEC.md), [docs/API.md](../../docs/API.md), [docs/DEPLOYMENT.md](../../docs/DEPLOYMENT.md) |
+
+---
+
+## 1.1. Khắc phục lỗi kiểm tra của Supervisor (`Verification failed: git exit=2: `)
+
+Trong lần thẩm định trước của supervisor, công đoạn kiểm tra `git diff --check base_sha HEAD` trả về mã thoát `exit=2` do tệp `packages/custom-runtime/index.d.ts` thừa một dòng trống ở cuối tệp (line 964: `new blank line at EOF`).
+- **Nguyên nhân:** Lệnh `git diff --check` bắt các lỗi khoảng trắng/dòng trống ở cuối tệp và thoát với mã `2`, kích hoạt ngoại lệ `Verification failed: git exit=2: ` trong `supervisor.py`.
+- **Khắc phục:** Đã loại bỏ hoàn toàn ký tự dòng trống thừa ở cuối `packages/custom-runtime/index.d.ts`.
+- **Xác minh:** Chạy `git diff --check bcfc977d3dc7d03d0b38ca39926dc7c92292a9df HEAD` trả về mã thoát `0` (không có cảnh báo hoặc lỗi khoảng trắng).
 
 ---
 
@@ -92,6 +101,7 @@ Tất cả các bài kiểm tra dưới đây được thực thi trực tiếp 
 
 | Lệnh kiểm tra | Exit Code | Trạng thái | Chi tiết kết quả |
 | :--- | :---: | :---: | :--- |
+| `git diff --check bcfc977d3dc7d03d0b38ca39926dc7c92292a9df HEAD` | `0` | `PASS` | Kiểm tra quy chuẩn khoảng trắng và dòng kết thúc tệp trên toàn bộ diff so với base staging, khắc phục triệt để lỗi `git exit=2`. |
 | `node packages/custom-runtime/src/cli.mjs --write-evidence evidence/P7-03` | `0` | `PASS` | Chạy toàn bộ 14/14 bài kiểm tra tự động `AUT-01`..`AUT-14` và xuất báo cáo kiểm toán tại [evidence/P7-03/authoring-adapter-audit.json](./authoring-adapter-audit.json) và OpenAPI tại [evidence/P7-03/authoring-openapi.json](./authoring-openapi.json). |
 | `npx tsc -p packages/custom-runtime/tsconfig.json --noEmit` | `0` | `PASS` | Kiểm tra kiểu tĩnh TypeScript cho toàn bộ mã nguồn `.mjs` và `.d.ts` trong `packages/custom-runtime/` không có lỗi. |
 | `node --test packages/custom-runtime/test/p7-03-authoring-adapter.test.mjs` | `0` | `PASS` | 26/26 bài kiểm thử (9 test suites) đạt 100%: hợp đồng adapter, phát hiện nhà cung cấp, tuyến non-premium, bộ sinh mock xác định, bảo tồn tiếng Việt NFC, ràng buộc asset IDs, ngân sách token/thời gian/chi phí, cơ chế hủy AbortSignal, quét mã an ninh tĩnh, chống rò rỉ canary, cô lập tenant IDOR, tích hợp SceneBundleRegistry và mở rộng OpenAPI 3.1. |
@@ -110,8 +120,8 @@ Tất cả các bài kiểm tra dưới đây được thực thi trực tiếp 
   "totalChecks": 14,
   "passedChecks": 14,
   "failedChecks": 0,
-  "durationMs": 1151,
-  "timestamp": "2026-11-04T15:51:21.212Z",
+  "durationMs": 1157,
+  "timestamp": "2026-11-04T16:00:08.369Z",
   "checks": [
     {
       "id": "AUT-01",
