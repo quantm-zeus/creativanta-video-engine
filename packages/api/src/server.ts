@@ -732,7 +732,7 @@ export function createServer({
       const pepper = repository ? repository.getPepper() : 'default_test_pepper_0123456789abcdef';
       let grantPayload: SignedDownloadGrantPayload;
       try {
-        grantPayload = verifySignedDownloadGrant(token, { pepper, revocationStore });
+        grantPayload = verifySignedDownloadGrant(token, { pepper, revocationStore, now: clock() });
       } catch (err) {
         if (err instanceof DownloadGrantError) {
           sendError(res, err.httpStatus, err.code, err.message, requestId);
@@ -808,7 +808,7 @@ export function createServer({
       const pepper = repository ? repository.getPepper() : 'default_test_pepper_0123456789abcdef';
       let grantPayload: SignedArtifactDownloadGrantPayload;
       try {
-        grantPayload = verifySignedArtifactDownloadGrant(token, { pepper, revocationStore });
+        grantPayload = verifySignedArtifactDownloadGrant(token, { pepper, revocationStore, now: clock() });
       } catch (err) {
         if (err instanceof DownloadGrantError) {
           sendError(res, err.httpStatus, err.code, err.message, requestId);
@@ -825,7 +825,7 @@ export function createServer({
             sendError(res, 410, 'GRANT_REVOKED', 'Artifact has been revoked and grant is invalid', requestId);
             return;
           }
-          if (Date.parse(art.expires_at) <= Date.now()) {
+          if (Date.parse(art.expires_at) <= clock().getTime()) {
             sendError(res, 410, 'ARTIFACT_EXPIRED', 'Artifact retention has expired', requestId);
             return;
           }
