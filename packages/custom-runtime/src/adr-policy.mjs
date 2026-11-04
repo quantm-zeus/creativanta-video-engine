@@ -117,15 +117,25 @@ export const CUSTOM_RUNTIME_ADR_0002 = Object.freeze({
   requiredReleaseGates: REQUIRED_C1_TO_C6_GATES,
 });
 
+/**
+ * @typedef {'SANDBOX_SECURITY_VIOLATION'|'SANDBOX_RESOURCE_LIMIT'|'CAPABILITY_DISABLED'|'RENDER_TIMEOUT'|'FRAME_READINESS_TIMEOUT'|'ENCODE_VERIFICATION_FAILED'|'VALIDATION_FAILED'|'DIGEST_MISMATCH'|'BUNDLE_NOT_FOUND'|'BUNDLE_CONFLICT'|'REVISION_NOT_FOUND'|'REVISION_CONFLICT'|'REVISION_SEALED'|'FILE_NOT_FOUND'|'FORBIDDEN'|'UNSUPPORTED_CAPABILITY'|string} CustomRuntimeErrorCode
+ */
+
+/**
+ * @property {CustomRuntimeErrorCode} code
+ */
 export class CustomRuntimeError extends SandboxError {
   /**
-   * @param {'SANDBOX_SECURITY_VIOLATION'|'SANDBOX_RESOURCE_LIMIT'|'CAPABILITY_DISABLED'|'RENDER_TIMEOUT'|'FRAME_READINESS_TIMEOUT'|'ENCODE_VERIFICATION_FAILED'} code
+   * @param {CustomRuntimeErrorCode} code
    * @param {string} message
    * @param {boolean} [retryable=false]
    * @param {Record<string, unknown>} [details]
    */
   constructor(code, message, retryable = false, details = undefined) {
+    // @ts-expect-error - CustomRuntimeError supports extended registry and validation error codes
     super(code, message, retryable, details);
+    /** @type {CustomRuntimeErrorCode} */
+    this.code = code;
     this.name = 'CustomRuntimeError';
   }
 }

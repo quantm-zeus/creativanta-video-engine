@@ -1,0 +1,1378 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "Creativanta Video Engine — Scene Bundle Registry Extension",
+    "version": "1.0.0",
+    "description": "OpenAPI 3.1 specification extension for Scene Bundle Registry, versioned source and build management, parameter schema validation, tamper-evident provenance, and download access (Task P7-02)."
+  },
+  "servers": [
+    {
+      "url": "https://video.example.invalid/v1",
+      "description": "Production v1 gateway"
+    },
+    {
+      "url": "http://127.0.0.1:8080/v1",
+      "description": "Local development loopback"
+    }
+  ],
+  "security": [
+    {
+      "BearerAuth": [],
+      "TenantHeader": []
+    }
+  ],
+  "paths": {
+    "/scene-bundles": {
+      "get": {
+        "summary": "List scene bundles for authenticated tenant",
+        "description": "Returns a paginated list of scene bundles owned by the tenant, optionally including curated global catalog bundles.",
+        "operationId": "listSceneBundles",
+        "parameters": [
+          {
+            "name": "tag",
+            "in": "query",
+            "description": "Filter by bundle tag (case-insensitive)",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "include_global",
+            "in": "query",
+            "description": "Whether to include curated global catalog bundles (default: true)",
+            "required": false,
+            "schema": {
+              "type": "boolean",
+              "default": true
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "description": "Maximum number of items to return",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100,
+              "default": 50
+            }
+          },
+          {
+            "name": "offset",
+            "in": "query",
+            "description": "Pagination offset",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 0,
+              "default": 0
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Paginated list of scene bundles",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SceneBundleListResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Error401"
+          },
+          "403": {
+            "$ref": "#/components/responses/Error403"
+          }
+        }
+      },
+      "post": {
+        "summary": "Create a new scene bundle and initial draft revision",
+        "description": "Creates a new scene bundle entity along with revision 1 in 'draft' state.",
+        "operationId": "createSceneBundle",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SceneBundleCreateRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Scene bundle created successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SceneBundleResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/Error400"
+          },
+          "401": {
+            "$ref": "#/components/responses/Error401"
+          },
+          "403": {
+            "$ref": "#/components/responses/Error403"
+          },
+          "409": {
+            "$ref": "#/components/responses/Error409"
+          },
+          "422": {
+            "$ref": "#/components/responses/Error422"
+          }
+        }
+      }
+    },
+    "/scene-bundles/{id}": {
+      "parameters": [
+        {
+          "name": "id",
+          "in": "path",
+          "required": true,
+          "description": "Unique scene bundle ID",
+          "schema": {
+            "type": "string",
+            "pattern": "^[a-z][a-z0-9_-]{0,63}$"
+          }
+        }
+      ],
+      "get": {
+        "summary": "Retrieve scene bundle details",
+        "operationId": "getSceneBundle",
+        "responses": {
+          "200": {
+            "description": "Scene bundle descriptor",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SceneBundleResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Error401"
+          },
+          "404": {
+            "$ref": "#/components/responses/Error404"
+          }
+        }
+      },
+      "patch": {
+        "summary": "Update scene bundle metadata",
+        "operationId": "updateSceneBundle",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SceneBundleUpdateRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Updated scene bundle descriptor",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SceneBundleResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/Error400"
+          },
+          "401": {
+            "$ref": "#/components/responses/Error401"
+          },
+          "403": {
+            "$ref": "#/components/responses/Error403"
+          },
+          "404": {
+            "$ref": "#/components/responses/Error404"
+          }
+        }
+      },
+      "delete": {
+        "summary": "Soft-delete / archive a scene bundle",
+        "operationId": "deleteSceneBundle",
+        "responses": {
+          "204": {
+            "description": "Bundle archived successfully"
+          },
+          "401": {
+            "$ref": "#/components/responses/Error401"
+          },
+          "403": {
+            "$ref": "#/components/responses/Error403"
+          },
+          "404": {
+            "$ref": "#/components/responses/Error404"
+          }
+        }
+      }
+    },
+    "/scene-bundles/{id}/revisions": {
+      "parameters": [
+        {
+          "name": "id",
+          "in": "path",
+          "required": true,
+          "description": "Scene bundle identifier",
+          "schema": {
+            "type": "string"
+          }
+        }
+      ],
+      "get": {
+        "summary": "List all revisions of a scene bundle",
+        "operationId": "listSceneBundleRevisions",
+        "responses": {
+          "200": {
+            "description": "List of bundle revisions",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SceneBundleRevisionListResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Error401"
+          },
+          "404": {
+            "$ref": "#/components/responses/Error404"
+          }
+        }
+      },
+      "post": {
+        "summary": "Create a new revision with optimistic locking (base_revision)",
+        "description": "Creates a new revision in 'draft' status. Caller must supply base_revision matching current latest_revision to avoid concurrent overwrite; returns 409 REVISION_CONFLICT if stale.",
+        "operationId": "createSceneBundleRevision",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SceneBundleRevisionCreateRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "New draft revision created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SceneBundleRevisionResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/Error400"
+          },
+          "401": {
+            "$ref": "#/components/responses/Error401"
+          },
+          "403": {
+            "$ref": "#/components/responses/Error403"
+          },
+          "404": {
+            "$ref": "#/components/responses/Error404"
+          },
+          "409": {
+            "$ref": "#/components/responses/Error409"
+          },
+          "422": {
+            "$ref": "#/components/responses/Error422"
+          }
+        }
+      }
+    },
+    "/scene-bundles/{id}/revisions/{revision}": {
+      "parameters": [
+        {
+          "name": "id",
+          "in": "path",
+          "required": true,
+          "schema": {
+            "type": "string"
+          }
+        },
+        {
+          "name": "revision",
+          "in": "path",
+          "required": true,
+          "schema": {
+            "type": "integer",
+            "minimum": 1
+          }
+        }
+      ],
+      "get": {
+        "summary": "Get specific revision details",
+        "description": "Retrieves metadata, parameter schema, source and build digests, and provenance for a specific revision.",
+        "operationId": "getSceneBundleRevision",
+        "responses": {
+          "200": {
+            "description": "Revision details",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SceneBundleRevisionResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Error401"
+          },
+          "404": {
+            "$ref": "#/components/responses/Error404"
+          }
+        }
+      },
+      "patch": {
+        "summary": "Update editable draft revision",
+        "description": "Modifies files or parameters of a revision that is still in 'draft' status. Once published/sealed, revisions are immutable and throw 409 REVISION_SEALED.",
+        "operationId": "updateDraftSceneBundleRevision",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SceneBundleRevisionUpdateRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Updated draft revision",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SceneBundleRevisionResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/Error400"
+          },
+          "401": {
+            "$ref": "#/components/responses/Error401"
+          },
+          "403": {
+            "$ref": "#/components/responses/Error403"
+          },
+          "404": {
+            "$ref": "#/components/responses/Error404"
+          },
+          "409": {
+            "$ref": "#/components/responses/Error409"
+          },
+          "422": {
+            "$ref": "#/components/responses/Error422"
+          }
+        }
+      }
+    },
+    "/scene-bundles/{id}/revisions/{revision}/source": {
+      "parameters": [
+        {
+          "name": "id",
+          "in": "path",
+          "required": true,
+          "schema": {
+            "type": "string"
+          }
+        },
+        {
+          "name": "revision",
+          "in": "path",
+          "required": true,
+          "schema": {
+            "type": "integer",
+            "minimum": 1
+          }
+        },
+        {
+          "name": "format",
+          "in": "query",
+          "required": false,
+          "description": "Download representation format ('manifest' metadata, 'tar' POSIX tarball, or 'files' base64 bundle)",
+          "schema": {
+            "type": "string",
+            "enum": ["manifest", "tar", "files"],
+            "default": "manifest"
+          }
+        }
+      ],
+      "get": {
+        "summary": "Download complete source files or manifest for revision",
+        "description": "Retrieves source files and validates source_sha256 digest integrity.",
+        "operationId": "downloadSceneBundleSource",
+        "responses": {
+          "200": {
+            "description": "Source files bundle in requested format",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SourceDownloadResponse"
+                }
+              },
+              "application/x-tar": {
+                "schema": {
+                  "type": "string",
+                  "format": "binary"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Error401"
+          },
+          "404": {
+            "$ref": "#/components/responses/Error404"
+          }
+        }
+      }
+    },
+    "/scene-bundles/{id}/revisions/{revision}/source/{filePath}": {
+      "parameters": [
+        {
+          "name": "id",
+          "in": "path",
+          "required": true,
+          "schema": {
+            "type": "string"
+          }
+        },
+        {
+          "name": "revision",
+          "in": "path",
+          "required": true,
+          "schema": {
+            "type": "integer",
+            "minimum": 1
+          }
+        },
+        {
+          "name": "filePath",
+          "in": "path",
+          "required": true,
+          "description": "Relative file path within the bundle source tree",
+          "schema": {
+            "type": "string"
+          }
+        }
+      ],
+      "get": {
+        "summary": "Download a single source file from the revision",
+        "description": "Returns raw file content with path traversal protection and SHA-256 verification.",
+        "operationId": "downloadSceneBundleSourceFile",
+        "responses": {
+          "200": {
+            "description": "File content",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "type": "string",
+                  "format": "binary"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/Error400"
+          },
+          "401": {
+            "$ref": "#/components/responses/Error401"
+          },
+          "404": {
+            "$ref": "#/components/responses/Error404"
+          }
+        }
+      }
+    },
+    "/scene-bundles/{id}/revisions/{revision}/build": {
+      "parameters": [
+        {
+          "name": "id",
+          "in": "path",
+          "required": true,
+          "schema": {
+            "type": "string"
+          }
+        },
+        {
+          "name": "revision",
+          "in": "path",
+          "required": true,
+          "schema": {
+            "type": "integer",
+            "minimum": 1
+          }
+        }
+      ],
+      "get": {
+        "summary": "Download build artifacts and inspect build digest",
+        "operationId": "downloadSceneBundleBuild",
+        "responses": {
+          "200": {
+            "description": "Build artifacts manifest and digests",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BuildArtifactResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Error401"
+          },
+          "404": {
+            "$ref": "#/components/responses/Error404"
+          }
+        }
+      }
+    },
+    "/scene-bundles/{id}/revisions/{revision}/validate": {
+      "parameters": [
+        {
+          "name": "id",
+          "in": "path",
+          "required": true,
+          "schema": {
+            "type": "string"
+          }
+        },
+        {
+          "name": "revision",
+          "in": "path",
+          "required": true,
+          "schema": {
+            "type": "integer",
+            "minimum": 1
+          }
+        }
+      ],
+      "post": {
+        "summary": "Trigger static security scan and parameter schema validation",
+        "operationId": "validateSceneBundleRevision",
+        "responses": {
+          "200": {
+            "description": "Validation evaluation report",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ValidationReport"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Error401"
+          },
+          "404": {
+            "$ref": "#/components/responses/Error404"
+          }
+        }
+      }
+    },
+    "/scene-bundles/{id}/revisions/{revision}/publish": {
+      "parameters": [
+        {
+          "name": "id",
+          "in": "path",
+          "required": true,
+          "schema": {
+            "type": "string"
+          }
+        },
+        {
+          "name": "revision",
+          "in": "path",
+          "required": true,
+          "schema": {
+            "type": "integer",
+            "minimum": 1
+          }
+        }
+      ],
+      "post": {
+        "summary": "Seal and publish revision (making it strictly immutable and ready for render)",
+        "operationId": "publishSceneBundleRevision",
+        "responses": {
+          "200": {
+            "description": "Revision published successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SceneBundleRevisionResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Error401"
+          },
+          "403": {
+            "$ref": "#/components/responses/Error403"
+          },
+          "404": {
+            "$ref": "#/components/responses/Error404"
+          },
+          "422": {
+            "$ref": "#/components/responses/Error422"
+          }
+        }
+      }
+    },
+    "/scene-bundles/fork": {
+      "post": {
+        "summary": "Fork an existing bundle (curated global or tenant) into tenant workspace",
+        "operationId": "forkSceneBundle",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SceneBundleForkRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Bundle forked successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SceneBundleResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/Error400"
+          },
+          "401": {
+            "$ref": "#/components/responses/Error401"
+          },
+          "403": {
+            "$ref": "#/components/responses/Error403"
+          },
+          "404": {
+            "$ref": "#/components/responses/Error404"
+          },
+          "409": {
+            "$ref": "#/components/responses/Error409"
+          },
+          "422": {
+            "$ref": "#/components/responses/Error422"
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "securitySchemes": {
+      "BearerAuth": {
+        "type": "http",
+        "scheme": "bearer",
+        "bearerFormat": "JWT",
+        "description": "Standard tenant bearer authentication token"
+      },
+      "TenantHeader": {
+        "type": "apiKey",
+        "in": "header",
+        "name": "X-Tenant-ID",
+        "description": "Scoped tenant identifier header"
+      }
+    },
+    "schemas": {
+      "SceneBundle": {
+        "type": "object",
+        "required": ["id", "tenant_id", "name", "is_global", "latest_revision", "created_at", "updated_at"],
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^[a-z][a-z0-9_-]{0,63}$"
+          },
+          "tenant_id": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 256
+          },
+          "description": {
+            "type": "string",
+            "maxLength": 2048
+          },
+          "is_global": {
+            "type": "boolean"
+          },
+          "tags": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "latest_revision": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "is_archived": {
+            "type": "boolean"
+          },
+          "created_by": {
+            "type": "string"
+          }
+        },
+        "additionalProperties": false
+      },
+      "SceneBundleResponse": {
+        "type": "object",
+        "required": ["bundle"],
+        "properties": {
+          "bundle": {
+            "$ref": "#/components/schemas/SceneBundle"
+          },
+          "revision": {
+            "$ref": "#/components/schemas/SceneBundleRevision"
+          }
+        },
+        "additionalProperties": false
+      },
+      "SceneBundleListResponse": {
+        "type": "object",
+        "required": ["items", "total", "limit", "offset"],
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/SceneBundle"
+            }
+          },
+          "total": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "limit": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "offset": {
+            "type": "integer",
+            "minimum": 0
+          }
+        },
+        "additionalProperties": false
+      },
+      "SceneBundleCreateRequest": {
+        "type": "object",
+        "required": ["id", "name"],
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^[a-z][a-z0-9_-]{0,63}$"
+          },
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 256
+          },
+          "description": {
+            "type": "string",
+            "maxLength": 2048
+          },
+          "tags": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "entrypoint": {
+            "type": "string",
+            "default": "index.js"
+          },
+          "parameter_schema": {
+            "$ref": "#/components/schemas/ParameterSchema"
+          },
+          "source_files": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/SourceFilePayload"
+            }
+          },
+          "declared_capabilities": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "change_summary": {
+            "type": "string",
+            "maxLength": 1024
+          }
+        },
+        "additionalProperties": false
+      },
+      "SceneBundleUpdateRequest": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 256
+          },
+          "description": {
+            "type": "string",
+            "maxLength": 2048
+          },
+          "tags": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        "additionalProperties": false
+      },
+      "SceneBundleRevision": {
+        "type": "object",
+        "required": [
+          "bundle_id",
+          "revision",
+          "status",
+          "entrypoint",
+          "source_sha256",
+          "build_sha256",
+          "parameter_schema",
+          "provenance",
+          "created_at"
+        ],
+        "properties": {
+          "bundle_id": {
+            "type": "string"
+          },
+          "revision": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "base_revision": {
+            "type": ["integer", "null"]
+          },
+          "status": {
+            "type": "string",
+            "enum": ["draft", "validating", "published", "archived", "rejected"]
+          },
+          "entrypoint": {
+            "type": "string"
+          },
+          "source_sha256": {
+            "type": "string",
+            "pattern": "^[0-9a-f]{64}$"
+          },
+          "build_sha256": {
+            "type": "string",
+            "pattern": "^[0-9a-f]{64}$"
+          },
+          "parameter_schema": {
+            "$ref": "#/components/schemas/ParameterSchema"
+          },
+          "provenance": {
+            "$ref": "#/components/schemas/Provenance"
+          },
+          "declared_capabilities": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "change_summary": {
+            "type": "string"
+          },
+          "csp_script_hash": {
+            "type": "string"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "created_by": {
+            "type": "string"
+          },
+          "sealed_at": {
+            "type": ["string", "null"],
+            "format": "date-time"
+          }
+        },
+        "additionalProperties": false
+      },
+      "SceneBundleRevisionResponse": {
+        "type": "object",
+        "required": ["revision"],
+        "properties": {
+          "revision": {
+            "$ref": "#/components/schemas/SceneBundleRevision"
+          }
+        },
+        "additionalProperties": false
+      },
+      "SceneBundleRevisionListResponse": {
+        "type": "object",
+        "required": ["items"],
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/SceneBundleRevision"
+            }
+          }
+        },
+        "additionalProperties": false
+      },
+      "SceneBundleRevisionCreateRequest": {
+        "type": "object",
+        "required": ["base_revision"],
+        "properties": {
+          "base_revision": {
+            "type": "integer",
+            "description": "Expected current latest_revision of the bundle for optimistic locking concurrency control"
+          },
+          "entrypoint": {
+            "type": "string"
+          },
+          "parameter_schema": {
+            "$ref": "#/components/schemas/ParameterSchema"
+          },
+          "source_files": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/SourceFilePayload"
+            }
+          },
+          "change_summary": {
+            "type": "string"
+          },
+          "declared_capabilities": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        "additionalProperties": false
+      },
+      "SceneBundleRevisionUpdateRequest": {
+        "type": "object",
+        "properties": {
+          "entrypoint": {
+            "type": "string"
+          },
+          "parameter_schema": {
+            "$ref": "#/components/schemas/ParameterSchema"
+          },
+          "add_or_update_files": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/SourceFilePayload"
+            }
+          },
+          "remove_files": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "change_summary": {
+            "type": "string"
+          },
+          "declared_capabilities": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        "additionalProperties": false
+      },
+      "SceneBundleForkRequest": {
+        "type": "object",
+        "required": ["source_bundle_id", "new_bundle_id"],
+        "properties": {
+          "source_bundle_id": {
+            "type": "string"
+          },
+          "new_bundle_id": {
+            "type": "string",
+            "pattern": "^[a-z][a-z0-9_-]{0,63}$"
+          },
+          "source_revision": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "name": {
+            "type": "string",
+            "maxLength": 256
+          },
+          "description": {
+            "type": "string",
+            "maxLength": 2048
+          }
+        },
+        "additionalProperties": false
+      },
+      "SourceFilePayload": {
+        "type": "object",
+        "required": ["path", "content"],
+        "properties": {
+          "path": {
+            "type": "string",
+            "description": "Normalized relative file path (max depth 8, no path traversal)"
+          },
+          "content": {
+            "type": "string",
+            "description": "UTF-8 file text or base64 data"
+          }
+        },
+        "additionalProperties": false
+      },
+      "ParameterSchema": {
+        "type": "object",
+        "required": ["type"],
+        "properties": {
+          "$schema": {
+            "type": "string"
+          },
+          "type": {
+            "type": "string",
+            "enum": ["object"]
+          },
+          "properties": {
+            "type": "object",
+            "additionalProperties": true
+          },
+          "required": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "additionalProperties": {
+            "type": "boolean"
+          }
+        },
+        "additionalProperties": true
+      },
+      "Provenance": {
+        "type": "object",
+        "required": [
+          "provenance_id",
+          "authoring_type",
+          "author",
+          "created_at",
+          "rights_and_license",
+          "source_sha256",
+          "build_sha256",
+          "provenance_digest"
+        ],
+        "properties": {
+          "provenance_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "authoring_type": {
+            "type": "string",
+            "enum": ["human", "ai", "fork", "import"]
+          },
+          "author": {
+            "type": "string"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "base_revision": {
+            "type": ["integer", "null"]
+          },
+          "source_bundle": {
+            "type": ["object", "null"],
+            "properties": {
+              "bundle_id": {
+                "type": "string"
+              },
+              "revision": {
+                "type": "integer"
+              }
+            }
+          },
+          "ai_metadata": {
+            "type": ["object", "null"],
+            "properties": {
+              "provider": {
+                "type": "string"
+              },
+              "model": {
+                "type": "string"
+              },
+              "prompt_tokens": {
+                "type": "integer"
+              },
+              "completion_tokens": {
+                "type": "integer"
+              },
+              "cost_usd": {
+                "type": "number"
+              },
+              "job_id": {
+                "type": "string"
+              },
+              "brief_hash": {
+                "type": "string"
+              }
+            }
+          },
+          "rights_and_license": {
+            "type": "object",
+            "required": ["license", "rights_provenance"],
+            "properties": {
+              "license": {
+                "type": "string"
+              },
+              "copyright_holder": {
+                "type": "string"
+              },
+              "rights_provenance": {
+                "type": "string"
+              },
+              "commercial_use_allowed": {
+                "type": "boolean"
+              }
+            }
+          },
+          "declared_capabilities": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "source_sha256": {
+            "type": "string",
+            "pattern": "^[0-9a-f]{64}$"
+          },
+          "build_sha256": {
+            "type": "string",
+            "pattern": "^[0-9a-f]{64}$"
+          },
+          "provenance_digest": {
+            "type": "string",
+            "pattern": "^[0-9a-f]{64}$"
+          }
+        },
+        "additionalProperties": false
+      },
+      "SourceDownloadResponse": {
+        "type": "object",
+        "required": ["format", "sourceSha256", "totalFiles", "totalBytes", "data"],
+        "properties": {
+          "format": {
+            "type": "string",
+            "enum": ["manifest", "tar", "files"]
+          },
+          "sourceSha256": {
+            "type": "string"
+          },
+          "totalFiles": {
+            "type": "integer"
+          },
+          "totalBytes": {
+            "type": "integer"
+          },
+          "data": {
+            "description": "File items array or manifest list"
+          }
+        },
+        "additionalProperties": false
+      },
+      "BuildArtifactResponse": {
+        "type": "object",
+        "required": ["buildSha256", "entrypoint", "artifacts"],
+        "properties": {
+          "buildSha256": {
+            "type": "string"
+          },
+          "entrypoint": {
+            "type": "string"
+          },
+          "artifacts": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": ["path", "size", "sha256", "mime_type"],
+              "properties": {
+                "path": {
+                  "type": "string"
+                },
+                "size": {
+                  "type": "integer"
+                },
+                "sha256": {
+                  "type": "string"
+                },
+                "mime_type": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        },
+        "additionalProperties": false
+      },
+      "ValidationReport": {
+        "type": "object",
+        "required": ["passed", "scanned_files_count", "violations", "parameter_schema_valid", "evaluated_at"],
+        "properties": {
+          "passed": {
+            "type": "boolean"
+          },
+          "scanned_files_count": {
+            "type": "integer"
+          },
+          "violations": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            }
+          },
+          "parameter_schema_valid": {
+            "type": "boolean"
+          },
+          "evaluated_at": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "additionalProperties": false
+      },
+      "ErrorResponse": {
+        "type": "object",
+        "required": ["code", "message"],
+        "properties": {
+          "code": {
+            "type": "string"
+          },
+          "message": {
+            "type": "string"
+          },
+          "details": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      }
+    },
+    "responses": {
+      "Error400": {
+        "description": "Bad Request",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/ErrorResponse"
+            }
+          }
+        }
+      },
+      "Error401": {
+        "description": "Unauthorized / Missing Tenant Credentials",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/ErrorResponse"
+            }
+          }
+        }
+      },
+      "Error403": {
+        "description": "Forbidden / Access Denied",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/ErrorResponse"
+            }
+          }
+        }
+      },
+      "Error404": {
+        "description": "Scene Bundle or Revision Not Found",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/ErrorResponse"
+            }
+          }
+        }
+      },
+      "Error409": {
+        "description": "Conflict: Stale base_revision or revision already sealed",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/ErrorResponse"
+            }
+          }
+        }
+      },
+      "Error422": {
+        "description": "Unprocessable Entity / Validation Failure",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/ErrorResponse"
+            }
+          }
+        }
+      },
+      "Error503": {
+        "description": "Service Unavailable / Sandbox Engine Offline",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/ErrorResponse"
+            }
+          }
+        }
+      }
+    }
+  }
+}
