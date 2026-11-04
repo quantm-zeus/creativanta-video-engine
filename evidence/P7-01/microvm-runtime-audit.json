@@ -1,0 +1,297 @@
+{
+  "taskId": "P7-01",
+  "adrId": "ADR-0002",
+  "status": "PASS",
+  "totalChecks": 12,
+  "passedChecks": 12,
+  "failedChecks": 0,
+  "durationMs": 659,
+  "timestamp": "2026-11-04T15:16:53.582Z",
+  "hostVirtualization": {
+    "probedAt": "2026-11-04T15:16:52.926Z",
+    "devKvmPath": "/dev/kvm",
+    "kvmDeviceExists": false,
+    "kvmReadableWritable": false,
+    "binaries": {
+      "firecracker": null,
+      "jailer": null,
+      "kataRuntime": null,
+      "runsc": null
+    },
+    "firecrackerReady": false,
+    "kataReady": false,
+    "gvisorBinaryPresent": false,
+    "microVmHardwareReady": false,
+    "recommendedActionWhenUnavailable": "Keep CVE_CUSTOM_CODE_ENABLED=false and CVE_CUSTOM_RUNTIME=disabled; never downgrade to standard containers."
+  },
+  "defaultFeatureState": {
+    "CVE_CUSTOM_CODE_ENABLED": false,
+    "CVE_CUSTOM_RUNTIME": "disabled",
+    "CVE_CUSTOM_TENANT_ALLOWLIST": []
+  },
+  "checks": [
+    {
+      "id": "CRM-01",
+      "title": "ADR-0002 Default-Off Gate (CVE_CUSTOM_CODE_ENABLED=false, CVE_CUSTOM_RUNTIME=disabled, kill switch)",
+      "category": "adr_and_default_off",
+      "status": "PASS",
+      "passed": true,
+      "durationMs": 1.49,
+      "details": {
+        "adrId": "ADR-0002",
+        "defaultCustomCodeEnabled": false,
+        "defaultCustomRuntime": "disabled",
+        "rejectedCode": "CAPABILITY_DISABLED"
+      }
+    },
+    {
+      "id": "CRM-02",
+      "title": "Anti-Downgrade Hard Lock (blocks docker, runc, crun, containerd, podman, node-vm, iframe, host)",
+      "category": "anti_downgrade",
+      "status": "PASS",
+      "passed": true,
+      "durationMs": 25.07,
+      "details": {
+        "blockedDowngradeRuntimesCount": 14,
+        "blockedDowngradeRuntimes": [
+          "docker",
+          "runc",
+          "crun",
+          "containerd",
+          "podman",
+          "lxc",
+          "node-vm",
+          "vm",
+          "iframe",
+          "host",
+          "process",
+          "trusted-template-v1",
+          "standard-container",
+          "simulated-microvm-prison"
+        ]
+      }
+    },
+    {
+      "id": "CRM-03",
+      "title": "gVisor (gvisor-runsc-v1) Explicit Signed Review Gate (rejects unreviewed/expired/tampered; requires signed ADR amendment)",
+      "category": "gvisor_explicit_review",
+      "status": "PASS",
+      "passed": true,
+      "durationMs": 4.86,
+      "details": {
+        "unreviewedBlockedReason": "GVISOR_EXPLICIT_REVIEW_REQUIRED",
+        "explicitSignedReviewAccepted": true,
+        "adrAmendmentId": "ADR-0002-AMEND-GVISOR-01"
+      }
+    },
+    {
+      "id": "CRM-04",
+      "title": "Host Virtualization Probe (/dev/kvm & microVM binaries check keeps custom code off without downgrading)",
+      "category": "host_virtualization_probe",
+      "status": "PASS",
+      "passed": true,
+      "durationMs": 0.3,
+      "details": {
+        "actualHostKvmAvailable": false,
+        "actualHostFirecrackerReady": false,
+        "missingKvmBlockedReason": "VIRTUALIZATION_UNAVAILABLE",
+        "downgradeAttempted": false
+      }
+    },
+    {
+      "id": "CRM-05",
+      "title": "C1-C6 Security Release Gate Attestation & Rootfs/Kernel Digest Drift Rejection",
+      "category": "c1_c6_gates",
+      "status": "PASS",
+      "passed": true,
+      "durationMs": 0.44,
+      "details": {
+        "verifiedGatesCount": 6,
+        "digestDriftBlockedReason": "ROOTFS_DIGEST_DRIFT"
+      }
+    },
+    {
+      "id": "CRM-06",
+      "title": "Disposable MicroVM Isolated Build (compiles valid scene source, computes source/build/CSP hashes, wipes build VM)",
+      "category": "isolated_build",
+      "status": "PASS",
+      "passed": true,
+      "durationMs": 130.08,
+      "details": {
+        "buildVmId": "vm_build_1_f162c1bf",
+        "sourceSha256": "31a5020a938d477ee6655b74eaab6691a4ed710e715c7520013b08c1d19c0eb3",
+        "buildSha256": "52d5fa91874edf0c52422a338f3b8dc7678b4828ab9922f94534de07afa2d597",
+        "cspScriptHash": "'sha256-UtX6kYdO3wxSQiozjzuNx2eLSCirmSL5RTTeB6+i1Zc='",
+        "buildVmDestroyed": true,
+        "buildPrisonWiped": true
+      }
+    },
+    {
+      "id": "CRM-07",
+      "title": "Static & Import Allowlist Policy Scanner (blocks fetch, WebSocket, eval, Node bridge, unapproved npm imports, lifecycle hooks)",
+      "category": "source_policy_scanner",
+      "status": "PASS",
+      "passed": true,
+      "durationMs": 1.04,
+      "details": {
+        "maliciousPayloadsBlockedCount": 6,
+        "approvedPreinstalledImports": [
+          "@creativanta/scene-runtime",
+          "@creativanta/scene-math",
+          "@creativanta/scene-easing"
+        ]
+      }
+    },
+    {
+      "id": "CRM-08",
+      "title": "Disposable MicroVM Isolated Render & Single-Use Enforcement (distinct render VM, valid MP4 ftyp, MICROVM_REUSE_FORBIDDEN)",
+      "category": "isolated_render",
+      "status": "PASS",
+      "passed": true,
+      "durationMs": 104.12,
+      "details": {
+        "renderVmId": "vm_render_2_435444d7",
+        "artifactSha256": "c8c5af84ac765d911a9ab05bc9a19d15d0b1bc5cf0654eff4469ce536410654e",
+        "artifactBytes": 24,
+        "renderVmDestroyed": true,
+        "reuseBlockedReason": "MICROVM_REUSE_FORBIDDEN",
+        "noSandboxFlagBlocked": true
+      }
+    },
+    {
+      "id": "CRM-09",
+      "title": "Zero Egress & Internal Loopback Asset Server Isolation (0 NICs, mmds_config=null, 127.0.0.1 asset hash check)",
+      "category": "zero_egress",
+      "status": "PASS",
+      "passed": true,
+      "durationMs": 0.23,
+      "details": {
+        "nicAttachmentBlockedReason": "EGRESS_NIC_FORBIDDEN",
+        "forbiddenChromiumFlagsCount": 12
+      }
+    },
+    {
+      "id": "CRM-10",
+      "title": "Zero Secrets & Canary Exfiltration Prevention (blocks secret env keys/values, scrubs canary from stdout/stderr)",
+      "category": "zero_secrets",
+      "status": "PASS",
+      "passed": true,
+      "durationMs": 1.57,
+      "details": {
+        "secretEnvKeysBlocked": 5,
+        "canaryScrubbed": true
+      }
+    },
+    {
+      "id": "CRM-11",
+      "title": "Zero Host FS & Read-Only Input Prison (blocks host mounts/sockets/traversal/symlinks; 0o440 inputs reject write with EACCES)",
+      "category": "zero_host_fs",
+      "status": "PASS",
+      "passed": true,
+      "durationMs": 243.43,
+      "details": {
+        "forbiddenHostPathsBlocked": 5,
+        "readOnlyInputWriteDeniedCode": "EACCES"
+      }
+    },
+    {
+      "id": "CRM-12",
+      "title": "Hard Resource Bounds, Infinite-Loop Timeout SIGKILL, Disk Quota Bomb & Stale Lease Epoch Fencing",
+      "category": "bounds_and_fencing",
+      "status": "PASS",
+      "passed": true,
+      "durationMs": 141.71,
+      "details": {
+        "infiniteLoopKilledCode": "RENDER_TIMEOUT",
+        "diskBombBlockedCode": "SANDBOX_RESOURCE_LIMIT",
+        "staleLeaseBlockedReason": "LEASE_FENCE_REJECTED"
+      }
+    }
+  ],
+  "adrSpecification": {
+    "adrId": "ADR-0002",
+    "taskId": "P7-01",
+    "title": "Disposable MicroVM Isolation for Untrusted Custom Scene Build & Render",
+    "status": "ACCEPTED_FOR_P7_ISOLATION_GATE",
+    "date": "2026-11-04",
+    "defaultState": {
+      "CVE_CUSTOM_CODE_ENABLED": false,
+      "CVE_CUSTOM_RUNTIME": "disabled",
+      "CVE_CUSTOM_TENANT_ALLOWLIST": []
+    },
+    "preferredRuntimes": [
+      {
+        "id": "microvm-firecracker-v1",
+        "isolationClass": "hardware-virtualized-microvm",
+        "vmm": "firecracker+jailer",
+        "requiresKvm": true,
+        "disposablePerBuild": true,
+        "disposablePerRenderAttempt": true,
+        "innerNonRootUid": 10001,
+        "innerNonRootGid": 10001,
+        "innerChromiumSandboxRequired": true,
+        "networkInterfacesCount": 0,
+        "status": "APPROVED_PRIMARY"
+      },
+      {
+        "id": "microvm-kata-v1",
+        "isolationClass": "hardware-virtualized-microvm",
+        "vmm": "kata-runtime-qemu-or-cloud-hypervisor",
+        "requiresKvm": true,
+        "disposablePerBuild": true,
+        "disposablePerRenderAttempt": true,
+        "innerNonRootUid": 10001,
+        "innerNonRootGid": 10001,
+        "innerChromiumSandboxRequired": true,
+        "networkInterfacesCount": 0,
+        "status": "APPROVED_SECONDARY"
+      }
+    ],
+    "alternativeRuntimes": [
+      {
+        "id": "gvisor-runsc-v1",
+        "isolationClass": "application-kernel-sandbox",
+        "vmm": "runsc-sentry-gofer",
+        "requiresExplicitAdrAmendment": true,
+        "requiresSignedSecurityReview": true,
+        "requiresEscapeAndCompatibilityBenchmarks": true,
+        "tradeoffs": [
+          "User-space Sentry kernel intercepts Linux syscalls via systrap/kvm platform, adding CPU/IPC overhead for Chromium multi-process rendering.",
+          "Gofer file proxy adds I/O latency for frame capture and FFmpeg muxing; RTF <= 6 target not yet benchmarked on gVisor.",
+          "Certain advanced Linux syscalls (io_uring, specialized clone3/shm flags) are emulated or restricted in Sentry."
+        ],
+        "status": "REQUIRES_EXPLICIT_SECURITY_REVIEW"
+      }
+    ],
+    "antiDowngradePolicy": {
+      "allowFallbackToStandardContainer": false,
+      "allowFallbackToNodeVmOrIframe": false,
+      "allowFallbackToHostProcess": false,
+      "onMissingVirtualization": "KEEP_CUSTOM_CODE_DISABLED",
+      "forbiddenRuntimes": [
+        "docker",
+        "runc",
+        "crun",
+        "containerd",
+        "podman",
+        "lxc",
+        "node-vm",
+        "vm",
+        "iframe",
+        "host",
+        "process",
+        "trusted-template-v1",
+        "standard-container",
+        "simulated-microvm-prison"
+      ]
+    },
+    "requiredReleaseGates": [
+      "C1_threat_model_and_runtime_pin",
+      "C2_isolated_build_and_no_egress",
+      "C3_escape_and_secret_canary_suite",
+      "C4_resource_bombs_cancel_and_lease_fencing",
+      "C5_tenant_preview_and_artifact_origin_auth",
+      "C6_security_reviewer_signed_attestation"
+    ]
+  }
+}
