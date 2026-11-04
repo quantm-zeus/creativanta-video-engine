@@ -20,6 +20,7 @@ import fs from 'node:fs';
 import http from 'node:http';
 import os from 'node:os';
 import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { DatabaseSync } from 'node:sqlite';
 
 import { loadEnvConfig } from '@creativanta/contracts';
@@ -216,7 +217,11 @@ describe('Task P5-03: Real API Server E2E Contract Harness (No Shared DB Assumpt
   });
 
   it('5.1 Static Code Audit: Verifies zero database / internal engine imports in SDK client', () => {
-    const clientDir = path.resolve('packages/sdk/src/client');
+    const clientDir = fs.existsSync(path.resolve('packages/sdk/src/client'))
+      ? path.resolve('packages/sdk/src/client')
+      : (fs.existsSync(path.resolve('src/client'))
+        ? path.resolve('src/client')
+        : fileURLToPath(new URL('../src/client', import.meta.url)));
     const files = fs.readdirSync(clientDir).filter((f) => f.endsWith('.ts'));
 
     const forbiddenPatterns = [

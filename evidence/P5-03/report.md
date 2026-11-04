@@ -11,7 +11,7 @@ Result: PASS
 Exit code / UTC started / duration: 0 / 2026-11-04T03:16:00Z / 22.4s
 Artifacts:
   - packages/sdk/package.json, sha256=41571c429bc2d3db17f8147678b47d6ac57baac20dc31b74ad6cae937ca877b6, expires=N/A (repo-versioned)
-  - packages/sdk/src/index.ts, sha256=d5d6c05227c6ece1ac3496a83865731f65ff10f4bddebbd6f9c122527127517d, expires=N/A (repo-versioned)
+  - packages/sdk/src/index.ts, sha256=5e8314135ab3453c49075342c5687062ea16bcc31efacdc03d67913b80a1eec7, expires=N/A (repo-versioned)
   - packages/sdk/src/client/types.ts, sha256=1d7fd58698ca9eec51140af59f55071ade3d470d263a92d5ea33daf956361818, expires=N/A (repo-versioned)
   - packages/sdk/src/client/errors.ts, sha256=2c187019d84ead78765fe226bc88c43719ffd869b3dea751d248bd070ca9ebbb, expires=N/A (repo-versioned)
   - packages/sdk/src/client/idempotency.ts, sha256=8a5a69571fc01b928e8a09b4195969c360a299633b9c61165a90e2f2b92df148, expires=N/A (repo-versioned)
@@ -25,7 +25,7 @@ Artifacts:
   - packages/sdk/test/creativanta-webhook-receiver.test.mjs, sha256=dd1ea789cfcaf569b1eab4f5755c6dadef42c3fce6c58c5c4dc39b419430f9c0, expires=N/A (repo-versioned)
   - packages/sdk/test/creativanta-reconciliation-and-cancel.test.mjs, sha256=333fb979e9a8abf295f8c251dd6fc152add2edbc9e6660c4ac301b3e9ab7b873, expires=N/A (repo-versioned)
   - packages/sdk/test/creativanta-download-expiry-refresh.test.mjs, sha256=a180c08632dd923cba73523e332f50918091a6b6a3247e7d5b5e25d7b8b9abe5, expires=N/A (repo-versioned)
-  - packages/sdk/test/creativanta-e2e-contract-harness.test.mjs, sha256=79f8891807ebb30b0f7b7fc779c6aa544dabfc927215c58980b0c0c930006b49, expires=N/A (repo-versioned)
+  - packages/sdk/test/creativanta-e2e-contract-harness.test.mjs, sha256=dad5d1c6d2b03ab55055ace6bd93388c3a62b1b9c821da1f4c5aa10c08ca4e81, expires=N/A (repo-versioned)
 Acceptance mapping:
   - external_reference/idempotency: PASS — Hỗ trợ truyền tham chiếu đối ngoại Creativanta `external_reference` (chuẩn hóa ánh xạ trong suốt sang `client_reference` trên đường truyền API); sinh và kiểm thực định dạng `Idempotency-Key` (1–128 ký tự ASCII [A-Za-z0-9._:-]); canonical hashing RFC 8785 (JCS); xử lý phản hồi phát lại `Idempotency-Replayed: true` -> `isReplayed: true`; chặn xung đột thân yêu cầu `409 IDEMPOTENCY_CONFLICT`; tự động thử lại với cùng khóa Idempotency-Key khi nhận `409 IDEMPOTENCY_IN_PROGRESS`, `429 RATE_LIMITED`, hoặc `503 SERVICE_UNAVAILABLE` tuân thủ docs/API.md dòng 10 & 167.
   - signed webhook receiver: PASS — Triển khai `CreativantaWebhookReceiver` xác thực chữ ký HMAC-SHA256 trên chuỗi byte thô `timestamp + '.' + raw_body_bytes` với thuật toán so sánh an toàn thời gian cố định `crypto.timingSafeEqual`; từ chối chữ ký giả mạo (401 INVALID_SIGNATURE) và độ lệch đồng hồ clock skew > 300s (400 CLOCK_SKEW_EXCEEDED); lọc trùng lặp `eventId` trong cửa sổ lưu giữ 7 ngày; cưỡng chế tính đơn điệu `state_version` (loại bỏ các sự kiện gửi muộn đến sau); hỗ trợ xoay vòng khóa bí mật (secret rotation); và tự động xử lý bắt tay sở hữu endpoint qua cơ chế challenge echo handshake `{"challenge": "<token>"}`.
@@ -93,10 +93,10 @@ Nhiệm vụ **P5-03** (`D+A / P5`) hiện thực hóa toàn diện bộ máy kh
 | 5 | `node --test packages/sdk/test/creativanta-reconciliation-and-cancel.test.mjs` | 0 | PASS (7/7 tests) | Kiểm tra polling reconciliation lùi số nhân 2s->10s, timeout guard, hủy tác vụ 202/200/409 terminal, phát lại replay cancel, và JobReconciliationManager |
 | 6 | `node --test packages/sdk/test/creativanta-download-expiry-refresh.test.mjs` | 0 | PASS (5/5 tests) | Kiểm tra grant có hạn ngắn, làm mới không rerender, tự phục hồi khi gặp 410 GRANT_EXPIRED, kiểm tra toàn vẹn byte count và SHA-256 |
 | 7 | `node --test packages/sdk/test/creativanta-e2e-contract-harness.test.mjs` | 0 | PASS (6/6 tests) | Kiểm thử E2E tích hợp trực tiếp với máy chủ HTTP thật: kiểm toán tĩnh zero-DB imports, bắt tay endpoint.challenge, nạp asset, tạo template/composition, submit render, nhận webhook thật, đối soát và tải video MP4 thành công |
-| 8 | `node --test packages/sdk/test/**/*.test.mjs` | 0 | PASS (57/57 tests) | Toàn bộ 57 bài kiểm thử trong `@creativanta/sdk` (25 bài TTS P5-02 và 32 bài Client/Webhook/Contract P5-03) đều vượt qua 100% |
-| 9 | `node --test packages/templates/test/**/*.test.mjs` | 0 | PASS (3/3 tests) | Toàn bộ bài kiểm thử mẫu video trong `@creativanta/templates` đạt kết quả PASS |
+| 8 | `node --test packages/sdk/test/**/*.test.mjs` | 0 | PASS (68/68 tests) | Toàn bộ 68 bài kiểm thử trong `@creativanta/sdk` (25 bài TTS P5-02, 11 bài brand-tokens/text-overflow P5-01 và 32 bài Client/Webhook/Contract P5-03) đều vượt qua 100% |
+| 9 | `node --test packages/templates/test/**/*.test.mjs` | 0 | PASS (17/17 tests) | Toàn bộ 17 bài kiểm thử mẫu video trong `@creativanta/templates` đạt kết quả PASS |
 | 10 | `node scripts/health-check.mjs` | 0 | PASS | Kiểm tra cấu hình môi trường, endpoints `/healthz`, `/readyz`, và năng lực hệ thống |
-| 11 | `python3 scripts/validate_repo.py` | 0 | PASS | Kiểm tra tính hợp lệ toàn repo: 16 tài liệu, 46 markdown, 648 internal links, 34 JSON files, 0 lỗi, đồ thị phụ thuộc acyclic |
+| 11 | `python3 scripts/validate_repo.py` | 0 | PASS | Kiểm tra tính hợp lệ toàn repo: 16 tài liệu, 47 markdown, 662 internal links, 34 JSON files, 0 lỗi, đồ thị phụ thuộc acyclic |
 | 12 | `python3 -m unittest discover -s tooling/agent_harness/tests -v` | 0 | PASS (10/10 tests) | Toàn bộ 10 bài kiểm thử vòng đời supervisor và quy chế quản lý nhiệm vụ đều đạt kết quả PASS |
 
 ---
