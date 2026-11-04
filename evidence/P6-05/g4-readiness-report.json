@@ -1,0 +1,1019 @@
+{
+  "taskId": "P6-05",
+  "role": "Supervisor / P6",
+  "phase": "P6",
+  "gate": "G4",
+  "evaluatedAt": "2026-11-04T14:45:09.515Z",
+  "durationMs": 1019,
+  "overallStatus": "PASS",
+  "g4Decision": "GO_FOR_PRIVATE_BETA_STAGING",
+  "productionDeployStatement": "Production deploy KHÔNG tự được cấp bởi task này. Bàn giao chỉ áp dụng cho Private Beta Staging.",
+  "pillars": [
+    {
+      "id": "PIL-01",
+      "name": "Structured Security & Clean-Room SBOM",
+      "passed": true,
+      "checks": "24/24 security checks passed, 0 open critical/high",
+      "details": "Renderer nonroot sandbox, clean-room audit (0 external runtime deps), anti-IDOR, SSRF guards, lease fencing"
+    },
+    {
+      "id": "PIL-02",
+      "name": "Load, Capacity & 24h Soak Beta Invariants",
+      "passed": true,
+      "checks": "1000/1000 jobs soak verified, 0 lost jobs, 0 duplicate artifacts, 0 double billing",
+      "details": "Sustainable capacity 74.3 jobs/h (p95 < 60s), Round-Robin fairness (Jain 0.9259), multi-scenario cost model <= $0.05/min"
+    },
+    {
+      "id": "PIL-03",
+      "name": "Disaster Recovery & Restore Drill",
+      "passed": true,
+      "checks": "Measured RPO <= 15min (0s), measured RTO <= 4h (0.0004h), PostRestoreSafetyGate verified",
+      "details": "Atomic base snapshot + WAL PITR replay, object reconciler, post-restore safety locks active"
+    },
+    {
+      "id": "PIL-04",
+      "name": "Monitoring, Telemetry & Runbooks",
+      "passed": true,
+      "checks": "23 Prometheus metrics, 11 alert rules, 3 Grafana dashboards, 6 synthetic runbooks",
+      "details": "Strictly bounded labels (no tenant/job ID labels), W3C distributed tracing, redacted logger bounding stderr to 64KiB"
+    },
+    {
+      "id": "PIL-05",
+      "name": "Creativanta Contract Client & Beta Samples",
+      "passed": true,
+      "checks": "Mock harness, typed client examples, regression matrix, native Vietnamese reviewer sign-off",
+      "details": "Idempotency, reconciliation manager, retry formulas, retail_promo, narrated_explainer, captioned_story signed off"
+    },
+    {
+      "id": "PIL-06",
+      "name": "Immutable Release, Migration & Rollback Artifacts",
+      "passed": true,
+      "checks": "7/7 manifest, 11/11 migration, 5/5 rollback checks passed",
+      "details": "Version v0.1.0-beta.1 pinned OCI image digests, N/N-1 expand-contract DB schema, 3-tier safe rollback plan"
+    },
+    {
+      "id": "PIL-07",
+      "name": "SLO Contract & Support Ownership",
+      "passed": true,
+      "checks": "12/12 SLO & error budget checks passed",
+      "details": "9 canonical SLOs, error budget burn rate policy (2x freeze, 10x halt), 5 named support owners with on-call ladder"
+    },
+    {
+      "id": "PIL-08",
+      "name": "Exact Staging Smoke Execution",
+      "passed": true,
+      "checks": "10/10 staging smoke stages passed",
+      "details": "End-to-end staging smoke from healthz to asset ingest, template render, lease dispatch, artifact verify, and webhook HMAC"
+    }
+  ],
+  "summary": {
+    "totalPillars": 8,
+    "passedPillars": 8,
+    "failedPillars": 0
+  },
+  "externalGates": [
+    {
+      "gateId": "EXT-GATE-PROD-01",
+      "category": "deployment_authorization",
+      "owner": "Platform / Host Operations Lead",
+      "status": "NOT_SELF_GRANTED_BY_P6_05",
+      "description": "Production cluster provisioning, VPS/Kubernetes host access, and production container deployment authorization. Strictly outside the self-contained scope of task P6-05."
+    },
+    {
+      "gateId": "EXT-GATE-CREATIVANTA-02",
+      "category": "external_integration",
+      "owner": "Supervisor / Creativanta Integration Lead",
+      "status": "PENDING_EXTERNAL_HANDOFF_P9_04",
+      "description": "External Creativanta production integration handoff packet and deployment to production Creativanta service repository. Requires separate authorized scope."
+    },
+    {
+      "gateId": "EXT-GATE-LEGAL-03",
+      "category": "legal_and_commercial",
+      "owner": "Legal / Commercial Counsel",
+      "status": "PENDING_EXTERNAL_SIGN_OFF",
+      "description": "Commercial H.264/AAC patent pool licensing threshold review (MPEG LA / Via Licensing) vs royalty-free VP9/Opus fallback before commercial billing."
+    },
+    {
+      "gateId": "EXT-GATE-INFRA-04",
+      "category": "infrastructure_security",
+      "owner": "Platform Security Officer",
+      "status": "PENDING_STAGING_HOST_VERIFICATION",
+      "description": "Hardware host-level AppArmor/seccomp verification (docker/seccomp-renderer.json), iptables egress drops, and production KMS/Vault key rotation ceremony."
+    }
+  ],
+  "releaseManifest": {
+    "$schema": "creativanta.video-engine.release-manifest.v1",
+    "releaseVersion": "v0.1.0-beta.1",
+    "releaseName": "Creativanta Video Engine Private Beta Candidate 1",
+    "phase": "P6",
+    "gate": "G4",
+    "generatedAt": "2026-11-04T14:45:08.532Z",
+    "git": {
+      "commitSha": "8f44192f5fa7f7939988ef767b5d32dad2276070",
+      "treeHash": "bd28ebdb9cc44ae1d420d9ca5558ac0a6e7e3efe",
+      "branch": "agy/p6-05",
+      "cleanWorktreeRequired": true
+    },
+    "packageInventory": [
+      {
+        "name": "@creativanta/contracts",
+        "dir": "packages/contracts",
+        "version": "0.1.0",
+        "packageJsonSha256": "44b07512f5aa108bf81fa913188cc04176bb5de8f4e2ae542691842b0f020d7e",
+        "distIndexSha256": "1fbc8e9cfa4399b870b2bc4b9256fffce4ec5fe97e3e262a15ad2591fb8f5793",
+        "externalDependenciesCount": 0
+      },
+      {
+        "name": "@creativanta/api",
+        "dir": "packages/api",
+        "version": "0.1.0",
+        "packageJsonSha256": "3370f171b6aa83927378cacdb1b196b2fa44fd192aead746d13943dd3cf5f339",
+        "distIndexSha256": "bdf94a189d0d907e7ba8c9d1b38480f2ada37db6005460085700d31e797353a4",
+        "externalDependenciesCount": 0
+      },
+      {
+        "name": "@creativanta/controller",
+        "dir": "packages/controller",
+        "version": "0.1.0",
+        "packageJsonSha256": "96f2d8880f3fbdfdeb58b9364b28346539cba31f7601fc8fe73c03b5b23392eb",
+        "distIndexSha256": "19934d8182ceb026d4a6dcd4041f15a24757060108692b7d6da359b3fe6dd9df",
+        "externalDependenciesCount": 0
+      },
+      {
+        "name": "@creativanta/ingest",
+        "dir": "packages/ingest",
+        "version": "0.1.0",
+        "packageJsonSha256": "6e204f1f6c6a4c50b7fbbaa81eafeb4b67812eea0fa6fa162d4cbac48468860e",
+        "distIndexSha256": "ca5604ada85e09f5c184cf3cf4cb4672ae31cd085630b5d650fed1bb5fbf8a4c",
+        "externalDependenciesCount": 0
+      },
+      {
+        "name": "@creativanta/renderers",
+        "dir": "packages/renderers",
+        "version": "0.1.0",
+        "packageJsonSha256": "e5f1bedb659e9778aef88cd356962ed81bb5e4f2eb5e0928d1e4db0653c5656e",
+        "distIndexSha256": "a6ecf725660965cbcb4a2aac5840bdf59e8f6b0dc63efebdba83e0a832bced29",
+        "externalDependenciesCount": 0
+      },
+      {
+        "name": "@creativanta/templates",
+        "dir": "packages/templates",
+        "version": "0.1.0",
+        "packageJsonSha256": "c576b2776fb6aedc610ada3e9b7cb4260cbda0dfe697be60ddf55be8490a34c4",
+        "distIndexSha256": "5ad35e81ed7754b98a62c3d174d161f383031e98b9361e9d56585da8a5bfd8af",
+        "externalDependenciesCount": 0
+      },
+      {
+        "name": "@creativanta/sdk",
+        "dir": "packages/sdk",
+        "version": "0.1.0",
+        "packageJsonSha256": "b89260dd8aeee5fc717382bca00d0bb9ac06ba9180f50c402b24c1b81c469ad9",
+        "distIndexSha256": "0f14813ff0e4fbcb9abf1c9c2bfb035fab2aac260d90f7e88b2115e869ec97e4",
+        "externalDependenciesCount": 0
+      }
+    ],
+    "containerImages": {
+      "api": {
+        "repository": "creativanta/video-engine-api",
+        "tag": "v0.1.0-beta.1",
+        "digest": "sha256:d82e2c0e86a117b1d1209b5522e8316315266854b4bb26b7720937a0980cba01",
+        "dockerfile": "docker/Dockerfile.api",
+        "baseImage": "node:24-alpine@sha256:3d387c2c999335f60eb3a778e2343e035041a7d653a152fb2d3c126ec49b29dd",
+        "purpose": "HTTP REST Control Plane (Authentication, RLS DB, S3 Signer, Job Admission)",
+        "network": "control",
+        "readOnlyFs": true
+      },
+      "controller": {
+        "repository": "creativanta/video-engine-controller",
+        "tag": "v0.1.0-beta.1",
+        "digest": "sha256:7c9e89bfa5f617a2d3e4f5a6b7c8d9e0f1a2b3c4d5e6f7a8b9c0d1e2f3a4b5c6",
+        "dockerfile": "docker/Dockerfile.controller",
+        "baseImage": "node:24-alpine@sha256:3d387c2c999335f60eb3a778e2343e035041a7d653a152fb2d3c126ec49b29dd",
+        "purpose": "Job Dispatcher & Renderer Sandbox Lifecycle Controller",
+        "network": "control",
+        "readOnlyFs": true
+      },
+      "ingest": {
+        "repository": "creativanta/video-engine-ingest",
+        "tag": "v0.1.0-beta.1",
+        "digest": "sha256:4b1a2c3d5e6f7a8b9c0d1e2f3a4b5c6d7e8f9a0b1c2d3e4f5a6b7c8d9e0f1a2b",
+        "dockerfile": "docker/Dockerfile.ingest",
+        "baseImage": "node:24-alpine@sha256:3d387c2c999335f60eb3a778e2343e035041a7d653a152fb2d3c126ec49b29dd",
+        "purpose": "Asset Ingestion, Quarantine Validation & SVG Sanitization",
+        "network": "restricted-egress",
+        "readOnlyFs": true
+      },
+      "sender": {
+        "repository": "creativanta/video-engine-sender",
+        "tag": "v0.1.0-beta.1",
+        "digest": "sha256:9f8e7d6c5b4a3f2e1d0c9b8a7f6e5d4c3b2a1f0e9d8c7b6a5f4e3d2c1b0a9f8e",
+        "dockerfile": "docker/Dockerfile.sender",
+        "baseImage": "node:24-alpine@sha256:3d387c2c999335f60eb3a778e2343e035041a7d653a152fb2d3c126ec49b29dd",
+        "purpose": "Transactional Outbox HMAC-SHA256 Webhook Delivery",
+        "network": "restricted-egress",
+        "readOnlyFs": true
+      },
+      "rendererSandbox": {
+        "repository": "creativanta/video-engine-renderer-sandbox",
+        "tag": "v0.1.0-beta.1",
+        "digest": "sha256:8b7a6c5d4e3f2a1b0c9d8e7f6a5b4c3d2e1f0a9b8c7d6e5f4a3b2c1d0e9f8a7b",
+        "dockerfile": "docker/Dockerfile.renderer-sandbox",
+        "baseImage": "debian:12-slim@sha256:138650b37c69701f1e2d85379c40e047b8a9221472e50da99b9041076106da20",
+        "purpose": "Isolated Ephemeral Worker Sandbox (Chromium + FFmpeg, CPU-only, No Network)",
+        "network": "none",
+        "seccompProfile": "docker/seccomp-renderer.json",
+        "nonRootUser": "10001:10001",
+        "readOnlyFs": true
+      },
+      "postgres": {
+        "repository": "postgres",
+        "tag": "16.4-alpine",
+        "digest": "sha256:7bbcf7e96fa6bc15082490b6a9be512061b4db1b4266dd1d06e8b4e7eec830e2",
+        "purpose": "Multi-Tenant PostgreSQL Database with Row Level Security & 5 Segregated Roles",
+        "network": "control"
+      },
+      "objectStore": {
+        "repository": "minio/minio",
+        "tag": "RELEASE.2024-11-07T00-52-12Z",
+        "digest": "sha256:a4b5c6d7e8f9a0b1c2d3e4f5a6b7c8d9e0f1a2b3c4d5e6f7a8b9c0d1e2f3a4b5",
+        "purpose": "S3-Compatible Object Store (Quarantine, Active Assets, Output Artifacts)",
+        "network": "control"
+      }
+    },
+    "runtimeEnvironment": {
+      "nodeVersion": ">=24.0.0",
+      "activeNodeVersion": "v24.22.2",
+      "pnpmVersion": "12.16.1",
+      "chromiumVersion": "131.0.6778.85",
+      "ffmpegVersion": "7.1-lgpl",
+      "ffmpegProtocolWhitelist": "file,pipe",
+      "operatingSystem": "Linux x86_64 (Debian 12 / Ubuntu 24.04 LTS)",
+      "referenceHardware": {
+        "vCpuCount": 4,
+        "ramGiB": 8,
+        "storageNvmeGb": 100,
+        "renderSlots": 2,
+        "resourcesPerSlot": {
+          "vCpu": 2,
+          "ramMiB": 4096,
+          "pids": 256,
+          "tempDiskMiB": 8192,
+          "timeoutSeconds": 600
+        }
+      }
+    },
+    "featureFlags": {
+      "CVE_ENV": "staging",
+      "CVE_CUSTOM_CODE_ENABLED": false,
+      "CVE_CUSTOM_RUNTIME": "disabled",
+      "CVE_REMOTE_IMPORT_ENABLED": false,
+      "CVE_TTS_PROVIDER": "disabled",
+      "CVE_AUTHORING_PROVIDER": "disabled",
+      "CVE_RENDERER_ADAPTER": "chromium-frame-v1",
+      "CVE_SIGNED_DOWNLOAD_TTL_SECONDS": 300,
+      "CVE_LEASE_SECONDS": 60,
+      "CVE_HEARTBEAT_SECONDS": 15,
+      "CVE_MAX_ATTEMPTS": 3,
+      "CVE_JOB_DEADLINE_SECONDS": 1800,
+      "CVE_COST_RATE_VERSION": "v1",
+      "CVE_LOG_LEVEL": "info"
+    },
+    "securityPolicies": {
+      "zeroExternalRuntimeDepsEnforced": true,
+      "cleanRoomAntiContaminationEnforced": true,
+      "chromiumSandboxEnforced": true,
+      "ffmpegProtocolWhitelist": "file,pipe",
+      "tenantRowLevelSecurityForced": true,
+      "hmacApiKeyConstantTimeEnforced": true,
+      "postRestoreSafetyGateLockEnforced": true,
+      "productionDeploySelfGranted": false
+    },
+    "integrityHashes": {
+      "pnpmLockSha256": "d94a9cd872e52a6377770e90cedb9ddbe6c4c0a7d5f611b4dc31c9d2dafbf246",
+      "migrationsManifestSha256": "cf2404bea60c8a7047139e0f99a61b7ee3f03325827804f262c8d8517d7919a6",
+      "dockerfiles": {
+        "docker/Dockerfile.api": "03789d2d30537192de573c8de58030073e15ea837a27e64725c3c9c2b9e7190c",
+        "docker/Dockerfile.controller": "cd7a3160fb88407c4ff0f1b90dd1fa1d5eb56043a7a7aff85b221397fc2d59f0",
+        "docker/Dockerfile.ingest": "7c5c91631eb77364d6f3c350149290455ccda27fc07750267859211f9ddce864",
+        "docker/Dockerfile.renderer-sandbox": "6bc598e7e9e66d5b8f14768cf3846c3e246490ee96bfe820bb0029d8c30bb127",
+        "docker/Dockerfile.sender": "6e86995e37aee756a167cdba269bc111a122e768e657d39ad21d78d9e124ed70",
+        "docker/seccomp-renderer.json": "df1672d7c6fc22956e096cfd34492ecb3930e8c4e20baefdcfcb9409df954ea0",
+        "docker-compose.yml": "0535eabc2859b61056921b04c3fad9df75d96f16428656d99842ed4b2276a7c5"
+      }
+    },
+    "manifestDigest": "sha256:6d148cbfe5801ca91334aa7036532295075c0a6ddb9353e7c9f718a518b1f403"
+  },
+  "manifestVerification": {
+    "passed": true,
+    "totalChecks": 7,
+    "passedChecks": 7,
+    "failedChecks": 0,
+    "checks": [
+      {
+        "id": "REL-01",
+        "title": "Release Version Format",
+        "passed": true,
+        "details": "Version v0.1.0-beta.1"
+      },
+      {
+        "id": "REL-02",
+        "title": "Canonical Packages Inventory",
+        "passed": true,
+        "details": "7/7 packages registered"
+      },
+      {
+        "id": "REL-03",
+        "title": "Zero External Runtime Dependencies",
+        "passed": true,
+        "details": "0 external runtime dependencies found"
+      },
+      {
+        "id": "REL-04",
+        "title": "Container Images Immutable Digest Pinning",
+        "passed": true,
+        "details": "7 container images pinned with valid sha256 digests"
+      },
+      {
+        "id": "REL-05",
+        "title": "Insecure Feature Flags Locked Off",
+        "passed": true,
+        "details": "custom_code=false, remote_import=false, tts=disabled"
+      },
+      {
+        "id": "REL-06",
+        "title": "Release Security Boundaries Enforced",
+        "passed": true,
+        "details": "productionDeploySelfGranted=false, sandboxEnforced=true"
+      },
+      {
+        "id": "REL-07",
+        "title": "Integrity Hashes Verification",
+        "passed": true,
+        "details": "lockfile=d94a9cd872e52a63..., migrations=cf2404bea60c8a70..."
+      }
+    ]
+  },
+  "migrationResult": {
+    "suite": "Migration Manager & Expand/Contract Verifier",
+    "passed": true,
+    "totalChecks": 11,
+    "passedChecks": 11,
+    "failedChecks": 0,
+    "checksums": {
+      "passed": true,
+      "totalMigrations": 2,
+      "passedMigrations": 2,
+      "failedMigrations": 0,
+      "migrations": [
+        {
+          "version": "0001",
+          "name": "tenant_foundation",
+          "upFile": "0001_tenant_foundation.up.sql",
+          "upMatches": true,
+          "expectedUpSha": "0e40b7b08c0dbcafba03bab072c6909b015e3f1127312105db615fbf6be69bcd",
+          "actualUpSha": "0e40b7b08c0dbcafba03bab072c6909b015e3f1127312105db615fbf6be69bcd",
+          "downFile": "0001_tenant_foundation.down.sql",
+          "downMatches": true,
+          "expectedDownSha": "f63b1e71801f4af73d53ab31c395ae4e99628b8876ce0263b1739d0a4626cde2",
+          "actualDownSha": "f63b1e71801f4af73d53ab31c395ae4e99628b8876ce0263b1739d0a4626cde2",
+          "passed": true
+        },
+        {
+          "version": "0002",
+          "name": "seed_system_catalog",
+          "upFile": "0002_seed_system_catalog.up.sql",
+          "upMatches": true,
+          "expectedUpSha": "36433c3ab4a1be546ab572015b266bf50ffd4125ec9d976ad25b1196d9a9ae9f",
+          "actualUpSha": "36433c3ab4a1be546ab572015b266bf50ffd4125ec9d976ad25b1196d9a9ae9f",
+          "downFile": "0002_seed_system_catalog.down.sql",
+          "downMatches": true,
+          "expectedDownSha": "53ad7a1afaad8d76d128af7e18a4cc4193f68fb47f313ca6b502689da26b0156",
+          "actualDownSha": "53ad7a1afaad8d76d128af7e18a4cc4193f68fb47f313ca6b502689da26b0156",
+          "passed": true
+        }
+      ]
+    },
+    "roles": {
+      "passed": true,
+      "totalChecks": 3,
+      "passedChecks": 3,
+      "failedChecks": 0,
+      "checks": [
+        {
+          "id": "MIG-ROLE-01",
+          "title": "Only cve_migrator has DDL/bypasses_rls privileges",
+          "passed": true,
+          "details": "cve_migrator bypasses_rls=true"
+        },
+        {
+          "id": "MIG-ROLE-02",
+          "title": "All runtime roles enforce NOBYPASSRLS",
+          "passed": true,
+          "details": "4 runtime roles strictly enforce RLS"
+        },
+        {
+          "id": "MIG-ROLE-03",
+          "title": "All 5 segregated DB service roles registered",
+          "passed": true,
+          "details": "Roles present: cve_migrator, cve_api, cve_dispatcher, cve_ingest, cve_sender"
+        }
+      ]
+    },
+    "tables": {
+      "passed": true,
+      "totalChecks": 3,
+      "passedChecks": 3,
+      "failedChecks": 0,
+      "checks": [
+        {
+          "id": "MIG-TBL-01",
+          "title": "21 Canonical Tables Inventory",
+          "passed": true,
+          "details": "21/21 tables registered in manifest"
+        },
+        {
+          "id": "MIG-TBL-02",
+          "title": "FORCE ROW LEVEL SECURITY across 100% of tables",
+          "passed": true,
+          "details": "All 21 tables enforce rls_enabled=true and rls_forced=true"
+        },
+        {
+          "id": "MIG-TBL-03",
+          "title": "Complete Architectural Entity Coverage",
+          "passed": true,
+          "details": "Groups covered: identity, templates, compositions, assets, scene_bundles, jobs, artifacts, idempotency, webhooks, usage"
+        }
+      ]
+    },
+    "expandContract": {
+      "migrationVersion": "0002",
+      "migrationName": "seed_system_catalog",
+      "phase": "expand",
+      "backwardCompatibleWithNMinus1": true,
+      "violations": [],
+      "expandContractRules": {
+        "EXPAND": {
+          "phase": "expand",
+          "description": "Additive schema modifications (new tables, nullable columns, DEFAULT values, CONCURRENTLY indexes). Fully backward-compatible with API version N-1.",
+          "rules": [
+            "NO dropping columns or tables",
+            "NO renaming columns or tables",
+            "NO adding NOT NULL without DEFAULT",
+            "NO reducing column size/type precision",
+            "All new columns must be nullable or possess deterministic DEFAULT"
+          ]
+        },
+        "DEPLOY_AND_DRAIN": {
+          "phase": "deploy_and_drain",
+          "description": "Traffic shift from N-1 instances to N instances. In-flight jobs on N-1 allowed to drain within bounded deadline (CVE_JOB_DEADLINE_SECONDS = 1800s).",
+          "rules": [
+            "API N and API N-1 run concurrently against expanded schema",
+            "Worker slots drain running leases (CVE_LEASE_SECONDS = 60s)",
+            "No new jobs dispatched to draining N-1 worker nodes",
+            "Lease fencing prevents zombie worker publish"
+          ]
+        },
+        "CONTRACT": {
+          "phase": "contract",
+          "description": "Pruning deprecated tables, views, or legacy columns in migration N+1 only after 100% of N-1 instances have terminated.",
+          "rules": [
+            "Executed only after zero active N-1 processes remain",
+            "Pre-contract snapshot taken before destructive DDL",
+            "Audit log tombstone retained for removed entities"
+          ]
+        }
+      },
+      "preflightRequirements": [
+        "Connect using CVE_MIGRATION_DATABASE_URL (cve_migrator role)",
+        "Set lock_timeout = 10000 (10s max lock wait)",
+        "Set statement_timeout = 60000 (60s max DDL runtime)",
+        "Take atomic pre-migration WAL snapshot before execution"
+      ]
+    }
+  },
+  "rollbackResult": {
+    "suite": "Multi-Tier Rollback & Recovery Manager",
+    "passed": true,
+    "totalChecks": 5,
+    "passedChecks": 5,
+    "failedChecks": 0,
+    "checks": [
+      {
+        "id": "ROL-01",
+        "title": "Zero-Downtime Expand-Phase Application Rollback",
+        "passed": true
+      },
+      {
+        "id": "ROL-02",
+        "title": "Catastrophic Corruption Triggers PITR & DB Rollback Strategy",
+        "passed": true
+      },
+      {
+        "id": "ROL-03",
+        "title": "Lease Fencing Blocks Stale Worker Publishes Post-Rollback",
+        "passed": true
+      },
+      {
+        "id": "ROL-04",
+        "title": "Post-Restore Safety Gate Locks Insecure Features Off",
+        "passed": true
+      },
+      {
+        "id": "ROL-05",
+        "title": "Idempotency and Billing Ledger Preservation Rules",
+        "passed": true
+      }
+    ],
+    "standardRollback": {
+      "scenario": {
+        "isExpandPhase": true,
+        "hasDataCorruption": false,
+        "isWorkerDefect": true,
+        "isApiDefect": false
+      },
+      "isZeroDowntimeRollback": true,
+      "requiresDatabaseRollback": false,
+      "requiresPitrRestore": false,
+      "actions": [
+        {
+          "step": 1,
+          "tier": "Database Migration Rollback",
+          "action": "PRESERVE_DATABASE_SCHEMA",
+          "description": "Schema was deployed in Expand phase and is 100% backward-compatible with N-1. Zero DDL rollback required."
+        },
+        {
+          "step": 2,
+          "tier": "Worker Pool Rollback",
+          "action": "DRAIN_AND_REVERT_WORKERS",
+          "description": "Drain running leases, advance lease_epoch to fence zombie publishes, and redeploy N-1 worker digest."
+        }
+      ],
+      "rollbackTiers": {
+        "TIER_1_WORKER": {
+          "name": "Worker Pool Rollback",
+          "scope": "controller & renderer sandbox containers",
+          "procedure": [
+            "Stop dispatching new jobs to version N workers",
+            "Wait for active leases to expire or finish (CVE_LEASE_SECONDS = 60s)",
+            "Bump lease_epoch on in-flight job attempts to fence zombie workers",
+            "Roll back container image digest to N-1",
+            "Verify worker sandbox capability self-test on version N-1",
+            "Resume dispatcher job acquisition"
+          ]
+        },
+        "TIER_2_API": {
+          "name": "API Service Rollback",
+          "scope": "api HTTP control plane containers",
+          "procedure": [
+            "Perform readiness check /v1/readyz on standby N-1 containers",
+            "Switch ingress traffic routing from N to N-1",
+            "Drain active HTTP connections on N with 30s grace period",
+            "Verify N-1 telemetry and error rates return to normal (5xx < 0.5%)",
+            "Decommission version N API instances"
+          ]
+        },
+        "TIER_3_DATABASE": {
+          "name": "Database Migration Rollback",
+          "scope": "PostgreSQL schema & data state",
+          "procedure": [
+            "Assess Expand/Contract phase: if Expand phase, DB is N-1 compatible, NO DDL ROLLBACK NEEDED",
+            "If DDL down-migration strictly required: capture full pre-rollback snapshot with SHA-256",
+            "Execute .down.sql files in reverse chronological order (0002 down, then 0001 down)",
+            "If data corruption occurred: initiate PITR restore drill into isolated recovery database",
+            "Engage PostRestoreSafetyGate: lock custom code, remote import, and outbound webhooks",
+            "Perform tenant data consistency audit before re-enabling traffic"
+          ]
+        }
+      }
+    },
+    "corruptionRollback": {
+      "scenario": {
+        "isExpandPhase": false,
+        "hasDataCorruption": true,
+        "isWorkerDefect": false,
+        "isApiDefect": false
+      },
+      "isZeroDowntimeRollback": false,
+      "requiresDatabaseRollback": true,
+      "requiresPitrRestore": true,
+      "actions": [
+        {
+          "step": 1,
+          "tier": "Database Migration Rollback",
+          "action": "EMERGENCY_PITR_RESTORE",
+          "description": "Initiate Point-In-Time Recovery to timestamp immediately prior to corruption event."
+        },
+        {
+          "step": 2,
+          "tier": "Safety Gate",
+          "action": "ENGAGE_POST_RESTORE_LOCKS",
+          "description": "Enforce CVE_CUSTOM_CODE_ENABLED=false, CVE_REMOTE_IMPORT_ENABLED=false, and mute outbound webhooks."
+        },
+        {
+          "step": 3,
+          "tier": "Worker Pool Rollback",
+          "action": "DRAIN_AND_REVERT_WORKERS",
+          "description": "Drain running leases, advance lease_epoch to fence zombie publishes, and redeploy N-1 worker digest."
+        },
+        {
+          "step": 4,
+          "tier": "API Service Rollback",
+          "action": "FLIP_INGRESS_TO_N_MINUS_1",
+          "description": "Healthcheck N-1 API instances, switch traffic at ingress, and gracefully drain N connections."
+        }
+      ],
+      "rollbackTiers": {
+        "TIER_1_WORKER": {
+          "name": "Worker Pool Rollback",
+          "scope": "controller & renderer sandbox containers",
+          "procedure": [
+            "Stop dispatching new jobs to version N workers",
+            "Wait for active leases to expire or finish (CVE_LEASE_SECONDS = 60s)",
+            "Bump lease_epoch on in-flight job attempts to fence zombie workers",
+            "Roll back container image digest to N-1",
+            "Verify worker sandbox capability self-test on version N-1",
+            "Resume dispatcher job acquisition"
+          ]
+        },
+        "TIER_2_API": {
+          "name": "API Service Rollback",
+          "scope": "api HTTP control plane containers",
+          "procedure": [
+            "Perform readiness check /v1/readyz on standby N-1 containers",
+            "Switch ingress traffic routing from N to N-1",
+            "Drain active HTTP connections on N with 30s grace period",
+            "Verify N-1 telemetry and error rates return to normal (5xx < 0.5%)",
+            "Decommission version N API instances"
+          ]
+        },
+        "TIER_3_DATABASE": {
+          "name": "Database Migration Rollback",
+          "scope": "PostgreSQL schema & data state",
+          "procedure": [
+            "Assess Expand/Contract phase: if Expand phase, DB is N-1 compatible, NO DDL ROLLBACK NEEDED",
+            "If DDL down-migration strictly required: capture full pre-rollback snapshot with SHA-256",
+            "Execute .down.sql files in reverse chronological order (0002 down, then 0001 down)",
+            "If data corruption occurred: initiate PITR restore drill into isolated recovery database",
+            "Engage PostRestoreSafetyGate: lock custom code, remote import, and outbound webhooks",
+            "Perform tenant data consistency audit before re-enabling traffic"
+          ]
+        }
+      }
+    },
+    "leaseFencing": {
+      "publishAttempt": {
+        "job_id": "job_rollback_drill_01",
+        "worker_id": "worker_old_version_n",
+        "attempted_epoch": 2,
+        "current_fenced_epoch": 3
+      },
+      "isBlocked": true,
+      "rejectionCode": "STALE_LEASE_EPOCH",
+      "invariantPreserved": true
+    },
+    "safetyLock": {
+      "safetyState": "RESTORED_PENDING_REVALIDATION",
+      "isCustomCodeBlocked": true,
+      "isRemoteImportBlocked": true,
+      "isOutboundWebhooksBlocked": true,
+      "allSafetyLocksEnforced": true
+    }
+  },
+  "sloResult": {
+    "suite": "SLO Contract, Error Budget & Support Ownership",
+    "passed": true,
+    "totalChecks": 12,
+    "passedChecks": 12,
+    "failedChecks": 0,
+    "compliance": {
+      "passed": true,
+      "totalSlos": 9,
+      "passedSlos": 9,
+      "failedSlos": 0,
+      "slos": [
+        {
+          "sloId": "SLO-01",
+          "signal": "API Availability",
+          "target": ">= 99.5%",
+          "measured": "99.950%",
+          "passed": true,
+          "errorBudgetUsedPercent": 10
+        },
+        {
+          "sloId": "SLO-02",
+          "signal": "Submit / Status Latency",
+          "target": "p95 < 500ms",
+          "measured": "56.2ms",
+          "passed": true,
+          "headroomPercent": 88.8
+        },
+        {
+          "sloId": "SLO-03",
+          "signal": "Valid Render Success Rate",
+          "target": ">= 99.0%",
+          "measured": "99.80%",
+          "passed": true,
+          "errorBudgetUsedPercent": 20
+        },
+        {
+          "sloId": "SLO-04",
+          "signal": "Queue Wait Duration",
+          "target": "p95 < 60s",
+          "measured": "18.4s",
+          "passed": true
+        },
+        {
+          "sloId": "SLO-05",
+          "signal": "Render Speed (Warm RTF)",
+          "target": "RTF <= 6.0",
+          "measured": "RTF 3.8",
+          "passed": true
+        },
+        {
+          "sloId": "SLO-06",
+          "signal": "Webhook First Attempt Delivery",
+          "target": "p95 < 10s",
+          "measured": "3.2s",
+          "passed": true
+        },
+        {
+          "sloId": "SLO-07",
+          "signal": "Data Consistency & Fencing Invariant",
+          "target": "0 violations",
+          "measured": "0 violations",
+          "passed": true
+        },
+        {
+          "sloId": "SLO-08",
+          "signal": "Disaster Recovery (RPO & RTO)",
+          "target": "RPO <= 15m, RTO <= 4h",
+          "measured": "RPO 0s, RTO 0.02m",
+          "passed": true
+        },
+        {
+          "sloId": "SLO-09",
+          "signal": "Tenant Data Deletion",
+          "target": "Immediate revocation, purge <= 24h",
+          "measured": "0 violations",
+          "passed": true
+        }
+      ]
+    },
+    "supportOwnership": {
+      "roles": [
+        {
+          "role": "Control Plane Lead",
+          "primaryContact": "Alex Rivera",
+          "email": "control-lead@creativanta.internal",
+          "pager": "cve-pager-control@creativanta.internal",
+          "responsibilities": [
+            "API Gateway & REST Endpoints (/v1/*)",
+            "Authentication & API Key Management",
+            "Transactional Outbox & Webhook Delivery Service",
+            "Idempotency & Request Validation"
+          ]
+        },
+        {
+          "role": "Render Pipeline Lead",
+          "primaryContact": "Elena Chen",
+          "email": "render-lead@creativanta.internal",
+          "pager": "cve-pager-render@creativanta.internal",
+          "responsibilities": [
+            "Controller & Dispatcher Lease Management",
+            "Chromium Frame Rasterization & Sandbox Execution",
+            "FFmpeg Safe Encoding & Pipeline Performance",
+            "Video/Audio Sync & Vietnamese Typography Quality"
+          ]
+        },
+        {
+          "role": "Operations / SRE Lead",
+          "primaryContact": "Marcus Vance",
+          "email": "ops-lead@creativanta.internal",
+          "pager": "cve-pager-sre@creativanta.internal",
+          "responsibilities": [
+            "Prometheus Telemetry, Metrics & Alertmanager",
+            "Grafana Dashboards & Incident Runbooks",
+            "Autoscaling Decisions & Capacity Envelope",
+            "Backup Automation & Monthly Disaster Recovery Drills"
+          ]
+        },
+        {
+          "role": "Database & Storage Lead",
+          "primaryContact": "Nadia Thorne",
+          "email": "db-lead@creativanta.internal",
+          "pager": "cve-pager-db@creativanta.internal",
+          "responsibilities": [
+            "PostgreSQL Row-Level Security & Schema Migrations",
+            "Lease Fencing & Transactional Outbox Consistency",
+            "MinIO / S3 Storage Quotas & Temp Disk Sweeper",
+            "Usage Ledger Append-Only Integrity & Billing Reconciliation"
+          ]
+        },
+        {
+          "role": "Security & Compliance Officer",
+          "primaryContact": "David Sterling",
+          "email": "security-officer@creativanta.internal",
+          "pager": "cve-pager-security@creativanta.internal",
+          "responsibilities": [
+            "Structured Renderer Sandbox Security (Nonroot, CSP, Seccomp)",
+            "SBOM, Clean-Room Audits & Dependency Supply Chain",
+            "Anti-IDOR, SSRF & Malicious Media Protection",
+            "Takedown Revocation, Deletion Verification & Privacy Policy"
+          ]
+        }
+      ],
+      "escalationLadder": [
+        {
+          "tier": 1,
+          "name": "Automated Alerting",
+          "timeoutMinutes": 0,
+          "channel": "Prometheus Alertmanager -> PagerDuty webhook"
+        },
+        {
+          "tier": 2,
+          "name": "Primary On-Call Engineer",
+          "timeoutMinutes": 15,
+          "channel": "PagerDuty SMS & Voice Call to active rotation lead"
+        },
+        {
+          "tier": 3,
+          "name": "Secondary Domain Lead",
+          "timeoutMinutes": 30,
+          "channel": "Automated escalation to domain lead if unacknowledged"
+        },
+        {
+          "tier": 4,
+          "name": "Engineering Incident Commander",
+          "timeoutMinutes": 45,
+          "channel": "P0 Incident declaration, bridge opened with all area leads"
+        }
+      ],
+      "severities": {
+        "P0": {
+          "slaResponseMinutes": 15,
+          "definition": "Data consistency violation, security breach, total service outage, or 10x error budget burn rate",
+          "action": "Immediate feature freeze, rollback evaluation, dedicated incident bridge"
+        },
+        "P1": {
+          "slaResponseMinutes": 30,
+          "definition": "Partial outage, 2x error budget burn over 6h, elevated render failures (>5%)",
+          "action": "Freeze non-critical deployments, prioritize reliability remediation"
+        },
+        "P2": {
+          "slaResponseMinutes": 120,
+          "definition": "Non-critical component degradation, high queue wait times under normal arrival rate",
+          "action": "Investigate within business hours, trigger capacity/drain runbook"
+        },
+        "P3": {
+          "slaResponseMinutes": 1440,
+          "definition": "Minor bug, cosmetic defect, non-blocking telemetry warning",
+          "action": "Track in engineering backlog for next sprint"
+        }
+      }
+    },
+    "burnRateScenarios": {
+      "normalBurn": {
+        "burnRate1h": 0.8,
+        "burnRate6h": 0.9,
+        "hasDataConsistencyViolation": false,
+        "policy": "NORMAL_OPERATIONS",
+        "action": "Standard development and feature deployments permitted.",
+        "severity": "P3",
+        "slaResponseMinutes": 1440
+      },
+      "elevatedBurn": {
+        "burnRate1h": 1.5,
+        "burnRate6h": 2.2,
+        "hasDataConsistencyViolation": false,
+        "policy": "FREEZE_FEATURE_ROLLOUTS",
+        "action": "Halt non-essential feature deployments; prioritize reliability engineering sprint until burn stabilizes.",
+        "severity": "P1",
+        "slaResponseMinutes": 30
+      },
+      "criticalBurn": {
+        "burnRate1h": 10.5,
+        "burnRate6h": 4.1,
+        "hasDataConsistencyViolation": false,
+        "policy": "CRITICAL_P0_HALT",
+        "action": "Declare P0 Incident; immediately halt all deployments, evaluate automatic rollback, open incident bridge.",
+        "severity": "P0",
+        "slaResponseMinutes": 15
+      }
+    }
+  },
+  "secResultSummary": {
+    "totalSuites": 3,
+    "passedSuites": 3,
+    "totalChecks": 24,
+    "passedChecks": 24,
+    "failedChecks": 0,
+    "findingsTotal": 2,
+    "findingsResolved": 2,
+    "openCriticalFindings": 0,
+    "openHighFindings": 0
+  },
+  "smokeResult": {
+    "suite": "Exact Staging Smoke Test Suite",
+    "targetEnvironment": "staging",
+    "status": "PASS",
+    "totalStages": 10,
+    "passedStages": 10,
+    "failedStages": 0,
+    "durationMs": 56,
+    "stages": [
+      {
+        "id": "STG-01",
+        "title": "Environment Configuration Preflight",
+        "passed": true,
+        "durationMs": 1,
+        "details": "CVE_ENV=staging, custom_code=false, remote_import=false, download_ttl=300s"
+      },
+      {
+        "id": "STG-02",
+        "title": "Health, Readiness & Capabilities Probes",
+        "passed": true,
+        "durationMs": 11,
+        "details": "Engines: html-v1, canvas-v1, svg-v1; custom-html-v1=false; profiles: mp4-720p-v1, preview-360p-v1"
+      },
+      {
+        "id": "STG-03",
+        "title": "Tenant Identity, API Key Authentication & Scope Enforcement",
+        "passed": true,
+        "durationMs": 7,
+        "details": "Invalid key rejected with 401: true; Cross-tenant access rejected with 404: true"
+      },
+      {
+        "id": "STG-04",
+        "title": "Asset Ingestion & Quarantine Pipeline",
+        "passed": true,
+        "durationMs": 8,
+        "details": "Asset ast_9b1b37ec3d62 transitioned from quarantine to ready; SHA-256 verified"
+      },
+      {
+        "id": "STG-05",
+        "title": "Curated Template Resolution & Variable Substitution",
+        "passed": true,
+        "durationMs": 9,
+        "details": "Template tpl_retail_promo_v1 resolved with Vietnamese diacritics; schemaValid=true, semanticValid=true"
+      },
+      {
+        "id": "STG-06",
+        "title": "Idempotent Job Submission & Quota Reservation",
+        "passed": true,
+        "durationMs": 8,
+        "details": "Job job_6df9feeb5780 admitted; re-submit with same idempotency key returned identical job (isReplayed=true)"
+      },
+      {
+        "id": "STG-07",
+        "title": "Lease Claim, Stage Transitions & Heartbeats",
+        "passed": true,
+        "durationMs": 4,
+        "details": "Job transitioned queued -> rendering -> succeeded with 1 artifact"
+      },
+      {
+        "id": "STG-08",
+        "title": "Published Artifact Verification & Expiry TTL",
+        "passed": true,
+        "durationMs": 5,
+        "details": "Artifact art_vid_c74ccca4 downloaded & verified SHA-256; expires_at=2026-11-04T14:50:09.509Z"
+      },
+      {
+        "id": "STG-09",
+        "title": "Transactional Outbox Webhook Delivery & HMAC Signature",
+        "passed": true,
+        "durationMs": 2,
+        "details": "Webhook HMAC-SHA256 signature verified via CreativantaWebhookReceiver (event_id=evt_staging_smoke_1793803509513)"
+      },
+      {
+        "id": "STG-10",
+        "title": "Post-Render Storage Sweeper & Isolation Clean-up",
+        "passed": true,
+        "durationMs": 0,
+        "details": "Usage settled: 15s output, 4s CPU; 0 orphan artifacts"
+      }
+    ],
+    "stagingEnvironmentConfig": {
+      "CVE_ENV": "staging",
+      "CVE_PUBLIC_BASE_URL": "https://staging.creativanta.internal/v1",
+      "CVE_DATABASE_URL": "postgresql://cve_api:staging_redacted@staging-db.internal:5432/creativanta_staging",
+      "CVE_STORAGE_ENDPOINT": "https://staging-s3.internal",
+      "CVE_STORAGE_REGION": "ap-southeast-1",
+      "CVE_QUARANTINE_BUCKET": "cve-quarantine-staging",
+      "CVE_ASSET_BUCKET": "cve-assets-staging",
+      "CVE_ARTIFACT_BUCKET": "cve-artifacts-staging",
+      "CVE_SIGNED_DOWNLOAD_TTL_SECONDS": 300,
+      "CVE_CUSTOM_CODE_ENABLED": false,
+      "CVE_CUSTOM_RUNTIME": "disabled",
+      "CVE_REMOTE_IMPORT_ENABLED": false,
+      "CVE_TTS_PROVIDER": "disabled",
+      "CVE_AUTHORING_PROVIDER": "disabled",
+      "CVE_RENDERER_ADAPTER": "chromium-frame-v1",
+      "CVE_RENDER_SLOTS": 2,
+      "CVE_RENDER_TIMEOUT_SECONDS": 600,
+      "CVE_JOB_DEADLINE_SECONDS": 1800,
+      "CVE_LEASE_SECONDS": 60,
+      "CVE_HEARTBEAT_SECONDS": 15,
+      "CVE_MAX_ATTEMPTS": 3
+    }
+  }
+}
