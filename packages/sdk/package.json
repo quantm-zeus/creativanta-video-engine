@@ -13,6 +13,10 @@
     "./tts": {
       "types": "./dist/tts/index.d.ts",
       "default": "./dist/tts/index.js"
+    },
+    "./client": {
+      "types": "./dist/client/index.d.ts",
+      "default": "./dist/client/index.js"
     }
   },
   "scripts": {
