@@ -98,4 +98,26 @@ describe('Redacted Structured Logging Suite', () => {
     assert.strictEqual(entry.details.profile, 'mp4-720p-v1');
     assert.strictEqual(entry.details.apiKey, '[REDACTED_CREDENTIAL]');
   });
+
+  it('redacts full 77-char generated API keys, webhook secrets, external tokens, PEM keys, and DB URIs', () => {
+    const fullApiKey = `cve_live_0123456789ab_${'f'.repeat(64)}`;
+    const webhookSecret = 'whsec_0123456789abcdef0123456789abcdef';
+    const openAiKey = 'sk-proj_0123456789abcdef0123456789abcdef';
+    const dbUri = 'postgresql://cve_api:super_secret_db_pass@db.internal:5432/cve';
+    const pemKey = '-----BEGIN PRIVATE KEY-----\nMIIEvQIBADANBgkqhkiG9w0BAQEFAASCBKcwggSjAgEAAoIBAQC\n-----END PRIVATE KEY-----';
+
+    const raw = `Auth=${fullApiKey} Webhook=${webhookSecret} LLM=${openAiKey} DB=${dbUri} Key=${pemKey}`;
+    const redacted = redactString(raw);
+
+    assert.ok(!redacted.includes(fullApiKey), 'Full 77-char suffix API key must be redacted');
+    assert.ok(redacted.includes('[REDACTED_API_KEY]'));
+    assert.ok(!redacted.includes(webhookSecret), 'Webhook secret must be redacted');
+    assert.ok(redacted.includes('[REDACTED_WEBHOOK_SECRET]'));
+    assert.ok(!redacted.includes(openAiKey), 'External secret must be redacted');
+    assert.ok(redacted.includes('[REDACTED_EXTERNAL_SECRET]'));
+    assert.ok(!redacted.includes('super_secret_db_pass'), 'DB URI password must be redacted');
+    assert.ok(redacted.includes('postgresql://cve_api:[REDACTED_PASSWORD]@db.internal:5432/cve'));
+    assert.ok(!redacted.includes('MIIEvQIBADANBgkqhkiG9w0BAQEFAASCBKcwggSjAgEAAoIBAQC'));
+    assert.ok(redacted.includes('[REDACTED_PRIVATE_KEY]'));
+  });
 });
