@@ -484,6 +484,17 @@ export class SceneBundleRegistry {
       change_summary?: string;
       declared_capabilities?: string[];
       created_by?: string;
+      provenance?: {
+        authoring_type?: 'human' | 'ai' | 'fork' | 'import';
+        author?: string;
+        ai_metadata?: Record<string, unknown>;
+        rights_and_license?: {
+          license: string;
+          copyright_holder?: string;
+          rights_provenance?: string;
+          commercial_use_allowed?: boolean;
+        };
+      };
     },
   ): SceneBundleRevisionRecord;
 
@@ -598,3 +609,356 @@ export function validateOpenApiSpecification(spec: Record<string, unknown>): {
 };
 export function extendOpenApiWithSceneBundles(baseSpec: Record<string, unknown>): Record<string, unknown>;
 export function runSceneBundleRegistrySelfTest(): Promise<Record<string, unknown>>;
+
+// ---------------------------------------------------------------------------
+// Task P7-03: Provider-Neutral Authoring Adapter Contract & Non-Premium Routes
+// ---------------------------------------------------------------------------
+
+export type AuthoringProviderType = 'mock' | 'local' | 'remote';
+
+export interface AuthoringBudgets {
+  max_tokens: number;
+  max_completion_tokens: number;
+  timeout_ms: number;
+  max_cost_usd: number;
+}
+
+export interface AuthoringTarget {
+  bundle_type?: string;
+  width?: number;
+  height?: number;
+  fps?: number;
+  duration_seconds?: number;
+}
+
+export interface AuthoringRequest {
+  brief: string;
+  locale?: string;
+  approved_asset_ids?: string[];
+  provider_preference?: string;
+  model?: string;
+  budgets?: Partial<AuthoringBudgets>;
+  target?: Partial<AuthoringTarget>;
+  seed?: string | number;
+  options?: Record<string, unknown>;
+}
+
+export interface AuthoringModelInfo {
+  id: string;
+  name: string;
+  contextTokens: number;
+  requiresSubscription: boolean;
+  promptCostPer1k: number;
+  completionCostPer1k: number;
+}
+
+export interface AuthoringProviderInfo {
+  id: string;
+  name: string;
+  displayName: string;
+  providerType: AuthoringProviderType;
+  isSubscriptionRequired: boolean;
+  defaultModel: string;
+  supportedModels: AuthoringModelInfo[];
+  capabilities: readonly string[];
+}
+
+export interface AuthoringJobOutput {
+  files: Array<{ path: string; content: Buffer; size: number }>;
+  entrypoint: string;
+  parameter_schema: Record<string, unknown>;
+  declared_capabilities: string[];
+  source_sha256: string;
+  build_sha256: string;
+  csp_script_hash: string;
+  provenance: SceneBundleProvenance;
+  metadata: {
+    provider: string;
+    model: string;
+    job_id: string;
+    brief_hash: string;
+    prompt_tokens?: number;
+    completion_tokens?: number;
+    total_tokens?: number;
+    duration_ms?: number;
+    cost_usd?: number;
+    seed?: string | number;
+    finish_reason?: string;
+    total_files?: number;
+    total_bytes?: number;
+  };
+}
+
+export interface AuthoringMetering {
+  model: string;
+  prompt_tokens: number;
+  completion_tokens: number;
+  total_tokens: number;
+  duration_ms: number;
+  cost_usd: number;
+  cost_micros: number;
+}
+
+export interface AuthoringJob {
+  id: string;
+  tenant_id: string;
+  state: 'queued' | 'authoring' | 'succeeded' | 'failed' | 'canceled';
+  request: AuthoringRequest;
+  created_at: string;
+  updated_at: string;
+  started_at: string | null;
+  completed_at: string | null;
+  output: AuthoringJobOutput | null;
+  error: { code: string; message: string; elapsedMs?: number } | null;
+  cancellation_reason: string | null;
+  metering: AuthoringMetering | null;
+}
+
+export const AUTHORING_DEFAULT_BUDGETS: Readonly<{
+  maxPromptTokens: number;
+  maxCompletionTokens: number;
+  maxTotalTokens: number;
+  timeoutMs: number;
+  maxCostUsd: number;
+}>;
+
+export const AUTHORING_SYSTEM_LIMITS: Readonly<{
+  maxBriefLength: number;
+  maxApprovedAssetsCount: number;
+  maxTimeoutMs: number;
+  maxTokensUpperCap: number;
+  maxCompletionTokensUpperCap: number;
+  maxCostUsdUpperCap: number;
+  minTimeoutMs: number;
+}>;
+
+export const AUTHORING_PRICING_TABLE: Record<string, {
+  provider: string;
+  promptCostPer1k: number;
+  completionCostPer1k: number;
+  requiresSubscription: boolean;
+  contextWindow: number;
+}>;
+
+export const AUTHORING_CAPABILITIES: readonly string[];
+
+export function estimatePromptTokens(text: string): number;
+
+export function calculateAuthoringCost(
+  modelId: string,
+  promptTokens: number,
+  completionTokens: number,
+  customPricing?: Record<string, { promptCostPer1k: number; completionCostPer1k: number }>,
+): number;
+
+export function validateAuthoringRequest(request: Record<string, unknown>): AuthoringRequest & {
+  brief_hash: string;
+  budgets: AuthoringBudgets;
+  target: AuthoringTarget;
+};
+
+export class AuthoringAdapter {
+  id: string;
+  name: string;
+  displayName: string;
+  providerType: AuthoringProviderType;
+  isSubscriptionRequired: boolean;
+  supportedModels: readonly AuthoringModelInfo[];
+  defaultModel: string;
+  capabilities: readonly string[];
+
+  constructor(options: {
+    id: string;
+    name: string;
+    providerType: AuthoringProviderType;
+    displayName?: string;
+    isSubscriptionRequired?: boolean;
+    supportedModels?: AuthoringModelInfo[];
+    defaultModel?: string;
+    capabilities?: string[];
+  });
+
+  listModels(): readonly AuthoringModelInfo[];
+  estimateBudget(request: Record<string, unknown>): {
+    estimatedPromptTokens: number;
+    estimatedCompletionTokens: number;
+    estimatedCostUsd: number;
+    estimatedDurationMs: number;
+  };
+  generateSceneSource(
+    request: Record<string, unknown>,
+    context: {
+      signal?: AbortSignal;
+      tenantId: string;
+      jobId: string;
+      logger?: Record<string, unknown>;
+    },
+  ): Promise<{
+    status: 'succeeded' | 'failed' | 'canceled';
+    files: Array<{ path: string; content: string | Buffer }>;
+    entrypoint: string;
+    parameter_schema: Record<string, unknown>;
+    declared_capabilities: string[];
+    metadata: {
+      provider: string;
+      model: string;
+      prompt_tokens: number;
+      completion_tokens: number;
+      total_tokens: number;
+      duration_ms: number;
+      cost_usd: number;
+      brief_hash: string;
+      seed?: string | number;
+      finish_reason: string;
+    };
+  }>;
+}
+
+export class AuthoringBudgetEnforcer {
+  static checkPreflightBudget(
+    budgets: AuthoringBudgets,
+    estimation: {
+      estimatedPromptTokens: number;
+      estimatedCompletionTokens: number;
+      estimatedCostUsd: number;
+    },
+  ): void;
+
+  static checkPostflightBudget(
+    budgets: AuthoringBudgets,
+    actual: {
+      prompt_tokens: number;
+      completion_tokens: number;
+      total_tokens: number;
+      duration_ms: number;
+      cost_usd: number;
+    },
+  ): void;
+
+  static createTimeoutController(
+    timeoutMs: number,
+    parentSignal?: AbortSignal,
+  ): {
+    controller: AbortController;
+    signal: AbortSignal;
+    isTimedOut: () => boolean;
+    cleanup: () => void;
+  };
+
+  static calculateMetering(
+    modelId: string,
+    promptTokens: number,
+    completionTokens: number,
+    durationMs: number,
+    customPricing?: Record<string, { promptCostPer1k: number; completionCostPer1k: number }>,
+  ): AuthoringMetering;
+}
+
+export function scanSourceFilesForSecurityViolations(
+  files: Array<{ path: string; content: string | Buffer }>,
+  canarySecrets?: string[],
+): void;
+
+export function validateAndSanitizeAuthoringOutput(
+  rawOutput: {
+    files: Array<{ path: string; content: string | Buffer }>;
+    entrypoint?: string;
+    parameter_schema?: Record<string, unknown>;
+    declared_capabilities?: string[];
+    metadata?: Record<string, unknown>;
+  },
+  options: {
+    tenantId: string;
+    jobId: string;
+    brief: string;
+    briefHash: string;
+    provider: string;
+    model: string;
+    approvedAssetIds?: string[];
+    canarySecrets?: string[];
+  },
+): AuthoringJobOutput;
+
+export class DeterministicMockAuthoringAdapter extends AuthoringAdapter {
+  constructor(options?: Record<string, unknown>);
+}
+
+export class OpenCodeAuthoringAdapter extends AuthoringAdapter {
+  baseUrl: string;
+  allowOfflineSimulation: boolean;
+  constructor(options?: {
+    baseUrl?: string;
+    allowOfflineSimulation?: boolean;
+    defaultModel?: string;
+  });
+}
+
+export class DeepSeekAuthoringAdapter extends AuthoringAdapter {
+  constructor(options?: Record<string, unknown>);
+}
+
+export class AgyGeminiAuthoringAdapter extends AuthoringAdapter {
+  constructor(options?: Record<string, unknown>);
+}
+
+export class CodexAuthoringAdapter extends AuthoringAdapter {
+  constructor(options?: Record<string, unknown>);
+}
+
+export class AuthoringAdapterRegistry {
+  adapters: Map<string, AuthoringAdapter>;
+  constructor();
+  registerAdapter(adapter: AuthoringAdapter): void;
+  getAdapter(id: string): AuthoringAdapter | undefined;
+  getDefaultAdapter(): AuthoringAdapter;
+  listProviders(): AuthoringProviderInfo[];
+}
+
+export class AuthoringJobManager {
+  registry: AuthoringAdapterRegistry;
+  canarySecrets: string[];
+  jobs: Map<string, AuthoringJob>;
+
+  constructor(options?: {
+    registry?: AuthoringAdapterRegistry;
+    canarySecrets?: string[];
+  });
+
+  createJob(tenantId: string, request: Record<string, unknown>): AuthoringJob;
+  getJob(jobId: string, tenantId: string): AuthoringJob;
+  listJobs(
+    tenantId: string,
+    options?: { state?: string; limit?: number; cursor?: number },
+  ): {
+    jobs: AuthoringJob[];
+    total: number;
+    cursor: number;
+    limit: number;
+    has_more: boolean;
+  };
+  cancelJob(jobId: string, tenantId: string, reason?: string): AuthoringJob;
+  startJob(jobId: string, tenantId: string, options?: { signal?: AbortSignal }): Promise<AuthoringJob>;
+  importJobOutputToRegistry(
+    jobId: string,
+    tenantId: string,
+    bundleRegistry: SceneBundleRegistry,
+    options?: {
+      bundleId?: string;
+      title?: string;
+      description?: string;
+      tags?: string[];
+      category?: string;
+    },
+  ): Promise<{ action: 'bundle_created' | 'revision_created'; bundle?: any; revision?: any }>;
+}
+
+export function runAuthoringAdapterSelfTest(): Promise<Record<string, unknown>>;
+
+export const AUTHORING_OPENAPI_SPEC: Record<string, unknown>;
+export function getAuthoringOpenApiSpec(): Record<string, unknown>;
+export function validateAuthoringOpenApiSpecification(spec: Record<string, unknown>): {
+  valid: boolean;
+  errors: string[];
+};
+export function extendOpenApiWithAuthoring(baseSpec: Record<string, unknown>): Record<string, unknown>;
+

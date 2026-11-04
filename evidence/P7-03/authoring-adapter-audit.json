@@ -1,0 +1,887 @@
+{
+  "taskId": "P7-03",
+  "status": "PASS",
+  "totalChecks": 14,
+  "passedChecks": 14,
+  "failedChecks": 0,
+  "durationMs": 1169,
+  "timestamp": "2026-11-04T15:53:32.228Z",
+  "checks": [
+    {
+      "id": "AUT-01",
+      "title": "Provider-neutral authoring adapter contract & provider registry discovery",
+      "category": "adapter_contract",
+      "status": "PASS",
+      "passed": true,
+      "durationMs": 0,
+      "details": {
+        "providersCount": 5,
+        "defaultProvider": "mock-deterministic"
+      }
+    },
+    {
+      "id": "AUT-02",
+      "title": "At least one non-premium route without mandatory subscription",
+      "category": "non_premium_routes",
+      "status": "PASS",
+      "passed": true,
+      "durationMs": 0,
+      "details": {
+        "mockSubscriptionRequired": false,
+        "openCodeSubscriptionRequired": false
+      }
+    },
+    {
+      "id": "AUT-03",
+      "title": "Deterministic mock produces complete valid custom-html-v1 scene files from brief",
+      "category": "mock_generation",
+      "status": "PASS",
+      "passed": true,
+      "durationMs": 12,
+      "details": {
+        "jobId": "auth-job-842c3add-b08",
+        "filePaths": [
+          "index.html",
+          "scene.mjs",
+          "styles.css",
+          "manifest.json"
+        ],
+        "sourceSha256": "87664f1303be2d406bb600010d019380394fe6b0886805616ba1f6abc6ede19a"
+      }
+    },
+    {
+      "id": "AUT-04",
+      "title": "Deterministic repeatability: same brief and seed produce byte-identical source files and digest",
+      "category": "determinism",
+      "status": "PASS",
+      "passed": true,
+      "durationMs": 3,
+      "details": {
+        "sourceSha256": "27be75f87697d36ec4e59e2c264ff16bac8f9a88e3bb5bb4b5d9eee544794392",
+        "buildSha256": "21f14c4c04bb0c7082f209e2c28c542b8bb2e66e836afdffea660dcb674fe6f6",
+        "isIdentical": true
+      }
+    },
+    {
+      "id": "AUT-05",
+      "title": "Preservation of Vietnamese NFC diacritics and tone marks (ă â đ ê ô ơ ư)",
+      "category": "scene_spec_compliance",
+      "status": "PASS",
+      "passed": true,
+      "durationMs": 4,
+      "details": {
+        "preservesVietnamese": true,
+        "sampleHeadline": "Khám Phá Nền Tảng Video Creati"
+      }
+    },
+    {
+      "id": "AUT-06",
+      "title": "Enforces approved_asset_ids restriction and binds assets safely without external URLs",
+      "category": "asset_scoping",
+      "status": "PASS",
+      "passed": true,
+      "durationMs": 2,
+      "details": {
+        "approvedAssetsBound": [
+          "asset-logo-svg",
+          "asset-bg-pattern"
+        ]
+      }
+    },
+    {
+      "id": "AUT-07",
+      "title": "Token budget enforcement: rejects requests exceeding token limits",
+      "category": "budget_enforcement",
+      "status": "PASS",
+      "passed": true,
+      "durationMs": 1,
+      "details": {
+        "caughtAsExpected": true,
+        "rejectedCode": "TOKEN_BUDGET_EXCEEDED"
+      }
+    },
+    {
+      "id": "AUT-08",
+      "title": "Time budget enforcement: timeout budget triggers AbortSignal cancellation",
+      "category": "time_budget",
+      "status": "PASS",
+      "passed": true,
+      "durationMs": 1020,
+      "details": {
+        "timedOutAsExpected": true,
+        "finalState": "canceled"
+      }
+    },
+    {
+      "id": "AUT-09",
+      "title": "Cost budget enforcement: blocks execution exceeding max_cost_usd cap",
+      "category": "cost_budget",
+      "status": "PASS",
+      "passed": true,
+      "durationMs": 1,
+      "details": {
+        "budgetCapTested": true,
+        "jobId": "auth-job-b2d6052f-d96",
+        "maxCostUsd": 0.000001
+      }
+    },
+    {
+      "id": "AUT-10",
+      "title": "Responsive job cancellation: active jobs abort immediately on cancel request",
+      "category": "cancellation",
+      "status": "PASS",
+      "passed": true,
+      "durationMs": 107,
+      "details": {
+        "state": "canceled",
+        "reason": "User canceled generation"
+      }
+    },
+    {
+      "id": "AUT-11",
+      "title": "Source-only output guarantee: static scanner blocks eval, network egress, and host process access",
+      "category": "source_only_security",
+      "status": "PASS",
+      "passed": true,
+      "durationMs": 1,
+      "details": {
+        "evalBlocked": true,
+        "fetchBlocked": true
+      }
+    },
+    {
+      "id": "AUT-12",
+      "title": "Canary secret leak detection: prevents secrets from leaking into generated code",
+      "category": "secret_leak_defense",
+      "status": "PASS",
+      "passed": true,
+      "durationMs": 0,
+      "details": {
+        "canaryCaughtAsExpected": true
+      }
+    },
+    {
+      "id": "AUT-13",
+      "title": "Multi-tenant isolation & IDOR defense on authoring jobs (Path 404 / JOB_NOT_FOUND)",
+      "category": "tenant_isolation",
+      "status": "PASS",
+      "passed": true,
+      "durationMs": 1,
+      "details": {
+        "idorBlocked": true,
+        "statusCode": 404
+      }
+    },
+    {
+      "id": "AUT-14",
+      "title": "Seamless import of authoring job output into SceneBundleRegistry with AI provenance",
+      "category": "registry_integration",
+      "status": "PASS",
+      "passed": true,
+      "durationMs": 8,
+      "details": {
+        "bundleId": "bundle-ai-e6e34138",
+        "authoringType": "ai",
+        "provenanceDigest": "021a416453fc181d799c71397c0a69e6f9dcd362734cd10c1a5b401c65a5d9ee"
+      }
+    }
+  ],
+  "openApiSummary": {
+    "version": "3.1.0",
+    "routesCount": 5,
+    "specification": {
+      "openapi": "3.1.0",
+      "info": {
+        "title": "Creativanta Video Engine - AI Authoring Extension API",
+        "version": "1.0.0",
+        "description": "Provider-Neutral AI Scene Authoring Adapter API (Tasks P7-03 & P7-06). Generates source-only custom scene bundles within strict token, time, and cost budgets with zero subscription required."
+      },
+      "servers": [
+        {
+          "url": "https://api.creativanta.internal/v1",
+          "description": "Internal VaaS Production Gateway"
+        },
+        {
+          "url": "http://127.0.0.1:4000/v1",
+          "description": "Local Development / Isolated Test Server"
+        }
+      ],
+      "security": [
+        {
+          "TenantApiKeyAuth": [
+            "authoring:write",
+            "authoring:read"
+          ]
+        }
+      ],
+      "paths": {
+        "/authoring-jobs": {
+          "post": {
+            "summary": "Submit an AI scene bundle authoring job",
+            "operationId": "createAuthoringJob",
+            "tags": [
+              "Authoring"
+            ],
+            "security": [
+              {
+                "TenantApiKeyAuth": [
+                  "authoring:write"
+                ]
+              }
+            ],
+            "requestBody": {
+              "required": true,
+              "content": {
+                "application/json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/AuthoringJobRequest"
+                  }
+                }
+              }
+            },
+            "responses": {
+              "202": {
+                "description": "Authoring job accepted for processing",
+                "content": {
+                  "application/json": {
+                    "schema": {
+                      "$ref": "#/components/schemas/AuthoringJobSummary"
+                    }
+                  }
+                }
+              },
+              "400": {
+                "description": "Invalid creative brief or parameters",
+                "content": {
+                  "application/json": {
+                    "schema": {
+                      "$ref": "#/components/schemas/ErrorResponse"
+                    }
+                  }
+                }
+              },
+              "401": {
+                "description": "Unauthorized - Missing or invalid API key",
+                "content": {
+                  "application/json": {
+                    "schema": {
+                      "$ref": "#/components/schemas/ErrorResponse"
+                    }
+                  }
+                }
+              },
+              "403": {
+                "description": "Forbidden - Missing authoring:write scope or tenant not allowlisted",
+                "content": {
+                  "application/json": {
+                    "schema": {
+                      "$ref": "#/components/schemas/ErrorResponse"
+                    }
+                  }
+                }
+              },
+              "422": {
+                "description": "Unprocessable entity - Reference to unapproved asset ID",
+                "content": {
+                  "application/json": {
+                    "schema": {
+                      "$ref": "#/components/schemas/ErrorResponse"
+                    }
+                  }
+                }
+              },
+              "429": {
+                "description": "Too many requests or authoring rate limit exceeded",
+                "content": {
+                  "application/json": {
+                    "schema": {
+                      "$ref": "#/components/schemas/ErrorResponse"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "get": {
+            "summary": "List authoring jobs for the authenticated tenant",
+            "operationId": "listAuthoringJobs",
+            "tags": [
+              "Authoring"
+            ],
+            "security": [
+              {
+                "TenantApiKeyAuth": [
+                  "authoring:read"
+                ]
+              }
+            ],
+            "parameters": [
+              {
+                "name": "state",
+                "in": "query",
+                "required": false,
+                "description": "Filter by job state",
+                "schema": {
+                  "type": "string",
+                  "enum": [
+                    "queued",
+                    "authoring",
+                    "succeeded",
+                    "failed",
+                    "canceled"
+                  ]
+                }
+              },
+              {
+                "name": "limit",
+                "in": "query",
+                "required": false,
+                "schema": {
+                  "type": "integer",
+                  "default": 20,
+                  "minimum": 1,
+                  "maximum": 100
+                }
+              },
+              {
+                "name": "cursor",
+                "in": "query",
+                "required": false,
+                "schema": {
+                  "type": "integer",
+                  "default": 0
+                }
+              }
+            ],
+            "responses": {
+              "200": {
+                "description": "Paginated list of authoring jobs",
+                "content": {
+                  "application/json": {
+                    "schema": {
+                      "type": "object",
+                      "required": [
+                        "jobs",
+                        "total",
+                        "cursor",
+                        "limit",
+                        "has_more"
+                      ],
+                      "properties": {
+                        "jobs": {
+                          "type": "array",
+                          "items": {
+                            "$ref": "#/components/schemas/AuthoringJobSummary"
+                          }
+                        },
+                        "total": {
+                          "type": "integer"
+                        },
+                        "cursor": {
+                          "type": "integer"
+                        },
+                        "limit": {
+                          "type": "integer"
+                        },
+                        "has_more": {
+                          "type": "boolean"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "/authoring-jobs/{id}": {
+          "get": {
+            "summary": "Get authoring job status and source output",
+            "operationId": "getAuthoringJob",
+            "tags": [
+              "Authoring"
+            ],
+            "security": [
+              {
+                "TenantApiKeyAuth": [
+                  "authoring:read"
+                ]
+              }
+            ],
+            "parameters": [
+              {
+                "name": "id",
+                "in": "path",
+                "required": true,
+                "description": "Unique authoring job ID",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            ],
+            "responses": {
+              "200": {
+                "description": "Authoring job status and output details",
+                "content": {
+                  "application/json": {
+                    "schema": {
+                      "$ref": "#/components/schemas/AuthoringJobDetail"
+                    }
+                  }
+                }
+              },
+              "404": {
+                "description": "Job not found or belongs to another tenant",
+                "content": {
+                  "application/json": {
+                    "schema": {
+                      "$ref": "#/components/schemas/ErrorResponse"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "/authoring-jobs/{id}/cancel": {
+          "post": {
+            "summary": "Cancel an in-flight or queued authoring job",
+            "operationId": "cancelAuthoringJob",
+            "tags": [
+              "Authoring"
+            ],
+            "security": [
+              {
+                "TenantApiKeyAuth": [
+                  "authoring:write"
+                ]
+              }
+            ],
+            "parameters": [
+              {
+                "name": "id",
+                "in": "path",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              }
+            ],
+            "requestBody": {
+              "required": false,
+              "content": {
+                "application/json": {
+                  "schema": {
+                    "type": "object",
+                    "properties": {
+                      "reason": {
+                        "type": "string",
+                        "default": "Canceled by user request"
+                      }
+                    }
+                  }
+                }
+              }
+            },
+            "responses": {
+              "200": {
+                "description": "Authoring job successfully canceled",
+                "content": {
+                  "application/json": {
+                    "schema": {
+                      "$ref": "#/components/schemas/AuthoringJobSummary"
+                    }
+                  }
+                }
+              },
+              "404": {
+                "description": "Job not found",
+                "content": {
+                  "application/json": {
+                    "schema": {
+                      "$ref": "#/components/schemas/ErrorResponse"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "/authoring-providers": {
+          "get": {
+            "summary": "List available authoring adapters and model pricing",
+            "operationId": "listAuthoringProviders",
+            "tags": [
+              "Authoring"
+            ],
+            "security": [
+              {
+                "TenantApiKeyAuth": [
+                  "authoring:read"
+                ]
+              }
+            ],
+            "responses": {
+              "200": {
+                "description": "List of provider-neutral adapters and supported routes",
+                "content": {
+                  "application/json": {
+                    "schema": {
+                      "type": "object",
+                      "required": [
+                        "providers"
+                      ],
+                      "properties": {
+                        "providers": {
+                          "type": "array",
+                          "items": {
+                            "$ref": "#/components/schemas/AuthoringProviderInfo"
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "components": {
+        "securitySchemes": {
+          "TenantApiKeyAuth": {
+            "type": "http",
+            "scheme": "bearer",
+            "bearerFormat": "API Key",
+            "description": "Tenant API Key with authoring:write or authoring:read scopes"
+          }
+        },
+        "schemas": {
+          "AuthoringJobRequest": {
+            "type": "object",
+            "required": [
+              "brief"
+            ],
+            "properties": {
+              "brief": {
+                "type": "string",
+                "description": "Creative animation brief or instruction prompt (Unicode NFC)",
+                "maxLength": 10000
+              },
+              "locale": {
+                "type": "string",
+                "description": "Locale for typography and diacritics formatting",
+                "default": "vi-VN"
+              },
+              "approved_asset_ids": {
+                "type": "array",
+                "description": "Explicit allowlist of tenant asset IDs available to the scene",
+                "items": {
+                  "type": "string"
+                },
+                "maxItems": 50
+              },
+              "provider_preference": {
+                "type": "string",
+                "description": "Preferred provider adapter ID",
+                "default": "mock-deterministic"
+              },
+              "model": {
+                "type": "string",
+                "description": "Specific model identifier"
+              },
+              "budgets": {
+                "$ref": "#/components/schemas/AuthoringBudgets"
+              },
+              "target": {
+                "$ref": "#/components/schemas/AuthoringTarget"
+              },
+              "seed": {
+                "type": "string",
+                "description": "Seed for deterministic generation"
+              },
+              "options": {
+                "type": "object",
+                "description": "Additional provider-specific options"
+              }
+            }
+          },
+          "AuthoringBudgets": {
+            "type": "object",
+            "properties": {
+              "max_tokens": {
+                "type": "integer",
+                "default": 16384,
+                "maximum": 65536
+              },
+              "max_completion_tokens": {
+                "type": "integer",
+                "default": 8192,
+                "maximum": 32768
+              },
+              "timeout_ms": {
+                "type": "integer",
+                "default": 60000,
+                "maximum": 180000
+              },
+              "max_cost_usd": {
+                "type": "number",
+                "default": 0.5,
+                "maximum": 10
+              }
+            }
+          },
+          "AuthoringTarget": {
+            "type": "object",
+            "properties": {
+              "bundle_type": {
+                "type": "string",
+                "default": "custom-html-v1"
+              },
+              "width": {
+                "type": "integer",
+                "default": 1920
+              },
+              "height": {
+                "type": "integer",
+                "default": 1080
+              },
+              "fps": {
+                "type": "integer",
+                "default": 30
+              },
+              "duration_seconds": {
+                "type": "number",
+                "default": 5
+              }
+            }
+          },
+          "AuthoringJobSummary": {
+            "type": "object",
+            "required": [
+              "id",
+              "tenant_id",
+              "state",
+              "created_at"
+            ],
+            "properties": {
+              "id": {
+                "type": "string"
+              },
+              "tenant_id": {
+                "type": "string"
+              },
+              "state": {
+                "type": "string",
+                "enum": [
+                  "queued",
+                  "authoring",
+                  "succeeded",
+                  "failed",
+                  "canceled"
+                ]
+              },
+              "cancellation_reason": {
+                "type": "string",
+                "nullable": true
+              },
+              "created_at": {
+                "type": "string",
+                "format": "date-time"
+              },
+              "started_at": {
+                "type": "string",
+                "format": "date-time",
+                "nullable": true
+              },
+              "completed_at": {
+                "type": "string",
+                "format": "date-time",
+                "nullable": true
+              }
+            }
+          },
+          "AuthoringJobDetail": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/AuthoringJobSummary"
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "request": {
+                    "$ref": "#/components/schemas/AuthoringJobRequest"
+                  },
+                  "output": {
+                    "type": "object",
+                    "nullable": true,
+                    "properties": {
+                      "entrypoint": {
+                        "type": "string"
+                      },
+                      "source_sha256": {
+                        "type": "string"
+                      },
+                      "build_sha256": {
+                        "type": "string"
+                      },
+                      "csp_script_hash": {
+                        "type": "string"
+                      },
+                      "declared_capabilities": {
+                        "type": "array",
+                        "items": {
+                          "type": "string"
+                        }
+                      },
+                      "parameter_schema": {
+                        "type": "object"
+                      },
+                      "files": {
+                        "type": "array",
+                        "items": {
+                          "type": "object",
+                          "properties": {
+                            "path": {
+                              "type": "string"
+                            },
+                            "size": {
+                              "type": "integer"
+                            }
+                          }
+                        }
+                      }
+                    }
+                  },
+                  "metering": {
+                    "type": "object",
+                    "nullable": true,
+                    "properties": {
+                      "model": {
+                        "type": "string"
+                      },
+                      "prompt_tokens": {
+                        "type": "integer"
+                      },
+                      "completion_tokens": {
+                        "type": "integer"
+                      },
+                      "total_tokens": {
+                        "type": "integer"
+                      },
+                      "duration_ms": {
+                        "type": "integer"
+                      },
+                      "cost_usd": {
+                        "type": "number"
+                      },
+                      "cost_micros": {
+                        "type": "integer"
+                      }
+                    }
+                  },
+                  "error": {
+                    "type": "object",
+                    "nullable": true,
+                    "properties": {
+                      "code": {
+                        "type": "string"
+                      },
+                      "message": {
+                        "type": "string"
+                      }
+                    }
+                  }
+                }
+              }
+            ]
+          },
+          "AuthoringProviderInfo": {
+            "type": "object",
+            "required": [
+              "id",
+              "name",
+              "providerType",
+              "isSubscriptionRequired"
+            ],
+            "properties": {
+              "id": {
+                "type": "string"
+              },
+              "name": {
+                "type": "string"
+              },
+              "displayName": {
+                "type": "string"
+              },
+              "providerType": {
+                "type": "string",
+                "enum": [
+                  "mock",
+                  "local",
+                  "remote"
+                ]
+              },
+              "isSubscriptionRequired": {
+                "type": "boolean"
+              },
+              "defaultModel": {
+                "type": "string"
+              },
+              "supportedModels": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string"
+                    },
+                    "name": {
+                      "type": "string"
+                    },
+                    "contextTokens": {
+                      "type": "integer"
+                    },
+                    "requiresSubscription": {
+                      "type": "boolean"
+                    },
+                    "promptCostPer1k": {
+                      "type": "number"
+                    },
+                    "completionCostPer1k": {
+                      "type": "number"
+                    }
+                  }
+                }
+              },
+              "capabilities": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "ErrorResponse": {
+            "type": "object",
+            "required": [
+              "error",
+              "message"
+            ],
+            "properties": {
+              "error": {
+                "type": "string"
+              },
+              "message": {
+                "type": "string"
+              },
+              "details": {
+                "type": "object"
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}
