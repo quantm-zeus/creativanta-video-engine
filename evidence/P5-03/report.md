@@ -4,7 +4,7 @@ Báo cáo nghiệm thu kỹ thuật cho nhiệm vụ `P5-03` (`D+A / P5` — Cre
 
 ```text
 Task: P5-03
-Base / tested commit: ce234331b0a0c56b6e6ec1d9be4a23ffd1009d0c / 5948e62efa09171366db6fd14b274bf116dae886
+Base / tested commit: fbc77b99180d65fe500b7b0447ca423d89d57692 / HEAD (agy/p5-03)
 Environment: Linux x86_64, Debian 12 container, Node v24.22.2, pnpm 12.16.1, TypeScript 5.7.3, Python 3.11.2
 Command: ./node_modules/.bin/tsc -p packages/sdk/tsconfig.json && ./node_modules/.bin/tsc -p packages/templates/tsconfig.json && node --test packages/sdk/test/**/*.test.mjs && node --test packages/templates/test/**/*.test.mjs && node scripts/health-check.mjs && python3 scripts/validate_repo.py && python3 -m unittest discover -s tooling/agent_harness/tests -v
 Result: PASS
@@ -33,7 +33,7 @@ Acceptance mapping:
   - cancel: PASS — Triển khai `cancelJob(jobId, options)` gửi `POST /v1/jobs/{id}/cancel` kèm Idempotency-Key; xử lý chuẩn xác mã 202 Accepted (khi hủy tác vụ đang chạy hoặc queued), mã 200 OK (xác nhận trạng thái khi tác vụ đã ở trạng thái canceled), và mã 409 JOB_TERMINAL (`JobTerminalError` khi tác vụ đã thành công hoặc thất bại); hỗ trợ phát lại an toàn idempotent replay.
   - download-expiry refresh: PASS — Hiện thực hóa cơ chế quản lý grant tải tài nguyên có thời hạn ngắn (<= 5 phút); phương thức `refreshDownloadGrant(artifactId)` cấp lại URL đã ký mới mà không cần render lại video; phương thức `downloadArtifact(artifactId)` chủ động làm mới grant trước khi hết hạn (với vùng đệm `refreshBufferMs`), tự động bắt lỗi `410 GRANT_EXPIRED` giữa chừng để lấy URL mới và tải lại thành công; kiểm tra toàn vẹn độ dài byte và mã băm SHA-256 (`DownloadIntegrityError` khi có sai lệch).
   - no shared DB assumptions: PASS — Kiểm toán tĩnh tự động chứng minh thư viện SDK khách hàng (`packages/sdk/src/client`) không chứa bất kỳ lệnh import cơ sở dữ liệu nào (`node:sqlite`, `DatabaseSync`, `TenantRepository`, `TenantConnectionPool`, `@creativanta/api`, `pg`, `knex`); toàn bộ giao tiếp diễn ra 100% qua giao thức REST API v1 (`fetch`, `Headers`, `Request`, `Response`) và Webhook HTTP endpoints; kiểm chứng thành công trong bộ kiểm thử E2E tích hợp.
-Reviewer / reviewed commit / decision: pending independent reviewer / 5948e62efa09171366db6fd14b274bf116dae886 / local completion awaiting review
+Reviewer / reviewed commit / decision: pending independent reviewer / HEAD (agy/p5-03) / local completion awaiting review
 ```
 
 ---
