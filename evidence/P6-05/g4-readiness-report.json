@@ -3,8 +3,8 @@
   "role": "Supervisor / P6",
   "phase": "P6",
   "gate": "G4",
-  "evaluatedAt": "2026-11-04T14:51:56.433Z",
-  "durationMs": 776,
+  "evaluatedAt": "2026-11-04T15:06:12.463Z",
+  "durationMs": 588,
   "overallStatus": "PASS",
   "g4Decision": "GO_FOR_PRIVATE_BETA_STAGING",
   "productionDeployStatement": "Production deploy KHÔNG tự được cấp bởi task này. Bàn giao chỉ áp dụng cho Private Beta Staging.",
@@ -107,10 +107,10 @@
     "releaseName": "Creativanta Video Engine Private Beta Candidate 1",
     "phase": "P6",
     "gate": "G4",
-    "generatedAt": "2026-11-04T14:51:55.692Z",
+    "generatedAt": "2026-11-04T15:06:11.903Z",
     "git": {
-      "commitSha": "8b3ebbdbd3991ad7f95344d160f395606ce45d21",
-      "treeHash": "245f43e1b4cb2c11e5c0ee090961bbb52f22e9ad",
+      "commitSha": "d2cd6d4d7887a86e5966bae9483cc786c6d18291",
+      "treeHash": "dd33b628970745955a145c6ddbef3265f462d956",
       "branch": "agy/p6-05",
       "cleanWorktreeRequired": true
     },
@@ -301,7 +301,7 @@
         "docker-compose.yml": "0535eabc2859b61056921b04c3fad9df75d96f16428656d99842ed4b2276a7c5"
       }
     },
-    "manifestDigest": "sha256:4fd9e7d79b157ec3db4320e5c9a0a57d09fc96e1ca21d6d283a4fff276792f07"
+    "manifestDigest": "sha256:07e86a786b8a808170a9ee54528a1b7113e73cf826f2365f6cc5515a5c0dfb61"
   },
   "manifestVerification": {
     "passed": true,
@@ -919,7 +919,7 @@
     "totalStages": 10,
     "passedStages": 10,
     "failedStages": 0,
-    "durationMs": 61,
+    "durationMs": 43,
     "stages": [
       {
         "id": "STG-01",
@@ -932,28 +932,28 @@
         "id": "STG-02",
         "title": "Health, Readiness & Capabilities Probes",
         "passed": true,
-        "durationMs": 8,
+        "durationMs": 6,
         "details": "Engines: html-v1, canvas-v1, svg-v1; custom-html-v1=false; profiles: mp4-720p-v1, preview-360p-v1"
       },
       {
         "id": "STG-03",
         "title": "Tenant Identity, API Key Authentication & Scope Enforcement",
         "passed": true,
-        "durationMs": 12,
+        "durationMs": 5,
         "details": "Invalid key rejected with 401: true; Cross-tenant access rejected with 404: true"
       },
       {
         "id": "STG-04",
         "title": "Asset Ingestion & Quarantine Pipeline",
         "passed": true,
-        "durationMs": 9,
-        "details": "Asset ast_c76ffe4a0db2 transitioned from quarantine to ready; SHA-256 verified"
+        "durationMs": 6,
+        "details": "Asset ast_5471fd01d1e5 transitioned from quarantine to ready; SHA-256 verified"
       },
       {
         "id": "STG-05",
         "title": "Curated Template Resolution & Variable Substitution",
         "passed": true,
-        "durationMs": 10,
+        "durationMs": 8,
         "details": "Template tpl_retail_promo_v1 resolved with Vietnamese diacritics; schemaValid=true, semanticValid=true"
       },
       {
@@ -961,28 +961,28 @@
         "title": "Idempotent Job Submission & Quota Reservation",
         "passed": true,
         "durationMs": 7,
-        "details": "Job job_aaab32a8316b admitted; re-submit with same idempotency key returned identical job (isReplayed=true)"
+        "details": "Job job_a11991b00b29 admitted; re-submit with same idempotency key returned identical job (isReplayed=true)"
       },
       {
         "id": "STG-07",
         "title": "Lease Claim, Stage Transitions & Heartbeats",
         "passed": true,
-        "durationMs": 5,
+        "durationMs": 3,
         "details": "Job transitioned queued -> rendering -> succeeded with 1 artifact"
       },
       {
         "id": "STG-08",
         "title": "Published Artifact Verification & Expiry TTL",
         "passed": true,
-        "durationMs": 7,
-        "details": "Artifact art_vid_e0f243b9 downloaded & verified SHA-256; expires_at=2026-11-04T14:56:56.426Z"
+        "durationMs": 5,
+        "details": "Artifact art_vid_aa172e54 downloaded & verified SHA-256; expires_at=2026-11-04T15:11:12.457Z"
       },
       {
         "id": "STG-09",
         "title": "Transactional Outbox Webhook Delivery & HMAC Signature",
         "passed": true,
         "durationMs": 1,
-        "details": "Webhook HMAC-SHA256 signature verified via CreativantaWebhookReceiver (event_id=evt_staging_smoke_1793803916431)"
+        "details": "Webhook HMAC-SHA256 signature verified via CreativantaWebhookReceiver (event_id=evt_staging_smoke_1793804772461)"
       },
       {
         "id": "STG-10",

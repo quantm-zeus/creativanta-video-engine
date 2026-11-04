@@ -1305,9 +1305,9 @@ describe('P4-04: Signed Webhooks, Challenge Echo Handshake, Outbox & Bounded Ret
           composition_revision: 1,
           profile: 'mp4-720p-v1',
           snapshot_json: '{}',
-          deadline_at: new Date(Date.now() + 3600 * 1000).toISOString(),
-          created_at: new Date().toISOString(),
-          updated_at: new Date().toISOString(),
+          deadline_at: new Date(h.clock().getTime() + 3600 * 1000).toISOString(),
+          created_at: h.clock().toISOString(),
+          updated_at: h.clock().toISOString(),
         });
         tx.insertScoped('outbox', {
           tenant_id: TENANT_A_ID,
@@ -1316,8 +1316,8 @@ describe('P4-04: Signed Webhooks, Challenge Echo Handshake, Outbox & Bounded Ret
           job_id: 'job_replay_test',
           state_version: 1,
           payload_json: '{}',
-          created_at: new Date().toISOString(),
-          processed_at: new Date().toISOString(),
+          created_at: h.clock().toISOString(),
+          processed_at: h.clock().toISOString(),
         });
         tx.insertScoped('webhook_deliveries', {
           tenant_id: TENANT_A_ID,
@@ -1328,11 +1328,11 @@ describe('P4-04: Signed Webhooks, Challenge Echo Handshake, Outbox & Bounded Ret
           state: 'delivered',
           attempt_count: 1,
           next_attempt_at: null,
-          deadline_at: new Date(Date.now() + 3600 * 1000).toISOString(),
+          deadline_at: new Date(h.clock().getTime() + 3600 * 1000).toISOString(),
           last_http_status: 200,
           replay_count_today: 0,
-          created_at: new Date().toISOString(),
-          updated_at: new Date().toISOString(),
+          created_at: h.clock().toISOString(),
+          updated_at: h.clock().toISOString(),
         });
       });
 
