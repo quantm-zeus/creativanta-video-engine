@@ -29,6 +29,10 @@
     "./regression": {
       "types": "./dist/regression/index.d.ts",
       "default": "./dist/regression/index.js"
+    },
+    "./examples": {
+      "types": "./dist/examples/index.d.ts",
+      "default": "./dist/examples/index.js"
     }
   },
   "scripts": {

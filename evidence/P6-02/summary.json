@@ -1,0 +1,92 @@
+{
+  "$schema": "creativanta.video-engine.p6-02-summary.v1",
+  "task_id": "P6-02",
+  "stream": "C+A",
+  "phase": "P6",
+  "base_commit": "19ce9d2dc9080e75a337aa31f99c15858cfd7ba3",
+  "tested_commit": "HEAD (agy/p6-02)",
+  "acceptance_ref": "docs/IMPLEMENTATION_PLAN.md: P6-02",
+  "acceptance_criteria": "Backup/PITR + object consistency + restore drill vào isolated env, measured RPO<=15min/RTO<=4h; custom/import stay off sau restore đến revalidation",
+  "status": "implemented_local",
+  "rpo_slo": {
+    "limit_seconds": 900,
+    "limit_human": "<= 15 minutes",
+    "measured_seconds": 0.0,
+    "measured_minutes": 0.0,
+    "target_met": true
+  },
+  "rto_slo": {
+    "limit_seconds": 14400,
+    "limit_human": "<= 4 hours",
+    "measured_seconds": 0.018,
+    "measured_minutes": 0.0,
+    "target_met": true
+  },
+  "post_restore_safety_flags": {
+    "custom_code_enabled": false,
+    "remote_import_enabled": false,
+    "outbound_webhooks_enabled": false,
+    "safety_state": "RESTORED_PENDING_REVALIDATION",
+    "revalidation_required": true
+  },
+  "object_consistency": {
+    "published_artifacts_reconciled": true,
+    "missing_artifacts_policy": "flagged_unavailable_never_faked",
+    "incomplete_uploads_rejected": true,
+    "orphaned_storage_keys_detected": true,
+    "fencing_tokens_advanced": true,
+    "cancel_requests_converged": true,
+    "outbound_webhooks_frozen": true,
+    "usage_reservations_released": true,
+    "ledger_invariant_passed": true
+  },
+  "verification_suite": {
+    "foreign_keys_check": "PASS",
+    "foreign_key_violations": 0,
+    "tenant_isolation_check": "PASS",
+    "catalog_integrity_check": "PASS",
+    "safety_lock_enforced": "PASS"
+  },
+  "artifacts": [
+    {
+      "path": "ops/recovery/backup-manager.mjs",
+      "sha256": "fc69fa01cd45452d77b15d784efe05b09062dc0a43678b18b9793f16a1fdf6b0"
+    },
+    {
+      "path": "ops/recovery/object-reconciler.mjs",
+      "sha256": "63887cf5539b9afe58264fe1a40f52252514a54ec0d6d10a211c2b934ba4805b"
+    },
+    {
+      "path": "ops/recovery/safety-gate-manager.mjs",
+      "sha256": "980a502e052ad23bd14f69f115840d50a3a99d1fbdcb31178c1d6f3b6f670b80"
+    },
+    {
+      "path": "ops/recovery/restore-drill-runner.mjs",
+      "sha256": "f0a83c4f30cff66eb6c1de0b22cca3c447a71487a22a8150a4cf5e24b1f01985"
+    },
+    {
+      "path": "ops/recovery/recovery-cli.mjs",
+      "sha256": "2dd33f018984b6ffb996adbe3be62816086b08f1b779e03ba612bbe2b3e4304e"
+    },
+    {
+      "path": "ops/runbooks/RUNBOOK-05-DB-STORAGE-OUTAGE.md",
+      "sha256": "e5e6326d5123d5ccce4200cc167b8a1dc93e2fb023b9ca98301eae1527164263"
+    },
+    {
+      "path": "ops/runbooks/synthetic-runbook-runner.mjs",
+      "sha256": "a0d55d3fa61f6b170c629ba6f443e00685ebd0ec31b308bde2bdd14a0e76cf12"
+    },
+    {
+      "path": "benchmarks/restore-drill-benchmark.mjs",
+      "sha256": "2039d3a05707bb4393067ee82e79957b6226bfbc6b3e474094c5137583b6fd9d"
+    },
+    {
+      "path": "ops/test/restore-drill.test.mjs",
+      "sha256": "6dad8a530e8025e3045f15ac5f2340fee9ebed1e0b4f065cc4b0bba496829c5e"
+    },
+    {
+      "path": "evidence/P6-02/report.md",
+      "sha256": "d6c288e22df3eea44d2c32b322b9a0540f820fb031bc1b572a394657b8203369"
+    }
+  ]
+}

@@ -9,5 +9,6 @@ export * from './client/index.js';
 export * from './subtitles/index.js';
 export * from './rights/index.js';
 export * from './regression/index.js';
+export * from './examples/index.js';
 
 export const SDK_VERSION = '0.1.0';
