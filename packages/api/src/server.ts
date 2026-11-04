@@ -42,11 +42,13 @@ import {
 } from './webhook/types.js';
 import {
   DownloadGrantError,
+  SignedArtifactDownloadGrantPayload,
   SignedDownloadGrantPayload,
   StorageGrantRevocationStore,
   UploadGrantError,
   defaultGrantRevocationStore,
   generateSignedUploadGrant,
+  verifySignedArtifactDownloadGrant,
   verifySignedDownloadGrant,
   verifySignedUploadGrant,
 } from './assets/upload-grant.js';
@@ -778,11 +780,92 @@ export function createServer({
         return;
       }
 
+      // Security: "no raw custom HTML origin" per docs/SECURITY.md
+      const isRawHtml =
+        grantPayload.mimeType.toLowerCase() === 'text/html' ||
+        grantPayload.filename.toLowerCase().endsWith('.html') ||
+        grantPayload.filename.toLowerCase().endsWith('.htm');
+      const safeMimeType = isRawHtml ? 'application/octet-stream' : grantPayload.mimeType;
+
       res.writeHead(200, {
-        'Content-Type': grantPayload.mimeType,
+        'Content-Type': safeMimeType,
         'Content-Length': fileData.buffer.byteLength,
         'ETag': `"${grantPayload.sha256}"`,
-        'Content-Disposition': `inline; filename="${grantPayload.filename}"`,
+        'Content-Disposition': `attachment; filename="${grantPayload.filename}"`,
+        'Content-Security-Policy': "default-src 'none'; sandbox",
+        'X-Content-Type-Options': 'nosniff',
+        'X-Frame-Options': 'DENY',
+        'Cache-Control': 'private, no-transform, max-age=300',
+      });
+      res.end(fileData.buffer);
+      return;
+    }
+
+    // Scoped Artifact Download Execution Endpoint (Bearer capability token in URL, Task P4-06)
+    const artDownloadExecMatch = /^\/v1\/artifacts\/download\/([^/]+)$/.exec(pathname);
+    if (artDownloadExecMatch && method === 'GET') {
+      const token = artDownloadExecMatch[1]!;
+      const pepper = repository ? repository.getPepper() : 'default_test_pepper_0123456789abcdef';
+      let grantPayload: SignedArtifactDownloadGrantPayload;
+      try {
+        grantPayload = verifySignedArtifactDownloadGrant(token, { pepper, revocationStore });
+      } catch (err) {
+        if (err instanceof DownloadGrantError) {
+          sendError(res, err.httpStatus, err.code, err.message, requestId);
+          return;
+        }
+        sendError(res, 403, 'INVALID_GRANT_SIGNATURE', 'Invalid artifact download grant token', requestId);
+        return;
+      }
+
+      if (repository) {
+        try {
+          const art = repository.getArtifact(grantPayload.tenantId, grantPayload.artifactId);
+          if (art.revoked_at !== null) {
+            sendError(res, 410, 'GRANT_REVOKED', 'Artifact has been revoked and grant is invalid', requestId);
+            return;
+          }
+          if (Date.parse(art.expires_at) <= Date.now()) {
+            sendError(res, 410, 'ARTIFACT_EXPIRED', 'Artifact retention has expired', requestId);
+            return;
+          }
+        } catch (err) {
+          if (err instanceof ResourceNotFoundError) {
+            sendError(res, 404, 'NOT_FOUND', err.message, requestId);
+            return;
+          }
+          throw err;
+        }
+      }
+
+      if (!quarantineStore) {
+        sendError(res, 503, 'SERVICE_UNAVAILABLE', 'Storage store is not available', requestId, true);
+        return;
+      }
+
+      const fileData = quarantineStore.getArtifactFileByStorageKey(grantPayload.storageKey);
+      if (!fileData) {
+        sendError(res, 404, 'STORAGE_OBJECT_NOT_FOUND', 'Artifact storage file not found on disk', requestId);
+        return;
+      }
+
+      // Security: "no raw custom HTML origin" per docs/SECURITY.md
+      // Never serve raw user/tenant HTML directly on API origin; enforce attachment + strict sandbox CSP
+      const isRawHtml =
+        grantPayload.mimeType.toLowerCase() === 'text/html' ||
+        grantPayload.filename.toLowerCase().endsWith('.html') ||
+        grantPayload.filename.toLowerCase().endsWith('.htm');
+      const safeMimeType = isRawHtml ? 'application/octet-stream' : grantPayload.mimeType;
+
+      res.writeHead(200, {
+        'Content-Type': safeMimeType,
+        'Content-Length': fileData.buffer.byteLength,
+        'ETag': `"${grantPayload.sha256}"`,
+        'Content-Disposition': `attachment; filename="${grantPayload.filename}"`,
+        'Content-Security-Policy': "default-src 'none'; sandbox",
+        'X-Content-Type-Options': 'nosniff',
+        'X-Frame-Options': 'DENY',
+        'Cache-Control': 'private, no-transform, max-age=300',
       });
       res.end(fileData.buffer);
       return;
@@ -2228,7 +2311,18 @@ export function createServer({
         if (artDownloadMatch && method === 'GET') {
           const auth = authenticateAndAuthorize(['jobs:read']);
           if (!auth) return;
-          const grant = repository.getArtifactDownloadGrant(auth.tenantId, artDownloadMatch[1]!);
+          const rawBaseUrl = config.CVE_PUBLIC_BASE_URL;
+          const hostHeader = req.headers.host || '127.0.0.1';
+          const baseUrl =
+            !rawBaseUrl || rawBaseUrl.includes(':0')
+              ? `http://${hostHeader}/v1`
+              : rawBaseUrl;
+          const grant = repository.getArtifactDownloadGrant(
+            auth.tenantId,
+            artDownloadMatch[1]!,
+            new Date(),
+            baseUrl,
+          );
           res.writeHead(200);
           res.end(JSON.stringify(grant));
           return;

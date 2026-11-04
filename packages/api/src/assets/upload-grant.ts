@@ -217,6 +217,24 @@ export interface SignedDownloadGrant extends SignedDownloadGrantPayload {
   downloadUrl: string;
 }
 
+export interface SignedArtifactDownloadGrantPayload {
+  tenantId: string;
+  artifactId: string;
+  jobId: string;
+  storageKey: string;
+  filename: string;
+  mimeType: string;
+  sha256: string;
+  bytes: number;
+  expiresAt: string; // ISO 8601 UTC
+  grantKind: 'artifact_download';
+}
+
+export interface SignedArtifactDownloadGrant extends SignedArtifactDownloadGrantPayload {
+  token: string;
+  downloadUrl: string;
+}
+
 export class DownloadGrantError extends Error {
   public readonly httpStatus: number;
   public readonly code: string;
@@ -392,6 +410,174 @@ export function verifySignedDownloadGrant(
 }
 
 /**
+ * Creates an HMAC-SHA256 signature for artifact download grant parameters.
+ */
+function computeArtifactDownloadGrantSignature(
+  payload: Omit<SignedArtifactDownloadGrantPayload, 'token'>,
+  pepper: string,
+): string {
+  const hmac = crypto.createHmac('sha256', pepper);
+  const data = [
+    payload.tenantId,
+    payload.artifactId,
+    payload.jobId,
+    payload.storageKey,
+    payload.filename,
+    payload.mimeType,
+    payload.sha256,
+    String(payload.bytes),
+    payload.expiresAt,
+    payload.grantKind,
+  ].join(':');
+  hmac.update(data, 'utf8');
+  return hmac.digest('hex');
+}
+
+/**
+ * Generates a signed download grant for published artifacts with a max 5-minute (300s) TTL
+ * per docs/API.md line 44 and docs/SECURITY.md line 23.
+ */
+export function generateSignedArtifactDownloadGrant(
+  payload: {
+    tenantId: string;
+    artifactId: string;
+    jobId: string;
+    storageKey: string;
+    filename: string;
+    mimeType: string;
+    sha256: string;
+    bytes: number;
+    ttlSeconds?: number;
+  },
+  options: {
+    pepper: string;
+    baseUrl: string;
+    now?: Date;
+  },
+): SignedArtifactDownloadGrant {
+  const now = options.now ?? new Date();
+  const ttlSeconds = Math.min(payload.ttlSeconds ?? 300, 300);
+  const expiresAt = new Date(now.getTime() + ttlSeconds * 1000).toISOString();
+
+  const grantPayload: SignedArtifactDownloadGrantPayload = {
+    tenantId: payload.tenantId,
+    artifactId: payload.artifactId,
+    jobId: payload.jobId,
+    storageKey: payload.storageKey,
+    filename: payload.filename || payload.storageKey.split('/').pop() || 'artifact.bin',
+    mimeType: payload.mimeType,
+    sha256: payload.sha256,
+    bytes: payload.bytes,
+    expiresAt,
+    grantKind: 'artifact_download',
+  };
+
+  const sig = computeArtifactDownloadGrantSignature(grantPayload, options.pepper);
+  const envelope = {
+    ...grantPayload,
+    sig,
+  };
+
+  const token = Buffer.from(JSON.stringify(envelope), 'utf8').toString('base64url');
+  const cleanBaseUrl = options.baseUrl.replace(/\/+$/, '');
+  const downloadUrl = `${cleanBaseUrl}/artifacts/download/${token}`;
+
+  return {
+    ...grantPayload,
+    token,
+    downloadUrl,
+  };
+}
+
+/**
+ * Verifies and decodes a signed artifact download grant token in constant time.
+ */
+export function verifySignedArtifactDownloadGrant(
+  token: string,
+  options: {
+    pepper: string;
+    now?: Date;
+    revocationStore?: StorageGrantRevocationStore;
+  },
+): SignedArtifactDownloadGrantPayload {
+  let envelope: (SignedArtifactDownloadGrantPayload & { sig: string }) | null = null;
+  try {
+    const jsonStr = Buffer.from(token, 'base64url').toString('utf8');
+    envelope = JSON.parse(jsonStr) as SignedArtifactDownloadGrantPayload & { sig: string };
+  } catch {
+    throw new DownloadGrantError('Malformed artifact download grant token', 400, 'MALFORMED_DOWNLOAD_TOKEN');
+  }
+
+  if (
+    !envelope ||
+    typeof envelope !== 'object' ||
+    typeof envelope.sig !== 'string' ||
+    typeof envelope.tenantId !== 'string' ||
+    typeof envelope.artifactId !== 'string' ||
+    typeof envelope.jobId !== 'string' ||
+    typeof envelope.storageKey !== 'string' ||
+    typeof envelope.filename !== 'string' ||
+    typeof envelope.mimeType !== 'string' ||
+    typeof envelope.sha256 !== 'string' ||
+    typeof envelope.bytes !== 'number' ||
+    typeof envelope.expiresAt !== 'string' ||
+    envelope.grantKind !== 'artifact_download'
+  ) {
+    throw new DownloadGrantError('Invalid artifact download grant token structure', 400, 'INVALID_DOWNLOAD_TOKEN');
+  }
+
+  const expectedSig = computeArtifactDownloadGrantSignature(
+    {
+      tenantId: envelope.tenantId,
+      artifactId: envelope.artifactId,
+      jobId: envelope.jobId,
+      storageKey: envelope.storageKey,
+      filename: envelope.filename,
+      mimeType: envelope.mimeType,
+      sha256: envelope.sha256,
+      bytes: envelope.bytes,
+      expiresAt: envelope.expiresAt,
+      grantKind: 'artifact_download',
+    },
+    options.pepper,
+  );
+
+  const providedSigBuf = Buffer.from(envelope.sig, 'hex');
+  const expectedSigBuf = Buffer.from(expectedSig, 'hex');
+
+  if (
+    providedSigBuf.length !== expectedSigBuf.length ||
+    !crypto.timingSafeEqual(providedSigBuf, expectedSigBuf)
+  ) {
+    throw new DownloadGrantError('Artifact download grant signature verification failed', 403, 'INVALID_GRANT_SIGNATURE');
+  }
+
+  if (options.revocationStore?.isGrantRevoked(envelope.tenantId, envelope.artifactId, envelope.sig)) {
+    throw new DownloadGrantError('Artifact download grant has been revoked', 410, 'GRANT_REVOKED');
+  }
+
+  const nowTime = (options.now ?? new Date()).getTime();
+  const expiryTime = Date.parse(envelope.expiresAt);
+
+  if (Number.isNaN(expiryTime) || nowTime > expiryTime) {
+    throw new DownloadGrantError('Artifact download grant has expired', 410, 'ARTIFACT_GRANT_EXPIRED');
+  }
+
+  return {
+    tenantId: envelope.tenantId,
+    artifactId: envelope.artifactId,
+    jobId: envelope.jobId,
+    storageKey: envelope.storageKey,
+    filename: envelope.filename,
+    mimeType: envelope.mimeType,
+    sha256: envelope.sha256,
+    bytes: envelope.bytes,
+    expiresAt: envelope.expiresAt,
+    grantKind: 'artifact_download',
+  };
+}
+
+/**
  * Durable in-memory storage grant revocation store.
  * Tracks revoked tokens and revoked asset IDs across tenant operations.
  */
@@ -407,6 +593,10 @@ export class StorageGrantRevocationStore {
 
   public revokeAssetGrants(tenantId: string, assetId: string, now = Date.now()): void {
     this.revokedAssetTimestamps.set(`${tenantId}:${assetId}`, now);
+  }
+
+  public revokeArtifactGrants(tenantId: string, artifactId: string, now = Date.now()): void {
+    this.revokedAssetTimestamps.set(`${tenantId}:${artifactId}`, now);
   }
 
   public isGrantRevoked(tenantId: string, assetId: string, sig?: string): boolean {
