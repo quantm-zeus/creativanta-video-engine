@@ -63,7 +63,8 @@
 | [packages/custom-runtime/tsconfig.json](../../packages/custom-runtime/tsconfig.json) | Cấu hình kiểm tra kiểu tĩnh TypeScript (`noEmit`) | `c71773add550b4d13688126c73ff6049f97c38b9d227340d8bae8821fbadea02` |
 | [packages/custom-runtime/test/p7-01-custom-runtime.test.mjs](../../packages/custom-runtime/test/p7-01-custom-runtime.test.mjs) | Bộ kiểm thử đơn vị và bảo mật toàn diện (15 test cases / 3 test suites) | `97d0309c9642ae775647b586fba54f1daa7e512f21c3250aa4b26aea84e8ccf7` |
 | [evidence/P7-01/ADR-0002-custom-scene-microvm-runtime.md](./ADR-0002-custom-scene-microvm-runtime.md) | Bản lưu trữ bằng chứng ADR 0002 trong thư mục `evidence/P7-01/` | `c40004ef55f0722323972939bba77d7b7c0a7b33db5dec93ca496823edb87969` |
-| [evidence/P7-01/microvm-runtime-audit.json](./microvm-runtime-audit.json) | Báo cáo JSON tự kiểm tra 12/12 hạng mục `CRM-01`..`CRM-12` | `3b4ebeaf67b30d0062233d61ed6c9c00771e868f701a56c20c51dfd5b6c9c385` |
+| [evidence/P7-01/microvm-runtime-audit.json](./microvm-runtime-audit.json) | Báo cáo JSON tự kiểm tra 12/12 hạng mục `CRM-01`..`CRM-12` | `04abcecb0a0584dd2c3ba80b834a1ff81b0beeec27d75240559c1c5eb93b4b0c` |
+| [packages/api/test/p4-04-signed-webhooks.test.mjs](../../packages/api/test/p4-04-signed-webhooks.test.mjs) | Sửa lỗi trôi đồng hồ ảo (`h.clock()`) trong bài kiểm thử P4-04 khiến CI PR #41 thất bại | `d70861168b44b32ae4e4ba2088f05d957f709abf50a2abd480f197a14218ffed` |
 
 ---
 
@@ -74,6 +75,9 @@
 | `node packages/custom-runtime/src/cli.mjs --write-evidence evidence/P7-01` | `0` | `PASS` | Thực thi 12/12 bài kiểm tra tự động `CRM-01`..`CRM-12` và ghi báo cáo tại [evidence/P7-01/microvm-runtime-audit.json](./microvm-runtime-audit.json). |
 | `npx tsc -p packages/custom-runtime/tsconfig.json --noEmit` | `0` | `PASS` | Kiểm tra kiểu tĩnh toàn bộ mã nguồn `.mjs` và `.d.ts` trong `packages/custom-runtime/` không có lỗi. |
 | `node --test packages/custom-runtime/test/p7-01-custom-runtime.test.mjs` | `0` | `PASS` | 15/15 bài kiểm thử (3 suites) đạt 100%: ADR-0002, default-off, anti-downgrade lock, gVisor explicit review gate, C1–C6 attestation, bounds, zero egress/secrets/host FS, two-phase disposable build & render microVM. |
+| `node --test packages/api/test/p4-04-signed-webhooks.test.mjs` | `0` | `PASS` | 21/21 bài kiểm thử P4-04 đạt 100% sau khi đồng bộ dấu thời gian `created_at`/`deadline_at` theo đồng hồ ảo `h.clock()`. |
+| `pnpm -r --if-present lint && pnpm -r --if-present typecheck && pnpm -r --if-present build` | `0` | `PASS` | Toàn bộ 7 gói workspace vượt qua lint, typecheck và build không lỗi. |
+| `pnpm -r --if-present test` | `0` | `PASS` | Toàn bộ bộ kiểm thử monorepo (`contracts`, `controller`, `api` 268/268, `ingest`, `sdk`, `templates`, `renderers`) đạt 100%. |
 | `node --test ops/test/security-review-p6-04.test.mjs` | `0` | `PASS` | 4/4 suite bảo mật nền tảng (`P6-04` 24/24 checks, bao gồm SBOM/lockfile integrity, renderer security, API/tenant isolation) tiếp tục đạt 100%. |
 | `node packages/controller/dist/index.js --self-test` | `0` | `PASS` | 8/8 bài kiểm tra hộp cát của controller (`custom_code_disabled_gate`, non-root, Chromium flags, FFmpeg whitelist, cgroup v2, zero egress) đạt 100%. |
 | `node scripts/health-check.mjs` | `0` | `PASS` | Kiểm tra cấu hình mặc định `CVE_CUSTOM_CODE_ENABLED=false`, `CVE_CUSTOM_RUNTIME="disabled"`, `custom-html-v1: false`. |

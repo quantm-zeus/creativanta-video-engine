@@ -5,10 +5,10 @@
   "totalChecks": 12,
   "passedChecks": 12,
   "failedChecks": 0,
-  "durationMs": 666,
-  "timestamp": "2026-11-04T14:54:31.134Z",
+  "durationMs": 659,
+  "timestamp": "2026-11-04T15:16:53.582Z",
   "hostVirtualization": {
-    "probedAt": "2026-11-04T14:54:30.473Z",
+    "probedAt": "2026-11-04T15:16:52.926Z",
     "devKvmPath": "/dev/kvm",
     "kvmDeviceExists": false,
     "kvmReadableWritable": false,
@@ -36,7 +36,7 @@
       "category": "adr_and_default_off",
       "status": "PASS",
       "passed": true,
-      "durationMs": 1.88,
+      "durationMs": 1.49,
       "details": {
         "adrId": "ADR-0002",
         "defaultCustomCodeEnabled": false,
@@ -50,7 +50,7 @@
       "category": "anti_downgrade",
       "status": "PASS",
       "passed": true,
-      "durationMs": 32.68,
+      "durationMs": 25.07,
       "details": {
         "blockedDowngradeRuntimesCount": 14,
         "blockedDowngradeRuntimes": [
@@ -77,7 +77,7 @@
       "category": "gvisor_explicit_review",
       "status": "PASS",
       "passed": true,
-      "durationMs": 4.96,
+      "durationMs": 4.86,
       "details": {
         "unreviewedBlockedReason": "GVISOR_EXPLICIT_REVIEW_REQUIRED",
         "explicitSignedReviewAccepted": true,
@@ -90,7 +90,7 @@
       "category": "host_virtualization_probe",
       "status": "PASS",
       "passed": true,
-      "durationMs": 0.32,
+      "durationMs": 0.3,
       "details": {
         "actualHostKvmAvailable": false,
         "actualHostFirecrackerReady": false,
@@ -104,7 +104,7 @@
       "category": "c1_c6_gates",
       "status": "PASS",
       "passed": true,
-      "durationMs": 0.5,
+      "durationMs": 0.44,
       "details": {
         "verifiedGatesCount": 6,
         "digestDriftBlockedReason": "ROOTFS_DIGEST_DRIFT"
@@ -116,9 +116,9 @@
       "category": "isolated_build",
       "status": "PASS",
       "passed": true,
-      "durationMs": 211.83,
+      "durationMs": 130.08,
       "details": {
-        "buildVmId": "vm_build_1_30a6a1ee",
+        "buildVmId": "vm_build_1_f162c1bf",
         "sourceSha256": "31a5020a938d477ee6655b74eaab6691a4ed710e715c7520013b08c1d19c0eb3",
         "buildSha256": "52d5fa91874edf0c52422a338f3b8dc7678b4828ab9922f94534de07afa2d597",
         "cspScriptHash": "'sha256-UtX6kYdO3wxSQiozjzuNx2eLSCirmSL5RTTeB6+i1Zc='",
@@ -132,7 +132,7 @@
       "category": "source_policy_scanner",
       "status": "PASS",
       "passed": true,
-      "durationMs": 2.83,
+      "durationMs": 1.04,
       "details": {
         "maliciousPayloadsBlockedCount": 6,
         "approvedPreinstalledImports": [
@@ -148,9 +148,9 @@
       "category": "isolated_render",
       "status": "PASS",
       "passed": true,
-      "durationMs": 142.73,
+      "durationMs": 104.12,
       "details": {
-        "renderVmId": "vm_render_2_a8348825",
+        "renderVmId": "vm_render_2_435444d7",
         "artifactSha256": "c8c5af84ac765d911a9ab05bc9a19d15d0b1bc5cf0654eff4469ce536410654e",
         "artifactBytes": 24,
         "renderVmDestroyed": true,
@@ -164,7 +164,7 @@
       "category": "zero_egress",
       "status": "PASS",
       "passed": true,
-      "durationMs": 0.22,
+      "durationMs": 0.23,
       "details": {
         "nicAttachmentBlockedReason": "EGRESS_NIC_FORBIDDEN",
         "forbiddenChromiumFlagsCount": 12
@@ -176,7 +176,7 @@
       "category": "zero_secrets",
       "status": "PASS",
       "passed": true,
-      "durationMs": 1.41,
+      "durationMs": 1.57,
       "details": {
         "secretEnvKeysBlocked": 5,
         "canaryScrubbed": true
@@ -188,7 +188,7 @@
       "category": "zero_host_fs",
       "status": "PASS",
       "passed": true,
-      "durationMs": 109.64,
+      "durationMs": 243.43,
       "details": {
         "forbiddenHostPathsBlocked": 5,
         "readOnlyInputWriteDeniedCode": "EACCES"
@@ -200,7 +200,7 @@
       "category": "bounds_and_fencing",
       "status": "PASS",
       "passed": true,
-      "durationMs": 145.81,
+      "durationMs": 141.71,
       "details": {
         "infiniteLoopKilledCode": "RENDER_TIMEOUT",
         "diskBombBlockedCode": "SANDBOX_RESOURCE_LIMIT",
