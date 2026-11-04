@@ -17,6 +17,10 @@
     "./client": {
       "types": "./dist/client/index.d.ts",
       "default": "./dist/client/index.js"
+    },
+    "./examples": {
+      "types": "./dist/examples/index.d.ts",
+      "default": "./dist/examples/index.js"
     }
   },
   "scripts": {

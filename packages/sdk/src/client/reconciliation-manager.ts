@@ -1,5 +1,5 @@
 /**
- * Job Reconciliation Manager for Creativanta (Task P5-03).
+ * Job Reconciliation Manager for Creativanta (Tasks P5-03 & P5-04).
  *
  * Blends real-time webhook callback processing with polling reconciliation:
  *   - Tracks in-flight jobs by jobId and externalReference
@@ -11,7 +11,7 @@
 import { EventEmitter } from 'node:events';
 import type { CreativantaClient } from './creativanta-client.js';
 import type { CreativantaWebhookReceiver } from './webhook-receiver.js';
-import type { JobEventData, JobResponse, WebhookEventPayload } from './types.js';
+import type { JobEventData, JobResponse, PollReconcileOptions, WebhookEventPayload } from './types.js';
 
 export interface TrackedJobState {
   jobId: string;
@@ -30,13 +30,21 @@ export class JobReconciliationManager extends EventEmitter {
   private readonly trackedJobs = new Map<string, TrackedJobState>();
   private readonly externalRefToJobId = new Map<string, string>();
 
-  constructor(options: {
-    client: CreativantaClient;
-    receiver?: CreativantaWebhookReceiver;
-  }) {
+  constructor(
+    options:
+      | {
+          client: CreativantaClient;
+          receiver?: CreativantaWebhookReceiver;
+        }
+      | CreativantaClient,
+  ) {
     super();
-    this.client = options.client;
-    this.receiver = options.receiver;
+    if ('client' in options) {
+      this.client = options.client;
+      this.receiver = options.receiver;
+    } else {
+      this.client = options;
+    }
 
     if (this.receiver) {
       this.bindReceiver(this.receiver);
@@ -98,6 +106,19 @@ export class JobReconciliationManager extends EventEmitter {
 
     const latest = await this.client.getJob(jobId);
     return this.updateFromJobResponse(latest);
+  }
+
+  /**
+   * Waits for a job to reach a terminal state by polling reconciliation with backoff.
+   */
+  public async waitForJobTerminal(jobIdOrExternalRef: string, options?: PollReconcileOptions): Promise<JobResponse> {
+    let jobId = jobIdOrExternalRef;
+    if (this.externalRefToJobId.has(jobIdOrExternalRef)) {
+      jobId = this.externalRefToJobId.get(jobIdOrExternalRef)!;
+    }
+    const finalJob = await this.client.reconcileJob(jobId, options);
+    this.updateFromJobResponse(finalJob);
+    return finalJob;
   }
 
   /**
