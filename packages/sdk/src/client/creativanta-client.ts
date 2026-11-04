@@ -1,5 +1,5 @@
 /**
- * Creativanta Video Engine Client (Task P5-03).
+ * Creativanta Video Engine Client (Tasks P5-03 & P5-04).
  *
  * Primary TypeScript client for Creativanta integration:
  *   - Zero shared DB assumptions: 100% pure HTTP client via REST API v1
@@ -7,6 +7,7 @@
  *   - Cancellation semantics (202 / 200 / 409 JOB_TERMINAL)
  *   - Polling reconciliation with exponential backoff (2s -> 10s) and state_version guard
  *   - Download-expiry refresh and download integrity verification
+ *   - Full typed methods covering v1 catalog: capabilities, compositions, templates, assets, jobs, webhooks, usage
  */
 
 import crypto from 'node:crypto';
@@ -19,14 +20,32 @@ import { HttpTransport } from './http-transport.js';
 import type {
   AdmittedJobResponse,
   ArtifactDownloadGrant,
+  AssetUploadInitiateOptions,
+  AssetUploadInitiateResponse,
   CancelJobOptions,
   CancelJobResult,
+  CapabilitiesResponse,
+  CompositionResponse,
+  CreateCompositionOptions,
+  CreateCompositionRevisionOptions,
   CreatePreviewJobOptions,
   CreateRenderJobOptions,
+  CreateTemplateOptions,
+  CreateTemplateRevisionOptions,
   CreativantaClientConfig,
   DownloadArtifactOptions,
+  IdempotencyOptions,
   JobResponse,
   PollReconcileOptions,
+  RegisterWebhookEndpointOptions,
+  RotateSecretResponse,
+  TemplateResponse,
+  TemplateRevisionResponse,
+  UsageQueryOptions,
+  UsageResponse,
+  ValidateCompositionOptions,
+  ValidateCompositionResult,
+  WebhookEndpointRecord,
 } from './types.js';
 
 export class CreativantaClient {
@@ -40,6 +59,21 @@ export class CreativantaClient {
     this.defaultWebhookEndpointId = config.defaultWebhookEndpointId;
     this.clock = config.clock ?? (() => new Date());
     this.customFetch = config.customFetch ?? globalThis.fetch;
+  }
+
+  // =========================================================================
+  // Capabilities & System Information
+  // =========================================================================
+
+  /**
+   * Retrieves engine capabilities, profiles, and runtime limits (`GET /v1/capabilities`).
+   */
+  public async getCapabilities(): Promise<CapabilitiesResponse> {
+    const res = await this.transport.request<CapabilitiesResponse>({
+      method: 'GET',
+      path: '/v1/capabilities',
+    });
+    return res.data;
   }
 
   // =========================================================================
@@ -75,6 +109,7 @@ export class CreativantaClient {
       path: '/v1/render-jobs',
       body,
       idempotencyKey: options.idempotencyKey,
+      signal: options.signal,
     });
 
     return {
@@ -119,6 +154,7 @@ export class CreativantaClient {
       path: '/v1/previews',
       body,
       idempotencyKey: options.idempotencyKey,
+      signal: options.signal,
     });
 
     return {
@@ -138,6 +174,23 @@ export class CreativantaClient {
     const res = await this.transport.request<JobResponse>({
       method: 'GET',
       path: `/v1/jobs/${jobId}`,
+    });
+    return res.data;
+  }
+
+  /**
+   * Lists jobs with optional filtering (`GET /v1/jobs`).
+   */
+  public async listJobs(query?: {
+    limit?: number;
+    cursor?: string;
+    kind?: 'render' | 'preview' | string;
+    state?: string;
+  }): Promise<{ data: JobResponse[]; next_cursor: string | null }> {
+    const res = await this.transport.request<{ data: JobResponse[]; next_cursor: string | null }>({
+      method: 'GET',
+      path: '/v1/jobs',
+      query,
     });
     return res.data;
   }
@@ -175,6 +228,7 @@ export class CreativantaClient {
       path: `/v1/jobs/${jobId}/cancel`,
       body,
       idempotencyKey: options?.idempotencyKey,
+      signal: options?.signal,
     });
 
     return {
@@ -336,64 +390,181 @@ export class CreativantaClient {
   }
 
   // =========================================================================
-  // Asset & Template Helpers (Optional Client Conveniences)
+  // Compositions & Validation
   // =========================================================================
 
-  public async initiateAssetUpload(options: {
-    filename: string;
-    mimeType: string;
-    bytes: number;
-    sha256: string;
-    rights: {
-      basis: 'owned' | 'licensed' | 'public_domain';
-      source: string;
-      attribution: string;
-      expires_at?: string;
+  /**
+   * Validates a composition specification without rendering (`POST /v1/compositions/validate`).
+   */
+  public async validateComposition(options: ValidateCompositionOptions): Promise<ValidateCompositionResult> {
+    const body: Record<string, unknown> = {
+      spec: options.spec,
+      profile: options.profile,
     };
-    idempotencyKey?: string;
-  }): Promise<{ asset_id: string; upload_method: string; upload_url: string; expires_at: string }> {
-    const res = await this.transport.request<{
-      asset_id: string;
-      upload_method: string;
-      upload_url: string;
-      expires_at: string;
-    }>({
+    if (options.baseCompositionId) body['base_composition_id'] = options.baseCompositionId;
+    if (options.baseRevision !== undefined) body['base_revision'] = options.baseRevision;
+
+    const res = await this.transport.request<ValidateCompositionResult>({
       method: 'POST',
-      path: '/v1/assets/uploads',
-      body: {
-        filename: options.filename,
-        mime_type: options.mimeType,
-        bytes: options.bytes,
-        sha256: options.sha256,
-        rights: options.rights,
-      },
+      path: '/v1/compositions/validate',
+      body,
       idempotencyKey: options.idempotencyKey,
     });
     return res.data;
   }
 
-  public async completeAssetUpload(
-    assetId: string,
-    sha256: string,
-    idempotencyKey?: string,
-  ): Promise<{ status: string }> {
-    const res = await this.transport.request<{ status: string }>({
+  /**
+   * Creates a new composition from full scene spec (`POST /v1/compositions`).
+   */
+  public async createComposition(options: CreateCompositionOptions): Promise<CompositionResponse> {
+    const res = await this.transport.request<CompositionResponse>({
       method: 'POST',
-      path: `/v1/assets/${assetId}/complete`,
-      body: { sha256 },
-      idempotencyKey,
+      path: '/v1/compositions',
+      body: {
+        name: options.name,
+        spec: options.spec,
+      },
+      idempotencyKey: options.idempotencyKey,
     });
-    return res.data;
+    return {
+      ...res.data,
+      isReplayed: res.isReplayed,
+    };
   }
 
-  public async getAsset(assetId: string): Promise<Record<string, unknown>> {
-    const res = await this.transport.request<Record<string, unknown>>({
+  /**
+   * Gets metadata and current revision of a composition (`GET /v1/compositions/{id}`).
+   */
+  public async getComposition(compositionId: string): Promise<CompositionResponse> {
+    const res = await this.transport.request<CompositionResponse>({
       method: 'GET',
-      path: `/v1/assets/${assetId}`,
+      path: `/v1/compositions/${compositionId}`,
     });
     return res.data;
   }
 
+  /**
+   * Gets an immutable scene revision document (`GET /v1/compositions/{id}/revisions/{revision}`).
+   */
+  public async getCompositionRevision(compositionId: string, revision: number): Promise<CompositionResponse> {
+    const res = await this.transport.request<CompositionResponse>({
+      method: 'GET',
+      path: `/v1/compositions/${compositionId}/revisions/${revision}`,
+    });
+    return res.data;
+  }
+
+  /**
+   * Creates a new composition revision with optimistic concurrency (`POST /v1/compositions/{id}/revisions`).
+   */
+  public async createCompositionRevision(
+    compositionId: string,
+    options: CreateCompositionRevisionOptions,
+  ): Promise<CompositionResponse> {
+    const body: Record<string, unknown> = {
+      base_revision: options.baseRevision,
+      spec: options.spec,
+    };
+    if (options.changeNote) {
+      body['change_note'] = options.changeNote;
+    }
+
+    const res = await this.transport.request<CompositionResponse>({
+      method: 'POST',
+      path: `/v1/compositions/${compositionId}/revisions`,
+      body,
+      idempotencyKey: options.idempotencyKey,
+    });
+    return {
+      ...res.data,
+      isReplayed: res.isReplayed,
+    };
+  }
+
+  // =========================================================================
+  // Templates Catalog & Instantiation
+  // =========================================================================
+
+  /**
+   * Lists available curated and tenant templates (`GET /v1/templates`).
+   */
+  public async listTemplates(query?: {
+    limit?: number;
+    cursor?: string;
+    visibility?: 'curated' | 'tenant';
+  }): Promise<{ data: TemplateResponse[]; next_cursor: string | null }> {
+    const res = await this.transport.request<{ data: TemplateResponse[]; next_cursor: string | null }>({
+      method: 'GET',
+      path: '/v1/templates',
+      query,
+    });
+    return res.data;
+  }
+
+  /**
+   * Gets an exact immutable template revision (`GET /v1/templates/{id}/revisions/{revision}`).
+   */
+  public async getTemplateRevision(templateId: string, revision: number): Promise<TemplateRevisionResponse> {
+    const res = await this.transport.request<TemplateRevisionResponse>({
+      method: 'GET',
+      path: `/v1/templates/${templateId}/revisions/${revision}`,
+    });
+    return res.data;
+  }
+
+  /**
+   * Creates a new tenant template (`POST /v1/templates`).
+   */
+  public async createTemplate(options: CreateTemplateOptions): Promise<{ id: string; revision: number; source_digest?: string }> {
+    const body: Record<string, unknown> = {
+      name: options.name,
+      variables_schema: options.variablesSchema,
+      defaults: options.defaults,
+      composition_spec: options.compositionSpec,
+      supported_locales: options.supportedLocales,
+    };
+    if (options.sourceTemplate) {
+      body['source_template'] = options.sourceTemplate;
+    }
+
+    const res = await this.transport.request<{ id: string; revision: number; source_digest?: string }>({
+      method: 'POST',
+      path: '/v1/templates',
+      body,
+      idempotencyKey: options.idempotencyKey,
+    });
+    return res.data;
+  }
+
+  /**
+   * Creates a new template revision (`POST /v1/templates/{id}/revisions`).
+   */
+  public async createTemplateRevision(
+    templateId: string,
+    options: CreateTemplateRevisionOptions,
+  ): Promise<{ id: string; revision: number; source_digest?: string }> {
+    const body: Record<string, unknown> = {
+      base_revision: options.baseRevision,
+    };
+    if (options.name) body['name'] = options.name;
+    if (options.variablesSchema) body['variables_schema'] = options.variablesSchema;
+    if (options.defaults) body['defaults'] = options.defaults;
+    if (options.compositionSpec) body['composition_spec'] = options.compositionSpec;
+    if (options.supportedLocales) body['supported_locales'] = options.supportedLocales;
+    if (options.changeNote) body['change_note'] = options.changeNote;
+
+    const res = await this.transport.request<{ id: string; revision: number; source_digest?: string }>({
+      method: 'POST',
+      path: `/v1/templates/${templateId}/revisions`,
+      body,
+      idempotencyKey: options.idempotencyKey,
+    });
+    return res.data;
+  }
+
+  /**
+   * Instantiates a template with variables into a composition revision 1 (`POST /v1/templates/{id}/instantiate`).
+   */
   public async instantiateTemplate(
     templateId: string,
     options: {
@@ -418,6 +589,168 @@ export class CreativantaClient {
         locale: options.locale ?? 'vi-VN',
       },
       idempotencyKey: options.idempotencyKey,
+    });
+    return res.data;
+  }
+
+  // =========================================================================
+  // Asset Management
+  // =========================================================================
+
+  /**
+   * Initiates asset upload and receives quarantine signed upload grant (`POST /v1/assets/uploads`).
+   */
+  public async initiateAssetUpload(options: AssetUploadInitiateOptions): Promise<AssetUploadInitiateResponse> {
+    const res = await this.transport.request<AssetUploadInitiateResponse>({
+      method: 'POST',
+      path: '/v1/assets/uploads',
+      body: {
+        filename: options.filename,
+        mime_type: options.mimeType,
+        bytes: options.bytes,
+        sha256: options.sha256,
+        rights: options.rights,
+      },
+      idempotencyKey: options.idempotencyKey,
+    });
+    return {
+      ...res.data,
+      isReplayed: res.isReplayed,
+    };
+  }
+
+  /**
+   * Completes asset upload and triggers async probing/normalization (`POST /v1/assets/{id}/complete`).
+   */
+  public async completeAssetUpload(
+    assetId: string,
+    sha256: string,
+    idempotencyKey?: string,
+  ): Promise<{ status: string }> {
+    const res = await this.transport.request<{ status: string }>({
+      method: 'POST',
+      path: `/v1/assets/${assetId}/complete`,
+      body: { sha256 },
+      idempotencyKey,
+    });
+    return res.data;
+  }
+
+  /**
+   * Retrieves asset metadata and processing status (`GET /v1/assets/{id}`).
+   */
+  public async getAsset(assetId: string): Promise<Record<string, unknown>> {
+    const res = await this.transport.request<Record<string, unknown>>({
+      method: 'GET',
+      path: `/v1/assets/${assetId}`,
+    });
+    return res.data;
+  }
+
+  /**
+   * Revokes and requests deletion of an asset (`DELETE /v1/assets/{id}`).
+   */
+  public async deleteAsset(assetId: string, options?: IdempotencyOptions): Promise<{ id: string; status: string }> {
+    const res = await this.transport.request<{ id: string; status: string }>({
+      method: 'DELETE',
+      path: `/v1/assets/${assetId}`,
+      idempotencyKey: options?.idempotencyKey,
+    });
+    return res.data;
+  }
+
+  // =========================================================================
+  // Webhook Endpoints Management
+  // =========================================================================
+
+  /**
+   * Registers a new webhook endpoint (`POST /v1/webhook-endpoints`).
+   * Note: signing_secret is only returned once upon registration.
+   */
+  public async registerWebhookEndpoint(
+    options: RegisterWebhookEndpointOptions,
+  ): Promise<WebhookEndpointRecord & { signing_secret: string }> {
+    const res = await this.transport.request<WebhookEndpointRecord & { signing_secret: string }>({
+      method: 'POST',
+      path: '/v1/webhook-endpoints',
+      body: {
+        url: options.url,
+        events: options.events,
+        description: options.description,
+      },
+      idempotencyKey: options.idempotencyKey,
+    });
+    return res.data;
+  }
+
+  /**
+   * Triggers or verifies endpoint challenge echo (`POST /v1/webhook-endpoints/{id}/verify`).
+   */
+  public async verifyWebhookEndpoint(
+    endpointId: string,
+    challenge: string,
+    options?: IdempotencyOptions,
+  ): Promise<{ verified: boolean; status: string }> {
+    const res = await this.transport.request<{ verified: boolean; status: string }>({
+      method: 'POST',
+      path: `/v1/webhook-endpoints/${endpointId}/verify`,
+      body: { challenge },
+      idempotencyKey: options?.idempotencyKey,
+    });
+    return res.data;
+  }
+
+  /**
+   * Retrieves webhook endpoint status (`GET /v1/webhook-endpoints/{id}`).
+   * Secret is never returned.
+   */
+  public async getWebhookEndpoint(endpointId: string): Promise<WebhookEndpointRecord> {
+    const res = await this.transport.request<WebhookEndpointRecord>({
+      method: 'GET',
+      path: `/v1/webhook-endpoints/${endpointId}`,
+    });
+    return res.data;
+  }
+
+  /**
+   * Rotates webhook endpoint signing secret (`POST /v1/webhook-endpoints/{id}/rotate-secret`).
+   * New secret is returned once; previous remains valid for 24h grace period.
+   */
+  public async rotateWebhookEndpointSecret(
+    endpointId: string,
+    options?: IdempotencyOptions,
+  ): Promise<RotateSecretResponse> {
+    const res = await this.transport.request<RotateSecretResponse>({
+      method: 'POST',
+      path: `/v1/webhook-endpoints/${endpointId}/rotate-secret`,
+      body: {},
+      idempotencyKey: options?.idempotencyKey,
+    });
+    return res.data;
+  }
+
+  /**
+   * Disables and removes a webhook endpoint (`DELETE /v1/webhook-endpoints/{id}`).
+   */
+  public async deleteWebhookEndpoint(endpointId: string): Promise<void> {
+    await this.transport.request<void>({
+      method: 'DELETE',
+      path: `/v1/webhook-endpoints/${endpointId}`,
+    });
+  }
+
+  // =========================================================================
+  // Usage & Metering
+  // =========================================================================
+
+  /**
+   * Retrieves usage summary for the tenant across a specified time window (`GET /v1/usage`).
+   */
+  public async getUsage(query: UsageQueryOptions): Promise<UsageResponse> {
+    const res = await this.transport.request<UsageResponse>({
+      method: 'GET',
+      path: '/v1/usage',
+      query: { from: query.from, to: query.to },
     });
     return res.data;
   }

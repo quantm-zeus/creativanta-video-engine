@@ -53,6 +53,27 @@ export class CreativantaWebhookReceiver extends EventEmitter {
   }
 
   /**
+   * Convenience helper to verify signature from structured arguments.
+   */
+  public verifySignature(options: {
+    rawBody: Buffer | Uint8Array | string;
+    signature: string;
+    timestamp: number | string;
+    eventId: string;
+    keyId?: string;
+  }): WebhookVerificationResult {
+    const headers: Record<string, string> = {
+      'x-cve-signature': options.signature,
+      'x-cve-timestamp': String(options.timestamp),
+      'x-cve-event-id': options.eventId,
+    };
+    if (options.keyId) {
+      headers['x-cve-key-id'] = options.keyId;
+    }
+    return this.verifyAndProcess(headers, options.rawBody);
+  }
+
+  /**
    * Pure verification of incoming raw webhook bytes and headers.
    * Performs constant-time HMAC check, clock-skew enforcement, deduplication,
    * and monotonic state_version verification without JSON reserialization.

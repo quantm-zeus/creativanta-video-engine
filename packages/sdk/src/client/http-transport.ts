@@ -1,5 +1,5 @@
 /**
- * HTTP Transport Client for Creativanta (Task P5-03).
+ * HTTP Transport Client for Creativanta (Tasks P5-03 & P5-04).
  *
  * Implements strict REST API v1 contracts:
  *   - Zero shared DB assumptions: purely HTTP over fetch
@@ -7,16 +7,31 @@
  *   - Safe automatic retries for 409 IDEMPOTENCY_IN_PROGRESS, 429 RATE_LIMITED,
  *     429 QUOTA_EXCEEDED, and 503 SERVICE_UNAVAILABLE using the SAME Idempotency-Key
  *   - Idempotency-Replayed header detection
- *   - Typed error mapping
+ *   - Exhaustive typed error mapping conforming to docs/API.md
  */
 
 import crypto from 'node:crypto';
 import {
+  AuthenticationError,
+  BadRequestError,
   CreativantaApiError,
   CreativantaClientError,
+  ForbiddenError,
   GrantExpiredError,
   IdempotencyConflictError,
+  IdempotencyInProgressError,
+  IdempotencyKeyRequiredError,
+  InvalidIdempotencyKeyError,
   JobTerminalError,
+  NotFoundError,
+  PayloadTooLargeError,
+  RateLimitedError,
+  ResourceExpiredError,
+  RevisionConflictError,
+  ServiceUnavailableError,
+  UnsupportedCapabilityError,
+  ValidationError,
+  type ApiErrorDetail,
 } from './errors.js';
 import { generateIdempotencyKey, isValidIdempotencyKey } from './idempotency.js';
 import type { CreativantaClientConfig } from './types.js';
@@ -75,7 +90,7 @@ export class HttpTransport {
       if (!idemKey) {
         idemKey = generateIdempotencyKey();
       } else if (!isValidIdempotencyKey(idemKey)) {
-        throw new CreativantaClientError(
+        throw new InvalidIdempotencyKeyError(
           `Invalid Idempotency-Key format: '${idemKey}'. Must be 1-128 ASCII [A-Za-z0-9._:-]`,
         );
       }
@@ -111,7 +126,12 @@ export class HttpTransport {
 
       // Chain caller's abort signal if supplied
       if (options.signal) {
-        options.signal.addEventListener('abort', () => controller.abort(), { once: true });
+        if (options.signal.aborted) {
+          if (timeoutId) clearTimeout(timeoutId);
+          controller.abort();
+        } else {
+          options.signal.addEventListener('abort', () => controller.abort(), { once: true });
+        }
       }
 
       try {
@@ -158,10 +178,11 @@ export class HttpTransport {
         }
 
         // Handle Errors and Retries
-        const errorBody = (parsedData as { error?: { code?: string; message?: string; details?: unknown[]; retryable?: boolean } })?.error;
+        const errorBody = (parsedData as { error?: { code?: string; message?: string; details?: ApiErrorDetail[]; retryable?: boolean } })?.error;
         const errorCode = errorBody?.code || `HTTP_${response.status}`;
         const errorMessage = errorBody?.message || response.statusText || 'Request failed';
         const isRetryable = errorBody?.retryable ?? false;
+        const details = errorBody?.details ?? [];
 
         // 1. Idempotency In Progress (409 IDEMPOTENCY_IN_PROGRESS): retry with SAME key after Retry-After
         if (response.status === 409 && errorCode === 'IDEMPOTENCY_IN_PROGRESS' && attempt <= this.maxRetries) {
@@ -178,24 +199,80 @@ export class HttpTransport {
           continue;
         }
 
-        // Non-retrying error mapping
-        if (response.status === 409 && errorCode === 'IDEMPOTENCY_CONFLICT') {
-          throw new IdempotencyConflictError(errorMessage, serverRequestId);
-        }
-        if (response.status === 409 && errorCode === 'JOB_TERMINAL') {
-          throw new JobTerminalError(errorMessage, serverRequestId);
-        }
-        if (response.status === 410 && (errorCode === 'GRANT_EXPIRED' || errorCode === 'ARTIFACT_EXPIRED')) {
-          throw new GrantExpiredError(errorMessage, serverRequestId);
+        // Non-retrying / exhausted retry typed error mapping
+        if (response.status === 400) {
+          if (errorCode === 'IDEMPOTENCY_KEY_REQUIRED') {
+            throw new IdempotencyKeyRequiredError(errorMessage, serverRequestId);
+          }
+          if (errorCode === 'INVALID_IDEMPOTENCY_KEY') {
+            throw new InvalidIdempotencyKeyError(errorMessage, serverRequestId);
+          }
+          throw new BadRequestError(errorMessage, errorCode, serverRequestId, details);
         }
 
+        if (response.status === 401) {
+          throw new AuthenticationError(errorMessage, serverRequestId);
+        }
+
+        if (response.status === 403) {
+          throw new ForbiddenError(errorMessage, errorCode, serverRequestId);
+        }
+
+        if (response.status === 404) {
+          throw new NotFoundError(errorMessage, serverRequestId);
+        }
+
+        if (response.status === 409) {
+          if (errorCode === 'IDEMPOTENCY_IN_PROGRESS') {
+            throw new IdempotencyInProgressError(errorMessage, serverRequestId);
+          }
+          if (errorCode === 'IDEMPOTENCY_CONFLICT') {
+            throw new IdempotencyConflictError(errorMessage, serverRequestId);
+          }
+          if (errorCode === 'JOB_TERMINAL') {
+            throw new JobTerminalError(errorMessage, serverRequestId);
+          }
+          if (errorCode === 'REVISION_CONFLICT') {
+            throw new RevisionConflictError(errorMessage, serverRequestId);
+          }
+        }
+
+        if (response.status === 410) {
+          if (errorCode === 'GRANT_EXPIRED') {
+            throw new GrantExpiredError(errorMessage, serverRequestId);
+          }
+          throw new ResourceExpiredError(errorMessage, errorCode, serverRequestId);
+        }
+
+        if (response.status === 413) {
+          throw new PayloadTooLargeError(errorMessage, serverRequestId);
+        }
+
+        if (response.status === 422) {
+          if (errorCode === 'UNSUPPORTED_CAPABILITY') {
+            throw new UnsupportedCapabilityError(errorMessage, details, serverRequestId);
+          }
+          throw new ValidationError(errorMessage, details, serverRequestId);
+        }
+
+        if (response.status === 429) {
+          const retryAfterSec = this.parseRetryAfter(response.headers.get('retry-after'), 1);
+          throw new RateLimitedError(errorMessage, retryAfterSec, serverRequestId);
+        }
+
+        if (response.status === 503) {
+          const retryAfterSec = this.parseRetryAfter(response.headers.get('retry-after'), 1);
+          throw new ServiceUnavailableError(errorMessage, retryAfterSec, serverRequestId);
+        }
+
+        // Generic fallback error
         throw new CreativantaApiError({
           status: response.status,
           code: errorCode,
           message: errorMessage,
           requestId: serverRequestId,
           retryable: isRetryable,
-          details: errorBody?.details as any,
+          details,
           isReplayed,
         });
       } catch (err: unknown) {
@@ -205,7 +282,12 @@ export class HttpTransport {
           throw err;
         }
 
-        // Transient network or abort error: retry if attempts remain and request is idempotent
+        // Check if aborted by caller signal
+        if (options.signal?.aborted) {
+          throw new CreativantaClientError('Request aborted by caller signal');
+        }
+
+        // Transient network error: retry if attempts remain and request is idempotent
         if (attempt <= this.maxRetries && (method === 'GET' || method === 'DELETE' || idemKey !== undefined)) {
           const backoff = this.retryBackoffBaseMs * Math.pow(2, attempt - 1);
           await this.delay(backoff);
