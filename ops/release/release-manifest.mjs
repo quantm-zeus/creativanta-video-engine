@@ -147,7 +147,7 @@ export class ReleaseManifestGenerator {
     try {
       commitSha = execSync('git rev-parse HEAD', { cwd: this.repoRoot, encoding: 'utf8' }).trim();
     } catch {
-      commitSha = '8f44192b0c16b1e60058e5fbb4e351838cf4bc29';
+      commitSha = '8f44192f5fa7f7939988ef767b5d32dad2276070';
     }
 
     try {

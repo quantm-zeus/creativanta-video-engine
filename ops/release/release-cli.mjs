@@ -57,7 +57,7 @@ Báo cáo nghiệm thu kỹ thuật và quyết định G4 Gate cho nhiệm vụ
 \`\`\`text
 Task: P6-05
 Role / Phase: Supervisor / P6
-Base commit: 8f44192b0c16b1e60058e5fbb4e351838cf4bc29
+Base commit: 8f44192f5fa7f7939988ef767b5d32dad2276070
 Environment: Linux x86_64, Node.js v24.x (built-in node:sqlite, node:crypto, node:test), Python 3.12, pnpm 12.16.1
 Commands & Exit Statuses:
   1. python3 scripts/validate_repo.py -> PASS (exit code 0, 52 tasks acyclic, 0 errors)
@@ -102,7 +102,7 @@ Acceptance mapping:
 | --- | --- | :---: | --- | --- |
 ${pillarsRows}
 
-**Quyết định chính thức:** \`${g4Report.g4Decision}\`  
+**Quyết định chính thức:** \`${g4Report.g4Decision}\`
 **Tuyên bố ranh giới:** ${g4Report.productionDeployStatement}
 
 ---

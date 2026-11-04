@@ -3,7 +3,7 @@
   "role": "Supervisor / P6",
   "phase": "P6",
   "gate": "G4",
-  "evaluatedAt": "2026-11-04T14:46:26.070Z",
+  "evaluatedAt": "2026-11-04T14:51:25.312Z",
   "overallStatus": "PASS",
   "g4Decision": "GO_FOR_PRIVATE_BETA_STAGING",
   "productionDeployStatement": "Production deploy KHÔNG tự được cấp bởi task này. Bàn giao chỉ áp dụng cho Private Beta Staging.",
