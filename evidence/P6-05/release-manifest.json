@@ -4,10 +4,10 @@
   "releaseName": "Creativanta Video Engine Private Beta Candidate 1",
   "phase": "P6",
   "gate": "G4",
-  "generatedAt": "2026-11-04T14:45:08.532Z",
+  "generatedAt": "2026-11-04T14:46:22.790Z",
   "git": {
-    "commitSha": "8f44192f5fa7f7939988ef767b5d32dad2276070",
-    "treeHash": "bd28ebdb9cc44ae1d420d9ca5558ac0a6e7e3efe",
+    "commitSha": "294a08be4b9253ce5a977705ec77cce12aad03fb",
+    "treeHash": "a4d2c265f7800d9e89992c34691ccc06e43a60f7",
     "branch": "agy/p6-05",
     "cleanWorktreeRequired": true
   },
@@ -198,5 +198,5 @@
       "docker-compose.yml": "0535eabc2859b61056921b04c3fad9df75d96f16428656d99842ed4b2276a7c5"
     }
   },
-  "manifestDigest": "sha256:6d148cbfe5801ca91334aa7036532295075c0a6ddb9353e7c9f718a518b1f403"
+  "manifestDigest": "sha256:2911627590b26223e4f7a82171ba8f594e7b7bbc643f4b3ca28651da2394a575"
 }

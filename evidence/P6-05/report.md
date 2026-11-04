@@ -72,8 +72,8 @@ Acceptance mapping:
 
 ### 2.1. Bản mô tả phát hành bất biến (`release-manifest.json`)
 - **Phiên bản:** `v0.1.0-beta.1` (`Creativanta Video Engine Private Beta Candidate 1`)
-- **Mã băm phát hành (Manifest Digest):** `sha256:6d148cbfe5801ca91334aa7036532295075c0a6ddb9353e7c9f718a518b1f403`
-- **Cam kết Git cơ sở:** `8f44192f5fa7f7939988ef767b5d32dad2276070` (nhánh `agy/p6-05`)
+- **Mã băm phát hành (Manifest Digest):** `sha256:2911627590b26223e4f7a82171ba8f594e7b7bbc643f4b3ca28651da2394a575`
+- **Cam kết Git cơ sở:** `294a08be4b9253ce5a977705ec77cce12aad03fb` (nhánh `agy/p6-05`)
 - **Danh mục gói phần mềm:** 7/7 gói trong monorepo (`@creativanta/contracts`, `api`, `controller`, `ingest`, `renderers`, `templates`, `sdk`) đạt chuẩn **0 phụ thuộc bên ngoài lúc runtime** (Clean-Room verified).
 - **Ghim cố định Container OCI Images (Digest Pinning):**
   - `api`: `sha256:d82e2c0e86a117b1d1209b5522e8316315266854b4bb26b7720937a0980cba01`
@@ -139,15 +139,15 @@ Bộ kiểm thử khói Staging đã thực thi trọn vẹn 10 công đoạn đ
 
 | Mã | Tên công đoạn kiểm thử | Kết quả | Thời gian | Chi tiết thực thi |
 | --- | --- | :---: | :---: | --- |
-| STG-01 | Environment Configuration Preflight | **PASS** | 1ms | CVE_ENV=staging, custom_code=false, remote_import=false, download_ttl=300s |
-| STG-02 | Health, Readiness & Capabilities Probes | **PASS** | 11ms | Engines: html-v1, canvas-v1, svg-v1; custom-html-v1=false; profiles: mp4-720p-v1, preview-360p-v1 |
-| STG-03 | Tenant Identity, API Key Authentication & Scope Enforcement | **PASS** | 7ms | Invalid key rejected with 401: true; Cross-tenant access rejected with 404: true |
-| STG-04 | Asset Ingestion & Quarantine Pipeline | **PASS** | 8ms | Asset ast_9b1b37ec3d62 transitioned from quarantine to ready; SHA-256 verified |
-| STG-05 | Curated Template Resolution & Variable Substitution | **PASS** | 9ms | Template tpl_retail_promo_v1 resolved with Vietnamese diacritics; schemaValid=true, semanticValid=true |
-| STG-06 | Idempotent Job Submission & Quota Reservation | **PASS** | 8ms | Job job_6df9feeb5780 admitted; re-submit with same idempotency key returned identical job (isReplayed=true) |
-| STG-07 | Lease Claim, Stage Transitions & Heartbeats | **PASS** | 4ms | Job transitioned queued -> rendering -> succeeded with 1 artifact |
-| STG-08 | Published Artifact Verification & Expiry TTL | **PASS** | 5ms | Artifact art_vid_c74ccca4 downloaded & verified SHA-256; expires_at=2026-11-04T14:50:09.509Z |
-| STG-09 | Transactional Outbox Webhook Delivery & HMAC Signature | **PASS** | 2ms | Webhook HMAC-SHA256 signature verified via CreativantaWebhookReceiver (event_id=evt_staging_smoke_1793803509513) |
+| STG-01 | Environment Configuration Preflight | **PASS** | 0ms | CVE_ENV=staging, custom_code=false, remote_import=false, download_ttl=300s |
+| STG-02 | Health, Readiness & Capabilities Probes | **PASS** | 22ms | Engines: html-v1, canvas-v1, svg-v1; custom-html-v1=false; profiles: mp4-720p-v1, preview-360p-v1 |
+| STG-03 | Tenant Identity, API Key Authentication & Scope Enforcement | **PASS** | 17ms | Invalid key rejected with 401: true; Cross-tenant access rejected with 404: true |
+| STG-04 | Asset Ingestion & Quarantine Pipeline | **PASS** | 14ms | Asset ast_45eef428c664 transitioned from quarantine to ready; SHA-256 verified |
+| STG-05 | Curated Template Resolution & Variable Substitution | **PASS** | 21ms | Template tpl_retail_promo_v1 resolved with Vietnamese diacritics; schemaValid=true, semanticValid=true |
+| STG-06 | Idempotent Job Submission & Quota Reservation | **PASS** | 15ms | Job job_44eb09569dd0 admitted; re-submit with same idempotency key returned identical job (isReplayed=true) |
+| STG-07 | Lease Claim, Stage Transitions & Heartbeats | **PASS** | 8ms | Job transitioned queued -> rendering -> succeeded with 1 artifact |
+| STG-08 | Published Artifact Verification & Expiry TTL | **PASS** | 17ms | Artifact art_vid_0a4ea054 downloaded & verified SHA-256; expires_at=2026-11-04T14:51:26.055Z |
+| STG-09 | Transactional Outbox Webhook Delivery & HMAC Signature | **PASS** | 2ms | Webhook HMAC-SHA256 signature verified via CreativantaWebhookReceiver (event_id=evt_staging_smoke_1793803586068) |
 | STG-10 | Post-Render Storage Sweeper & Isolation Clean-up | **PASS** | 0ms | Usage settled: 15s output, 4s CPU; 0 orphan artifacts |
 
 ---
