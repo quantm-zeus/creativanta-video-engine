@@ -25,3 +25,6 @@ export * from './src/deterministic-mock-adapter.mjs';
 export * from './src/non-premium-routes.mjs';
 export * from './src/authoring-job-manager.mjs';
 export * from './src/authoring-openapi.mjs';
+export * from './src/approved-imports-registry.mjs';
+export * from './src/isolated-build-and-preview.mjs';
+export * from './src/malicious-payload-suite.mjs';
