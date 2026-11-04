@@ -1,0 +1,188 @@
+{
+  "schema_version": "1.0",
+  "canvas": {
+    "width": 720,
+    "height": 1280,
+    "background": "#1A1A2E"
+  },
+  "fps": {
+    "num": 30,
+    "den": 1
+  },
+  "duration_frames": 450,
+  "seed": 2026,
+  "locale": "vi-VN",
+  "direction": "ltr",
+  "fonts": [
+    {
+      "id": "font_promo_bold",
+      "asset_id": "ast_font_noto_sans_bold",
+      "sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "family": "Noto Sans",
+      "weight": 700,
+      "style": "normal"
+    },
+    {
+      "id": "font_promo_regular",
+      "asset_id": "ast_font_noto_sans_regular",
+      "sha256": "41b78294a53e54b6cf481f21db5976b3cf92da630713b6326e0e02c6735a28c4",
+      "family": "Noto Sans",
+      "weight": 400,
+      "style": "normal"
+    }
+  ],
+  "scenes": [
+    {
+      "id": "scene_promo_intro",
+      "revision": 1,
+      "start_frame": 0,
+      "duration_frames": 150,
+      "engine": "html-v1",
+      "transition_out": {
+        "type": "cut",
+        "duration_frames": 0
+      },
+      "layers": [
+        {
+          "id": "layer_promo_headline",
+          "type": "text",
+          "start_frame": 0,
+          "duration_frames": 150,
+          "z_index": 1,
+          "box": {
+            "x": 48,
+            "y": 500,
+            "width": 624,
+            "height": 200
+          },
+          "content": {
+            "text": "Xả kho mùa hè — Giảm tới 70%!",
+            "font_id": "font_promo_bold",
+            "font_size": 50,
+            "color": "#FFD700",
+            "align": "center",
+            "max_lines": 3,
+            "overflow": "error"
+          }
+        }
+      ]
+    },
+    {
+      "id": "scene_promo_deal",
+      "revision": 1,
+      "start_frame": 150,
+      "duration_frames": 150,
+      "engine": "html-v1",
+      "transition_out": {
+        "type": "cut",
+        "duration_frames": 0
+      },
+      "layers": [
+        {
+          "id": "layer_promo_price",
+          "type": "text",
+          "start_frame": 0,
+          "duration_frames": 150,
+          "z_index": 1,
+          "box": {
+            "x": 48,
+            "y": 500,
+            "width": 624,
+            "height": 200
+          },
+          "content": {
+            "text": "Đồng giá chỉ 149.000 ₫",
+            "font_id": "font_promo_bold",
+            "font_size": 54,
+            "color": "#FF3366",
+            "align": "center",
+            "max_lines": 2,
+            "overflow": "error"
+          }
+        }
+      ]
+    },
+    {
+      "id": "scene_promo_cta",
+      "revision": 1,
+      "start_frame": 300,
+      "duration_frames": 150,
+      "engine": "html-v1",
+      "transition_out": {
+        "type": "fade_to_background",
+        "duration_frames": 30
+      },
+      "layers": [
+        {
+          "id": "layer_promo_cta",
+          "type": "text",
+          "start_frame": 0,
+          "duration_frames": 150,
+          "z_index": 1,
+          "box": {
+            "x": 48,
+            "y": 500,
+            "width": 624,
+            "height": 200
+          },
+          "content": {
+            "text": "Chớp cơ hội ngay hôm nay!",
+            "font_id": "font_promo_bold",
+            "font_size": 50,
+            "color": "#00F0FF",
+            "align": "center",
+            "max_lines": 2,
+            "overflow": "error"
+          }
+        }
+      ]
+    }
+  ],
+  "audio_tracks": [
+    {
+      "id": "track_voiceover",
+      "asset_id": "ast_audio_promo_fallback",
+      "start_frame": 0,
+      "duration_frames": 450,
+      "source_in_samples": 0,
+      "gain_db": 0,
+      "role": "voice"
+    }
+  ],
+  "subtitles": [
+    {
+      "id": "sub_vi_promo",
+      "locale": "vi-VN",
+      "burn_in": true,
+      "style": {
+        "font_id": "font_promo_bold",
+        "font_size": 32,
+        "color": "#FFFFFF",
+        "background": "#1A1A2ECC",
+        "align": "center",
+        "max_lines": 2,
+        "safe_margin_px": 48
+      },
+      "cues": [
+        {
+          "id": "cue_promo_01",
+          "start_frame": 0,
+          "end_frame": 150,
+          "text": "Khuyến mãi đặc biệt hôm nay!"
+        },
+        {
+          "id": "cue_promo_02",
+          "start_frame": 150,
+          "end_frame": 300,
+          "text": "Chỉ từ 149.000 ₫ — Giảm tới 70%!"
+        },
+        {
+          "id": "cue_promo_03",
+          "start_frame": 300,
+          "end_frame": 450,
+          "text": "Chớp cơ hội ngay hôm nay!"
+        }
+      ]
+    }
+  ]
+}

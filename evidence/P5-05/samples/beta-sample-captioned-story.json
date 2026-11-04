@@ -1,0 +1,278 @@
+{
+  "schema_version": "1.0",
+  "canvas": {
+    "width": 720,
+    "height": 1280,
+    "background": "#000000"
+  },
+  "fps": {
+    "num": 30,
+    "den": 1
+  },
+  "duration_frames": 1350,
+  "seed": 3030,
+  "locale": "vi-VN",
+  "direction": "ltr",
+  "fonts": [
+    {
+      "id": "font_story_bold",
+      "asset_id": "ast_font_roboto_bold",
+      "sha256": "2b8f413a968a35e47851d8b67117c09368d1847e09ef74e502c3c97dbb8a109a",
+      "family": "Roboto",
+      "weight": 700,
+      "style": "normal"
+    },
+    {
+      "id": "font_story_regular",
+      "asset_id": "ast_font_roboto_regular",
+      "sha256": "89cb384210a4e76a086057c32bf260a4f5f590dc501192e1b8b8095d3126f554",
+      "family": "Roboto",
+      "weight": 400,
+      "style": "normal"
+    }
+  ],
+  "scenes": [
+    {
+      "id": "scene_story_landscape",
+      "revision": 1,
+      "start_frame": 0,
+      "duration_frames": 675,
+      "engine": "html-v1",
+      "transition_out": {
+        "type": "cut",
+        "duration_frames": 0
+      },
+      "layers": [
+        {
+          "id": "video_clip_daklak",
+          "type": "video",
+          "start_frame": 0,
+          "duration_frames": 675,
+          "z_index": 1,
+          "box": {
+            "x": 0,
+            "y": 0,
+            "width": 720,
+            "height": 1280
+          },
+          "content": {
+            "asset_id": "ast_poc03_clip1_daklak",
+            "fit": "cover",
+            "source_in_frame": 0
+          }
+        },
+        {
+          "id": "layer_story_title",
+          "type": "text",
+          "start_frame": 0,
+          "duration_frames": 675,
+          "z_index": 2,
+          "box": {
+            "x": 48,
+            "y": 120,
+            "width": 624,
+            "height": 160
+          },
+          "content": {
+            "text": "HƯƠNG VỊ DI SẢN — ĐẮK LẮK 2026",
+            "font_id": "font_story_bold",
+            "font_size": 40,
+            "color": "#FFFFFF",
+            "align": "center",
+            "max_lines": 3,
+            "overflow": "error"
+          }
+        },
+        {
+          "id": "layer_story_location",
+          "type": "text",
+          "start_frame": 0,
+          "duration_frames": 675,
+          "z_index": 2,
+          "box": {
+            "x": 48,
+            "y": 290,
+            "width": 624,
+            "height": 60
+          },
+          "content": {
+            "text": "Buôn Ma Thuột • Việt Nam",
+            "font_id": "font_story_regular",
+            "font_size": 26,
+            "color": "#FBBF24",
+            "align": "center",
+            "max_lines": 1,
+            "overflow": "error"
+          }
+        }
+      ]
+    },
+    {
+      "id": "scene_story_workshop",
+      "revision": 1,
+      "start_frame": 675,
+      "duration_frames": 525,
+      "engine": "html-v1",
+      "transition_out": {
+        "type": "cut",
+        "duration_frames": 0
+      },
+      "layers": [
+        {
+          "id": "video_clip_workshop",
+          "type": "video",
+          "start_frame": 0,
+          "duration_frames": 525,
+          "z_index": 1,
+          "box": {
+            "x": 0,
+            "y": 0,
+            "width": 720,
+            "height": 1280
+          },
+          "content": {
+            "asset_id": "ast_poc03_clip2_workshop",
+            "fit": "cover",
+            "source_in_frame": 60
+          }
+        },
+        {
+          "id": "layer_story_quote",
+          "type": "text",
+          "start_frame": 0,
+          "duration_frames": 525,
+          "z_index": 2,
+          "box": {
+            "x": 48,
+            "y": 150,
+            "width": 624,
+            "height": 180
+          },
+          "content": {
+            "text": "Đậm đà hương vị truyền thống kết hợp công nghệ hiện đại",
+            "font_id": "font_story_bold",
+            "font_size": 38,
+            "color": "#FFFFFF",
+            "align": "center",
+            "max_lines": 3,
+            "overflow": "error"
+          }
+        }
+      ]
+    },
+    {
+      "id": "scene_story_outro",
+      "revision": 1,
+      "start_frame": 1200,
+      "duration_frames": 150,
+      "engine": "html-v1",
+      "transition_out": {
+        "type": "fade_to_background",
+        "duration_frames": 30
+      },
+      "layers": [
+        {
+          "id": "layer_outro_bg",
+          "type": "shape",
+          "start_frame": 0,
+          "duration_frames": 150,
+          "z_index": 1,
+          "box": {
+            "x": 0,
+            "y": 0,
+            "width": 720,
+            "height": 1280
+          },
+          "content": {
+            "shape": "rect",
+            "fill": "#0F172A"
+          }
+        },
+        {
+          "id": "layer_story_cta",
+          "type": "text",
+          "start_frame": 0,
+          "duration_frames": 150,
+          "z_index": 2,
+          "box": {
+            "x": 48,
+            "y": 550,
+            "width": 624,
+            "height": 180
+          },
+          "content": {
+            "text": "Đặt hàng gói quà tặng di sản ngay hôm nay",
+            "font_id": "font_story_bold",
+            "font_size": 42,
+            "color": "#FBBF24",
+            "align": "center",
+            "max_lines": 2,
+            "overflow": "error"
+          }
+        }
+      ]
+    }
+  ],
+  "audio_tracks": [
+    {
+      "id": "track_narration",
+      "asset_id": "ast_poc03_narration_vi",
+      "start_frame": 0,
+      "duration_frames": 1350,
+      "source_in_samples": 0,
+      "gain_db": 0,
+      "role": "voice"
+    },
+    {
+      "id": "track_bgm",
+      "asset_id": "ast_poc03_music_track",
+      "start_frame": 0,
+      "duration_frames": 1350,
+      "source_in_samples": 0,
+      "gain_db": -14,
+      "role": "music"
+    }
+  ],
+  "subtitles": [
+    {
+      "id": "sub_vi_story",
+      "locale": "vi-VN",
+      "burn_in": true,
+      "style": {
+        "font_id": "font_story_bold",
+        "font_size": 26,
+        "color": "#FFFFFF",
+        "background": "#000000B3",
+        "align": "center",
+        "max_lines": 2,
+        "safe_margin_px": 48
+      },
+      "cues": [
+        {
+          "id": "cue_story_1",
+          "start_frame": 30,
+          "end_frame": 450,
+          "text": "Nằm giữa lòng cao nguyên Đắk Lắk bạt ngàn nắng gió..."
+        },
+        {
+          "id": "cue_story_2",
+          "start_frame": 480,
+          "end_frame": 960,
+          "text": "Từng hạt cà phê chín mọng được nâng niu qua bàn tay nghệ nhân."
+        },
+        {
+          "id": "cue_story_3",
+          "start_frame": 990,
+          "end_frame": 1200,
+          "text": "Quy trình rang xay thủ công lưu giữ trọn vẹn hương vị nguyên bản."
+        },
+        {
+          "id": "cue_story_4",
+          "start_frame": 1215,
+          "end_frame": 1335,
+          "text": "Creativanta — Đồng hành cùng giá trị nông sản Việt Nam."
+        }
+      ]
+    }
+  ]
+}

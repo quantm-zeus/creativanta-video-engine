@@ -1,0 +1,261 @@
+{
+  "passed": true,
+  "totalTests": 17,
+  "passedTests": 17,
+  "failedTests": 0,
+  "durationMs": 3,
+  "timestamp": "2026-11-04T03:39:04.477Z",
+  "categories": {
+    "locale": {
+      "total": 7,
+      "passed": 7,
+      "failed": 0
+    },
+    "font": {
+      "total": 2,
+      "passed": 2,
+      "failed": 0
+    },
+    "layout": {
+      "total": 2,
+      "passed": 2,
+      "failed": 0
+    },
+    "audio": {
+      "total": 5,
+      "passed": 5,
+      "failed": 0
+    },
+    "sync": {
+      "total": 1,
+      "passed": 1,
+      "failed": 0
+    }
+  },
+  "results": [
+    {
+      "id": "reg_locale_01_diacritics_coverage",
+      "name": "Vietnamese Diacritics & 6-Tone Alphabet Coverage",
+      "category": "locale",
+      "passed": true,
+      "details": {
+        "totalCharacters": 148,
+        "allTonesIncluded": [
+          "ngang",
+          "huyen",
+          "sac",
+          "hoi",
+          "nga",
+          "nang"
+        ],
+        "nfcPreserved": true
+      }
+    },
+    {
+      "id": "reg_locale_02_nfd_to_nfc_normalization",
+      "name": "Decomposed NFD to Canonical NFC Normalization Equivalence",
+      "category": "locale",
+      "passed": true,
+      "details": {
+        "originalNfcLength": 60,
+        "decomposedNfdLength": 78,
+        "recomposedMatchesOriginal": true
+      }
+    },
+    {
+      "id": "reg_locale_03_canonical_phrase",
+      "name": "Canonical Testing.md Vietnamese Phrase Elements Validation",
+      "category": "locale",
+      "passed": true,
+      "details": {
+        "phrase": "Tiếng Việt: Trường học, cộng đồng, Đắk Lắk, Ưu đãi 199.000 ₫",
+        "hasDakLak": true,
+        "hasTruongHoc": true,
+        "hasCongDong": true,
+        "hasUuDai": true
+      }
+    },
+    {
+      "id": "reg_locale_04_currency_formatting",
+      "name": "Vietnamese Dong Currency Symbol ₫ (U+20AB) & Number Grouping",
+      "category": "locale",
+      "passed": true,
+      "details": {
+        "symbol": "₫",
+        "unicodeCodepoint": "U+20AB",
+        "isCorrectCodepoint": true,
+        "numberGroupingSeparator": "."
+      }
+    },
+    {
+      "id": "reg_locale_05_casing_roundtrip",
+      "name": "Vietnamese Locale Upper/Lower Casing Roundtrip Preservation",
+      "category": "locale",
+      "passed": true,
+      "details": {
+        "lower": "trường học đắk lắk",
+        "upper": "TRƯỜNG HỌC ĐẮK LẮK",
+        "upperConverted": "TRƯỜNG HỌC ĐẮK LẮK",
+        "lowerConverted": "trường học đắk lắk"
+      }
+    },
+    {
+      "id": "reg_locale_06_tofu_prevention_guard",
+      "name": "Emoji & Unsupported Glyph Detection Guard (Anti-Tofu Gate)",
+      "category": "locale",
+      "passed": true,
+      "details": {
+        "cleanTextValid": true,
+        "emojiDetected": [
+          "🎉",
+          "✨",
+          "🚀"
+        ],
+        "tofuGateEffective": true
+      }
+    },
+    {
+      "id": "reg_locale_07_bcp47_allowlist",
+      "name": "BCP47 Locale Allowlist (vi-VN & en-US) Enforcement",
+      "category": "locale",
+      "passed": true,
+      "details": {
+        "allowedLocales": [
+          "vi-VN",
+          "en-US"
+        ],
+        "testCasesChecked": 5
+      }
+    },
+    {
+      "id": "reg_font_01_pinned_registry_integrity",
+      "name": "Pinned Font Registry & Commercial License Verification",
+      "category": "font",
+      "passed": true,
+      "details": {
+        "totalFontsPinned": 7,
+        "verifiedFonts": [
+          "Inter (700) [OFL-1.1]",
+          "Inter (400) [OFL-1.1]",
+          "Inter (600) [OFL-1.1]",
+          "Noto Sans (400) [OFL-1.1]",
+          "Noto Sans (700) [OFL-1.1]",
+          "Roboto (700) [Apache-2.0]",
+          "Roboto (400) [Apache-2.0]"
+        ]
+      }
+    },
+    {
+      "id": "reg_font_02_fallback_disabled_gate",
+      "name": "Font Fallback Disabled Guard (Rejection of Unpinned System Fonts)",
+      "category": "font",
+      "passed": true,
+      "details": {
+        "policy": "Strict Offline Pinned Font IDs Only",
+        "checkedCount": 5
+      }
+    },
+    {
+      "id": "reg_font_03_safe_margin_bounds",
+      "name": "Safe Margins (48px) Usable Bounds Verification across 9:16 & 16:9",
+      "category": "layout",
+      "passed": true,
+      "details": {
+        "safeMarginPx": 48,
+        "vertical9x16UsableWidth": 624,
+        "horizontal16x9UsableWidth": 1184
+      }
+    },
+    {
+      "id": "reg_font_04_grapheme_wrapping_integrity",
+      "name": "Vietnamese Grapheme Cluster Word Wrapping Integrity",
+      "category": "layout",
+      "passed": true,
+      "details": {
+        "totalWordsSegmented": 17,
+        "diacriticsIntact": true,
+        "sampleWords": [
+          "Đắk",
+          "Lắk",
+          "là",
+          "thủ",
+          "phủ"
+        ]
+      }
+    },
+    {
+      "id": "reg_audio_01_canonical_format",
+      "name": "Canonical Audio Format Specification (48kHz Stereo 16-bit PCM)",
+      "category": "audio",
+      "passed": true,
+      "details": {
+        "formatName": "wav-48k-pcm16",
+        "sampleRate": 48000,
+        "channels": 2,
+        "bitDepth": 16,
+        "endianness": "Little-Endian"
+      }
+    },
+    {
+      "id": "reg_audio_02_frame_to_sample_mapping",
+      "name": "Rational Frame-to-Sample Integer Mapping Accuracy (round_half_up)",
+      "category": "audio",
+      "passed": true,
+      "details": {
+        "samplesPerFrame30fps": 1600,
+        "testedFramesCount": 7,
+        "driftAccumulation": 0
+      }
+    },
+    {
+      "id": "reg_audio_03_sync_anchor_tolerance",
+      "name": "Audio-Subtitle Synchronization Anchor Tolerance (<= 1 Frame / 33.33ms)",
+      "category": "sync",
+      "passed": true,
+      "details": {
+        "toleranceLimitFrames": 1,
+        "toleranceLimitMs": 33.33,
+        "testedAnchors": 3
+      }
+    },
+    {
+      "id": "reg_audio_04_peak_headroom_compliance",
+      "name": "Master Peak Headroom Compliance (<= -1.0 dBTP, Zero Digital Clipping)",
+      "category": "audio",
+      "passed": true,
+      "details": {
+        "maxTruePeakDbtpLimit": -1,
+        "measuredPeaks": [
+          -5.4,
+          -3.2,
+          -1.8,
+          -2.5
+        ],
+        "zeroClippingConfirmed": true
+      }
+    },
+    {
+      "id": "reg_audio_05_ducking_envelope_integrity",
+      "name": "Multi-Track Music Ducking Envelope & Monotonic Keyframes Integrity",
+      "category": "audio",
+      "passed": true,
+      "details": {
+        "keyframesCount": 6,
+        "baseGainDb": -14,
+        "duckedGainDb": -24,
+        "fadeoutGainDb": -60,
+        "strictlyMonotonicFrames": true
+      }
+    },
+    {
+      "id": "reg_audio_06_silence_preservation",
+      "name": "Baseline Silence Profile Preservation (Zero Noise Floor)",
+      "category": "audio",
+      "passed": true,
+      "details": {
+        "testedBufferBytes": 6400,
+        "absoluteSilencePreserved": true
+      }
+    }
+  ]
+}

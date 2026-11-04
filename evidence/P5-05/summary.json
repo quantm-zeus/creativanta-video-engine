@@ -1,0 +1,93 @@
+{
+  "task_id": "P5-05",
+  "stream": "D+C",
+  "phase": "P5",
+  "generated_at": "2026-11-04T03:39:04.478Z",
+  "status": "PASS",
+  "regression_matrix": {
+    "total_tests": 17,
+    "passed_tests": 17,
+    "failed_tests": 0,
+    "categories": {
+      "locale": {
+        "total": 7,
+        "passed": 7,
+        "failed": 0
+      },
+      "font": {
+        "total": 2,
+        "passed": 2,
+        "failed": 0
+      },
+      "layout": {
+        "total": 2,
+        "passed": 2,
+        "failed": 0
+      },
+      "audio": {
+        "total": 5,
+        "passed": 5,
+        "failed": 0
+      },
+      "sync": {
+        "total": 1,
+        "passed": 1,
+        "failed": 0
+      }
+    }
+  },
+  "beta_samples": {
+    "count": 3,
+    "samples": [
+      {
+        "id": "beta_sample_retail_promo_v1",
+        "name": "Khuyến Mãi Mùa Hè — Flash Sale Tai Nghe Không Dây",
+        "family": "retail_promo",
+        "aspect_ratio": "9:16",
+        "duration_seconds": 15,
+        "duration_frames": 450,
+        "cues_count": 3,
+        "rights_valid": true
+      },
+      {
+        "id": "beta_sample_narrated_explainer_v1",
+        "name": "Giải Thích Công Nghệ — Nền Tảng Video Engine Tự Động",
+        "family": "narrated_explainer",
+        "aspect_ratio": "16:9",
+        "duration_seconds": 30,
+        "duration_frames": 900,
+        "cues_count": 4,
+        "rights_valid": true
+      },
+      {
+        "id": "beta_sample_captioned_story_v1",
+        "name": "Hương Vị Di Sản — Phóng Sự Cà Phê Đắk Lắk 2026",
+        "family": "captioned_story",
+        "aspect_ratio": "9:16",
+        "duration_seconds": 45,
+        "duration_frames": 1350,
+        "cues_count": 4,
+        "rights_valid": true
+      }
+    ]
+  },
+  "reviewer_signoff": {
+    "decision": "APPROVED_FOR_PRIVATE_BETA",
+    "reviewer_name": "Nguyen Minh Tuan",
+    "criteria_count": 7,
+    "all_criteria_passed": true
+  },
+  "artifact_hashes": {
+    "samples/beta-sample-retail-promo.json": "d7af6acfa68edea99d60b2a11c1f1ad03e33e7b61b20812e69407a1e13b67cc2",
+    "samples/beta-sample-retail-promo.vi.srt": "070a9a158543a3b158a8892cca3252cc799a9b894da2347b052a161b6a527714",
+    "samples/beta-sample-retail-promo.vi.vtt": "ac05ae7f2f76d0381dc0cd4780631e0ffade32d883e2b810b246704d4d52c106",
+    "samples/beta-sample-narrated-explainer.json": "4c4734a6b9b521ea6cbe3efb096099e45ad5f26f39cf3ae70fdb7d4528daae40",
+    "samples/beta-sample-narrated-explainer.vi.srt": "5aa71f1f91e32bc6d7bee84ad48c50ba7a2c101eb290721cf9eeb261f74ed729",
+    "samples/beta-sample-narrated-explainer.vi.vtt": "ba5fb43566b261274039990120c9838209feb19e1569ead7774eb2e2745a6ba3",
+    "samples/beta-sample-captioned-story.json": "e91e452322fa5eca58962212b807e2b2c1f1bd50cf007c0d64cee47ac3188d15",
+    "samples/beta-sample-captioned-story.vi.srt": "d4dd3d0382b33edb53cede2d812ef8a31f4b0a6a1387a129b9930d32836bc6cd",
+    "samples/beta-sample-captioned-story.vi.vtt": "66b42afa6f07effb92316820eeaac8262b99eb1f5be0f93eba00b530d4f701bc",
+    "regression-matrix.json": "cb09dccf56a962db3da05b2a158825c021faa84f58e0552d563d4ed8c007cd4e",
+    "reviewer-signoff.json": "d37572b3407a384e1ee6b7fcfb9b5a4d044ce9ed63763e4e22d21db2ca29be8f"
+  }
+}
