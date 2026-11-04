@@ -961,3 +961,207 @@ export function validateAuthoringOpenApiSpecification(spec: Record<string, unkno
   errors: string[];
 };
 export function extendOpenApiWithAuthoring(baseSpec: Record<string, unknown>): Record<string, unknown>;
+
+/* =========================================================================
+ * Task P7-04 Declarations (Approved Imports, Isolated Build & Preview, Malicious Payload Suite)
+ * ========================================================================= */
+
+export interface ApprovedImportPackageEntry {
+  packageName: string;
+  version: string;
+  license: string;
+  reviewedInTask: string;
+  virtualPath: string;
+  exports: readonly string[];
+  sourceCode: string;
+  sha256: string;
+}
+
+export const APPROVED_IMPORT_PACKAGES_REGISTRY: Readonly<Record<string, ApprovedImportPackageEntry>>;
+
+export function getApprovedImportPackage(packageName: string): ApprovedImportPackageEntry | null;
+export function listApprovedImportPackages(): Array<Omit<ApprovedImportPackageEntry, 'sourceCode'>>;
+export function verifyApprovedImportsRegistryIntegrity(): {
+  verified: boolean;
+  packageCount: number;
+  packages: Array<Omit<ApprovedImportPackageEntry, 'sourceCode'>>;
+};
+export function parseStaticModuleImports(sourceText: string): Array<{
+  statement: string;
+  specifier: string;
+  namedImports: string[];
+  defaultImport: string | null;
+  namespaceImport: string | null;
+}>;
+export function validateSceneModuleImports(
+  files: readonly { path?: string; relativePath?: string; content: Buffer | string }[],
+  allowedPackageImports?: readonly string[],
+): {
+  valid: boolean;
+  resolvedImports: Array<{
+    fromFile: string;
+    specifier: string;
+    kind: 'preinstalled-package' | 'relative-module';
+    resolvedTarget: string;
+    version?: string;
+    sha256?: string;
+    importedSymbols: string[];
+  }>;
+  violations: Array<{ file: string; ruleId: string; message: string; specifier?: string }>;
+};
+
+export function assertNoTrustedApiExecution(
+  operationContext?: string,
+  attemptedPayload?: unknown,
+): boolean;
+export function recordIsolatedMicroVmExecution(phase: 'build' | 'render'): void;
+export function getTrustedApiExecutionAudit(): Readonly<{
+  trustedApiExecutionsCount: number;
+  blockedTrustedApiAttemptsCount: number;
+  isolatedBuildVmExecutionsCount: number;
+  isolatedRenderVmExecutionsCount: number;
+}>;
+export function resetTrustedApiExecutionAudit(): void;
+
+export function runDeepStaticSecurityScan(
+  rawFiles: readonly { path?: string; relativePath?: string; content: Buffer | string }[],
+  options?: {
+    allowedPackageImports?: readonly string[];
+    canarySecrets?: readonly string[];
+    throwOnViolation?: boolean;
+  },
+): {
+  passed: boolean;
+  scannedFilesCount: number;
+  totalSourceBytes: number;
+  resolvedImports: Array<Record<string, unknown>>;
+  violations: Array<{ file: string; ruleId: string; message: string; specifier?: string }>;
+  evaluatedAt: string;
+};
+
+export class IsolatedSceneBuildPipeline {
+  runtime: DisposableMicroVmRuntime;
+  canaries: string[];
+  allowedPackageImports: readonly string[];
+
+  constructor(options?: {
+    runtime?: DisposableMicroVmRuntime;
+    canaries?: string[];
+    allowedPackageImports?: readonly string[];
+  });
+
+  buildSceneBundle(buildInput: {
+    bundleId?: string;
+    revision?: number;
+    entrypoint?: string;
+    sourceFiles: ReadonlyArray<{ path?: string; relativePath?: string; content: Buffer | string }>;
+    parameterSchema?: Record<string, unknown>;
+    tenantId?: string;
+    jobId?: string;
+    attemptId?: string;
+    leaseEpoch?: number;
+    bounds?: Record<string, unknown>;
+    canaries?: readonly string[];
+    policyInput?: Record<string, unknown>;
+    securitySelfTestMode?: boolean;
+    isLeaseValid?: () => boolean;
+    isCancelRequested?: () => boolean;
+  }): Promise<Record<string, any>>;
+
+  buildRegistryRevision(
+    registry: SceneBundleRegistry,
+    tenantId: string,
+    bundleId: string,
+    revision: number,
+    options?: {
+      canaries?: readonly string[];
+      securitySelfTestMode?: boolean;
+      policyInput?: Record<string, unknown>;
+    },
+  ): Promise<Record<string, any>>;
+}
+
+export class IsolatedScenePreviewEngine {
+  runtime: DisposableMicroVmRuntime;
+  canaries: string[];
+  grantSigningSecret: string;
+  previews: Map<string, Record<string, any>>;
+
+  constructor(options?: {
+    runtime?: DisposableMicroVmRuntime;
+    canaries?: string[];
+    grantSigningSecret?: string;
+  });
+
+  renderIsolatedPreview(previewInput: {
+    tenantId: string;
+    compiledBundle: Record<string, any>;
+    mode: 'frame' | 'clip';
+    profile?: string;
+    canvas?: { width: number; height: number };
+    fps?: number;
+    totalFrames?: number;
+    frameIndex?: number;
+    startFrame?: number;
+    durationFrames?: number;
+    parameterSchema?: Record<string, unknown>;
+    parameters?: Record<string, unknown>;
+    stagedAssets?: ReadonlyArray<Record<string, any>>;
+    outputOrigin?: string;
+    format?: string;
+    canaries?: readonly string[];
+    policyInput?: Record<string, unknown>;
+    securitySelfTestMode?: boolean;
+    isLeaseValid?: () => boolean;
+    isCancelRequested?: () => boolean;
+  }): Promise<Record<string, any>>;
+
+  getPreview(tenantId: string, previewId: string): Record<string, any>;
+
+  createPreviewDownloadGrant(
+    tenantId: string,
+    previewId: string,
+    options?: { ttlSeconds?: number; now?: Date },
+  ): Readonly<{
+    previewId: string;
+    tenantId: string;
+    format: string;
+    mimeType: string;
+    sha256: string;
+    bytes: number;
+    ttlSeconds: number;
+    expiresAt: string;
+    url: string;
+    securityHeaders: Readonly<Record<string, string>>;
+    rawCustomHtmlOrigin: boolean;
+  }>;
+}
+
+export function verifySourceInjectionCannotReadCanarySecrets(options?: {
+  canarySecret?: string;
+}): Promise<{
+  verified: boolean;
+  vectorsTestedCount: number;
+  directInjectionVectorsBlocked: number;
+  hostEnvCanaryKey: string;
+  canaryPresentInBuildVm: boolean;
+  canaryPresentInRenderVm: boolean;
+  canaryLeakedInArtifactsOrLogs: boolean;
+  trustedApiExecutionsCount: number;
+}>;
+
+export const DEFAULT_P704_CANARY_SECRET: string;
+export const MALICIOUS_PAYLOAD_CORPUS: ReadonlyArray<Record<string, any>>;
+
+export function runMaliciousPayloadSuite(options?: {
+  canarySecret?: string;
+}): Promise<{
+  passed: boolean;
+  totalPayloads: number;
+  blockedPayloads: number;
+  categoriesSummary: Record<string, number>;
+  trustedApiExecutionsCount: number;
+  results: Array<Record<string, any>>;
+}>;
+
+export function runP704IsolatedBuildAndSecuritySelfTest(): Promise<Record<string, any>>;

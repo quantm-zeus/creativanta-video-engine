@@ -1,0 +1,275 @@
+{
+  "taskId": "P7-04",
+  "status": "PASS",
+  "totalChecks": 12,
+  "passedChecks": 12,
+  "failedChecks": 0,
+  "durationMs": 1644,
+  "timestamp": "2026-11-04T16:41:30.645Z",
+  "approvedPackages": [
+    {
+      "packageName": "@creativanta/scene-runtime",
+      "version": "1.0.0",
+      "license": "Proprietary-Creativanta-Reviewed",
+      "reviewedInTask": "P7-04",
+      "virtualPath": "__preinstalled_modules/@creativanta/scene-runtime/index.mjs",
+      "exports": [
+        "SCENE_RUNTIME_VERSION",
+        "createSeededRandom",
+        "formatRationalTime",
+        "resolveStagedAssetUrl",
+        "createSceneContext"
+      ],
+      "sha256": "fae5d99d83537800d22ef5843fb7c76ffcf9ae13860008f0edb142472166cb0f"
+    },
+    {
+      "packageName": "@creativanta/scene-math",
+      "version": "1.0.0",
+      "license": "Proprietary-Creativanta-Reviewed",
+      "reviewedInTask": "P7-04",
+      "virtualPath": "__preinstalled_modules/@creativanta/scene-math/index.mjs",
+      "exports": [
+        "SCENE_MATH_VERSION",
+        "clamp",
+        "lerp",
+        "inverseLerp",
+        "remap",
+        "smoothstep",
+        "degToRad",
+        "radToDeg",
+        "vec2",
+        "mat2d"
+      ],
+      "sha256": "dce8412ae3f6f0d3c4035f30dbbf25676660be08b44e6b850539bdcb3599026d"
+    },
+    {
+      "packageName": "@creativanta/scene-easing",
+      "version": "1.0.0",
+      "license": "Proprietary-Creativanta-Reviewed",
+      "reviewedInTask": "P7-04",
+      "virtualPath": "__preinstalled_modules/@creativanta/scene-easing/index.mjs",
+      "exports": [
+        "SCENE_EASING_VERSION",
+        "linear",
+        "easeInQuad",
+        "easeOutQuad",
+        "easeInOutQuad",
+        "easeInCubic",
+        "easeOutCubic",
+        "easeInOutCubic",
+        "spring"
+      ],
+      "sha256": "b35ceb785a0d033905ad1efe7a5190083ab5b1b900a753559b6a6b39faf2447c"
+    }
+  ],
+  "trustedApiExecutionAudit": {
+    "trustedApiExecutionsCount": 0,
+    "blockedTrustedApiAttemptsCount": 1,
+    "isolatedBuildVmExecutionsCount": 4,
+    "isolatedRenderVmExecutionsCount": 5
+  },
+  "checks": [
+    {
+      "id": "IBP-01",
+      "title": "Approved Pre-installed Imports Registry Integrity (@creativanta/scene-runtime, scene-math, scene-easing)",
+      "category": "approved_imports_registry",
+      "status": "PASS",
+      "passed": true,
+      "durationMs": 0.6,
+      "details": {
+        "packageCount": 3,
+        "packages": [
+          {
+            "packageName": "@creativanta/scene-runtime",
+            "version": "1.0.0",
+            "exportsCount": 5,
+            "sha256": "fae5d99d83537800d22ef5843fb7c76ffcf9ae13860008f0edb142472166cb0f"
+          },
+          {
+            "packageName": "@creativanta/scene-math",
+            "version": "1.0.0",
+            "exportsCount": 10,
+            "sha256": "dce8412ae3f6f0d3c4035f30dbbf25676660be08b44e6b850539bdcb3599026d"
+          },
+          {
+            "packageName": "@creativanta/scene-easing",
+            "version": "1.0.0",
+            "exportsCount": 9,
+            "sha256": "b35ceb785a0d033905ad1efe7a5190083ab5b1b900a753559b6a6b39faf2447c"
+          }
+        ]
+      }
+    },
+    {
+      "id": "IBP-02",
+      "title": "Isolated Build inside Disposable build-vm with Approved Imports & Relative Modules",
+      "category": "isolated_build",
+      "status": "PASS",
+      "passed": true,
+      "durationMs": 232.31,
+      "details": {
+        "buildVmId": "vm_build_1_1b73660c",
+        "sourceSha256": "8bd665880c0710021df5dd3386f592fc24fe29f0b537d173cd07704bdcae88f3",
+        "buildSha256": "642c48ff591aab3c441e5671c14693fe743b63d10814f0abd83e3d02f34f2906",
+        "cspScriptHash": "'sha256-ZCxI/1kaqzxEHlZxwUaT/nQ7Y9EIFPCr2D49AvNPKQY='",
+        "resolvedImportsCount": 4,
+        "buildVmDestroyedAndWiped": true
+      }
+    },
+    {
+      "id": "IBP-03",
+      "title": "Deterministic Isolated Build Reproducibility (identical source yields byte-identical buildSha256 & CSP hash)",
+      "category": "build_determinism",
+      "status": "PASS",
+      "passed": true,
+      "durationMs": 114.33,
+      "details": {
+        "byteIdenticalSourceDigest": true,
+        "byteIdenticalBuildDigest": true,
+        "byteIdenticalCspHash": true
+      }
+    },
+    {
+      "id": "IBP-04",
+      "title": "Static Import Scanner (blocks unapproved packages, unexported symbols, missing relative files, circular imports)",
+      "category": "import_validation",
+      "status": "PASS",
+      "passed": true,
+      "durationMs": 2.63,
+      "details": {
+        "circularImportBlocked": true,
+        "missingRelativeTargetBlocked": true
+      }
+    },
+    {
+      "id": "IBP-05",
+      "title": "Deep Static Scanner (blocks constructor.constructor, globalThis bracket concat, __proto__, /proc/self/environ)",
+      "category": "deep_static_scanner",
+      "status": "PASS",
+      "passed": true,
+      "durationMs": 0.63,
+      "details": {
+        "obfuscatedSamplesBlockedCount": 4
+      }
+    },
+    {
+      "id": "IBP-06",
+      "title": "Isolated Frame Preview (mode=\"frame\", preview-360p-v1 exact 0.5 scale 640x360 PNG in disposable render-vm)",
+      "category": "isolated_preview_frame",
+      "status": "PASS",
+      "passed": true,
+      "durationMs": 168.31,
+      "details": {
+        "previewId": "prv_p704_2de63a29be11",
+        "format": "png",
+        "ihdrDimensions": "640x360",
+        "artifactSha256": "38e7cbf4bb4f9543a9d3740b2c9dbbff1814bee19634bf6e27efc58aa069d1be",
+        "renderVmDestroyed": true
+      }
+    },
+    {
+      "id": "IBP-07",
+      "title": "Isolated Clip Preview (mode=\"clip\", preview-360p-v1 360x640 MP4 ftyp, preserves source_frame_range, rejects out-of-bounds with 422)",
+      "category": "isolated_preview_clip",
+      "status": "PASS",
+      "passed": true,
+      "durationMs": 97.36,
+      "details": {
+        "previewId": "prv_p704_a83b3c586011",
+        "format": "mp4",
+        "outputDimensions": {
+          "width": 360,
+          "height": 640
+        },
+        "sourceFrameRange": [
+          60,
+          180
+        ],
+        "outOfBoundsRejectedWithoutClamping": true
+      }
+    },
+    {
+      "id": "IBP-08",
+      "title": "No Raw Custom HTML Origin & Tenant-Scoped Signed Preview Download Grant (TTL <= 300s, 404 on foreign tenant IDOR)",
+      "category": "preview_origin_and_tenant_auth",
+      "status": "PASS",
+      "passed": true,
+      "durationMs": 94.64,
+      "details": {
+        "rawHtmlOriginBlocked": true,
+        "grantTtlSeconds": 300,
+        "nosniffHeader": "nosniff",
+        "foreignTenantBlockedWith404": true
+      }
+    },
+    {
+      "id": "IBP-09",
+      "title": "Malicious Payload Suite (24 adversarial payloads across 6 categories 100% blocked)",
+      "category": "malicious_payload_suite",
+      "status": "PASS",
+      "passed": true,
+      "durationMs": 242.7,
+      "details": {
+        "totalPayloads": 24,
+        "blockedPayloads": 24,
+        "categoriesSummary": {
+          "unapproved_and_supply_chain_imports": 6,
+          "network_egress_and_ssrf_imds": 5,
+          "dynamic_eval_obfuscation_and_dom_escape": 6,
+          "source_injection_and_canary_exfiltration": 4,
+          "filesystem_traversal_and_readonly_mutation": 2,
+          "resource_bombs_and_lease_fencing": 1
+        }
+      }
+    },
+    {
+      "id": "IBP-10",
+      "title": "Source Injection & Prompt Injection Cannot Read Canary Secrets (multi-vector live controller env & log redaction proof)",
+      "category": "canary_secret_non_exfiltration",
+      "status": "PASS",
+      "passed": true,
+      "durationMs": 360.76,
+      "details": {
+        "verified": true,
+        "vectorsTestedCount": 4,
+        "directInjectionVectorsBlocked": 5,
+        "hostEnvCanaryKey": "CVE_CANARY_HOST_SECRET_P704",
+        "canaryPresentInBuildVm": false,
+        "canaryPresentInRenderVm": false,
+        "canaryLeakedInArtifactsOrLogs": false,
+        "trustedApiExecutionsCount": 0
+      }
+    },
+    {
+      "id": "IBP-11",
+      "title": "No Trusted API or Supervisor Execution Guard (trustedApiExecutionsCount === 0 across all builds & previews)",
+      "category": "no_trusted_api_execution",
+      "status": "PASS",
+      "passed": true,
+      "durationMs": 0.38,
+      "details": {
+        "trustedApiExecutionsCount": 0,
+        "blockedTrustedApiAttemptsCount": 1,
+        "isolatedBuildVmExecutionsCount": 3,
+        "isolatedRenderVmExecutionsCount": 4
+      }
+    },
+    {
+      "id": "IBP-12",
+      "title": "End-to-End Integration: AI Authoring Draft -> SceneBundleRegistry -> Isolated Build -> Isolated Preview -> Publish",
+      "category": "end_to_end_pipeline",
+      "status": "PASS",
+      "passed": true,
+      "durationMs": 329.08,
+      "details": {
+        "bundleId": "bundle-ai-61c1b741",
+        "revision": 1,
+        "sourceSha256": "f6d873976e1ba7e6b93a69f4c1cc2720b3553c02948c037481863ae36a27a1b3",
+        "buildSha256": "2c31698190d140e93d07fdb5178aa98704cc4c08aaee7f9e96eb8f3c573131d5",
+        "previewId": "prv_p704_158ab321251d",
+        "previewSha256": "2dc0cedf05dd5768c8f31123d6a9cfe5b6c8794d293bfa504d7f68f7e185c0da",
+        "featureDefaultOffVerified": true
+      }
+    }
+  ]
+}

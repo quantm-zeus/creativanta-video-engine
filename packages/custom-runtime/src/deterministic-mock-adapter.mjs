@@ -172,6 +172,17 @@ export class DeterministicMockAuthoringAdapter extends AuthoringAdapter {
       if (firstSentence) headline = firstSentence.slice(0, 50).normalize('NFC');
     }
 
+    // Neutralize any source/prompt injection or string-literal breakout attempts in untrusted brief headline
+    if (/["\\`$<>]|process\.env|CANARY_|\/proc\/|eval\s*\(|fetch\s*\(/i.test(headline)) {
+      headline = headline
+        .replace(/["\\`$<>]/g, '')
+        .replace(/process\.env[A-Za-z0-9_.]*/gi, '')
+        .replace(/CANARY_[A-Za-z0-9_]*/gi, '')
+        .replace(/\/proc\/[A-Za-z0-9_/-]*/gi, '')
+        .replace(/\b(?:eval|fetch|Function)\s*\(/gi, '')
+        .trim() || 'Khám Phá Sáng Tạo';
+    }
+
     // 3. Asset binding
     let assetBindingSnippet = '// No external assets bound\n';
     let assetMarkup = '';
