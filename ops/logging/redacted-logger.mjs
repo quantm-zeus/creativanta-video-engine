@@ -10,7 +10,11 @@ export const MAX_STDERR_BYTES_PER_ATTEMPT = 64 * 1024; // 64 KiB
 
 // Patterns for credential detection
 const BEARER_TOKEN_REGEX = /Bearer\s+[A-Za-z0-9\-_.~+/]+=*/gi;
-const API_KEY_PREFIX_REGEX = /\b(cve_(?:live|test|migrator|api|sender|dispatcher)_[0-9a-zA-Z_]{16,64})\b/g;
+const API_KEY_PREFIX_REGEX = /\b(cve_(?:live|test|migrator|api|sender|dispatcher)_[0-9a-zA-Z_]{12,128})\b/g;
+const WEBHOOK_SECRET_REGEX = /\b(whsec_[0-9a-zA-Z_]{8,128})\b/g;
+const EXTERNAL_SECRET_REGEX = /\b(sk-[0-9a-zA-Z_-]{16,128}|gh[pousr]_[0-9a-zA-Z]{20,128}|AKIA[0-9A-Z]{16})\b/g;
+const PRIVATE_KEY_BLOCK_REGEX = /-----BEGIN [A-Z0-9 ]*PRIVATE KEY-----[\s\S]*?-----END [A-Z0-9 ]*PRIVATE KEY-----/g;
+const CONNECTION_URI_CREDENTIALS_REGEX = /((?:postgres(?:ql)?|redis|amqp|mongodb(?:\+srv)?):\/\/[^:\s/]+:)([^@\s]+)(@)/gi;
 const GENERIC_HEX_KEY_REGEX = /\b([0-9a-f]{32,64})\b/gi;
 const SIGNED_URL_REGEX = /(https?:\/\/[^\s"'<>]+)(\?[^\s"'<>]+)/gi;
 
@@ -19,9 +23,21 @@ const SENSITIVE_KEY_NAMES = new Set([
   'api_key',
   'apikey',
   'secret',
+  'webhook_secret',
+  'signing_secret',
+  'client_secret',
+  'secret_key',
+  'private_key',
+  'signing_key',
+  'encryption_key',
+  'master_key',
+  'access_key',
   'password',
   'pepper',
   'token',
+  'access_token',
+  'refresh_token',
+  'database_url',
   'upload_url',
   'download_url',
   'signed_url',
@@ -32,6 +48,19 @@ const SENSITIVE_KEY_NAMES = new Set([
   'subtitles',
   'raw_caption',
 ]);
+
+function isSensitiveKeyName(lowerKey) {
+  if (SENSITIVE_KEY_NAMES.has(lowerKey)) return true;
+  if (
+    lowerKey.endsWith('_secret') ||
+    lowerKey.endsWith('_token') ||
+    lowerKey.endsWith('_password') ||
+    lowerKey.endsWith('_pepper')
+  ) {
+    return true;
+  }
+  return false;
+}
 
 /**
  * Strips sensitive query strings from signed URLs while preserving scheme and path.
@@ -55,8 +84,12 @@ export function redactString(str) {
   if (typeof str !== 'string') return str;
 
   let sanitized = str
+    .replace(PRIVATE_KEY_BLOCK_REGEX, '[REDACTED_PRIVATE_KEY]')
     .replace(BEARER_TOKEN_REGEX, 'Bearer [REDACTED_TOKEN]')
-    .replace(API_KEY_PREFIX_REGEX, '[REDACTED_API_KEY]');
+    .replace(API_KEY_PREFIX_REGEX, '[REDACTED_API_KEY]')
+    .replace(WEBHOOK_SECRET_REGEX, '[REDACTED_WEBHOOK_SECRET]')
+    .replace(EXTERNAL_SECRET_REGEX, '[REDACTED_EXTERNAL_SECRET]')
+    .replace(CONNECTION_URI_CREDENTIALS_REGEX, '$1[REDACTED_PASSWORD]$3');
 
   // Redact URLs with query parameters that resemble signed capabilities
   sanitized = sanitized.replace(SIGNED_URL_REGEX, (match, base) => {
@@ -88,8 +121,8 @@ export function redactObject(obj, depth = 0) {
   const result = {};
   for (const [key, value] of Object.entries(obj)) {
     const lowerKey = key.toLowerCase();
-    if (SENSITIVE_KEY_NAMES.has(lowerKey)) {
-      if (lowerKey.includes('url')) {
+    if (isSensitiveKeyName(lowerKey)) {
+      if (lowerKey.includes('url') && lowerKey !== 'database_url') {
         result[key] = typeof value === 'string' ? redactSignedUrl(value) : '[REDACTED_URL]';
       } else if (lowerKey.includes('prompt') || lowerKey.includes('script') || lowerKey.includes('voice')) {
         result[key] = '[REDACTED_PROMPT_OR_SCRIPT]';

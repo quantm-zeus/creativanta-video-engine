@@ -13,7 +13,7 @@ import { DatabaseSync } from 'node:sqlite';
 import { BackupManager } from '../recovery/backup-manager.mjs';
 import { MemoryStorageBackend } from '../recovery/object-reconciler.mjs';
 import { RestoreDrillRunner } from '../recovery/restore-drill-runner.mjs';
-import { MigrationRunner } from '../../packages/api/dist/index.js';
+import { MigrationRunner, TenantConnectionPool, TenantRepository, ResourceNotFoundError } from '../../packages/api/dist/index.js';
 
 export class SyntheticRunbookRunner {
   constructor() {
@@ -342,17 +342,52 @@ export class SyntheticRunbookRunner {
   async runRunbook6TenantIsolation() {
     const attackerTenantId = 'tenant-synth-attacker-66666666';
     const victimTenantId = 'tenant-synth-victim-66666667';
+    const attackerUuid = '00000000-0000-4000-8000-666666666666';
+    const victimUuid = '00000000-0000-4000-8000-666666666667';
     const victimResourceId = 'res-synth-victim-006';
 
+    const db = new DatabaseSync(':memory:');
+    const runner = new MigrationRunner(db);
+    runner.migrateUp({ role: 'cve_migrator', targetVersion: '0002' });
+    const pool = new TenantConnectionPool(db);
+    const repo = new TenantRepository(pool, { pepper: 'synthetic-runbook6-pepper-secret-0001' });
+
+    repo.createTenant({ id: attackerUuid, name: attackerTenantId });
+    repo.createTenant({ id: victimUuid, name: victimTenantId });
+    repo.createAsset(victimUuid, {
+      id: victimResourceId,
+      filename: 'victim-confidential.svg',
+      kind: 'svg',
+      mimeType: 'image/svg+xml',
+      bytes: 64,
+      sha256: 'a'.repeat(64),
+      rights: { license: 'proprietary', owner: victimTenantId },
+    });
+
     // 1. Attacker queries victim resource -> MUST RETURN 404 (NOT 403)
-    let statusCode = 404;
-    let errorCode = 'NOT_FOUND';
+    let statusCode = 200;
+    let errorCode = 'NONE';
+    try {
+      repo.getAsset(attackerUuid, victimResourceId);
+    } catch (err) {
+      if (err instanceof ResourceNotFoundError || (err && err.httpStatus === 404)) {
+        statusCode = err.httpStatus;
+        errorCode = err.code;
+      } else {
+        throw err;
+      }
+    }
+
+    // Suspend attacker tenant in database and verify status
+    repo.setTenantStatus(attackerUuid, 'suspended');
+    const attackerRecord = db.prepare('SELECT status FROM tenants WHERE id = ?').get(attackerUuid);
+    const tenantSuspended = attackerRecord?.status === 'suspended';
 
     // 2. Record sandbox denial metric
     this.registry.getMetric('cve_sandbox_denials_total').inc({ reason: 'UNAUTHORIZED_CROSS_TENANT_ACCESS' }, 1);
 
     this.logger.error('security', 'Cross-tenant resource probe detected; returned 404 anti-IDOR', {
-      details: { attackerTenantId, probedResourceId: victimResourceId, outcome: statusCode },
+      details: { attackerTenantId, probedResourceId: victimResourceId, outcome: statusCode, errorCode },
       errorCode: 'CROSS_TENANT_PROBE_BLOCKED',
     });
 
@@ -363,12 +398,12 @@ export class SyntheticRunbookRunner {
 
     return {
       runbook: 'RUNBOOK-06-TENANT-ISOLATION',
-      success: true,
+      success: statusCode === 404 && errorCode === 'NOT_FOUND' && tenantSuspended,
       syntheticIds: { attackerTenantId, victimTenantId, victimResourceId },
       probedOutcomeHttpStatus: statusCode,
       antiIdorPreserved: statusCode === 404,
       alertsTriggered: alerts.map((a) => a.alert),
-      tenantSuspended: true,
+      tenantSuspended,
     };
   }
 }
