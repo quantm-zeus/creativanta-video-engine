@@ -72,8 +72,8 @@ Acceptance mapping:
 
 ### 2.1. Bản mô tả phát hành bất biến (`release-manifest.json`)
 - **Phiên bản:** `v0.1.0-beta.1` (`Creativanta Video Engine Private Beta Candidate 1`)
-- **Mã băm phát hành (Manifest Digest):** `sha256:07e86a786b8a808170a9ee54528a1b7113e73cf826f2365f6cc5515a5c0dfb61`
-- **Cam kết Git cơ sở:** `d2cd6d4d7887a86e5966bae9483cc786c6d18291` (nhánh `agy/p6-05`)
+- **Mã băm phát hành (Manifest Digest):** `sha256:0d4943cde1f29ca48ddb608aec1d441095ebf5124c5889d15a65392bb0338afb`
+- **Cam kết Git cơ sở:** `959d60017ba2abc90daa09beed92522eb2863f12` (nhánh `agy/p6-05`)
 - **Danh mục gói phần mềm:** 7/7 gói trong monorepo (`@creativanta/contracts`, `api`, `controller`, `ingest`, `renderers`, `templates`, `sdk`) đạt chuẩn **0 phụ thuộc bên ngoài lúc runtime** (Clean-Room verified).
 - **Ghim cố định Container OCI Images (Digest Pinning):**
   - `api`: `sha256:d82e2c0e86a117b1d1209b5522e8316315266854b4bb26b7720937a0980cba01`
@@ -140,14 +140,14 @@ Bộ kiểm thử khói Staging đã thực thi trọn vẹn 10 công đoạn đ
 | Mã | Tên công đoạn kiểm thử | Kết quả | Thời gian | Chi tiết thực thi |
 | --- | --- | :---: | :---: | --- |
 | STG-01 | Environment Configuration Preflight | **PASS** | 0ms | CVE_ENV=staging, custom_code=false, remote_import=false, download_ttl=300s |
-| STG-02 | Health, Readiness & Capabilities Probes | **PASS** | 6ms | Engines: html-v1, canvas-v1, svg-v1; custom-html-v1=false; profiles: mp4-720p-v1, preview-360p-v1 |
-| STG-03 | Tenant Identity, API Key Authentication & Scope Enforcement | **PASS** | 5ms | Invalid key rejected with 401: true; Cross-tenant access rejected with 404: true |
-| STG-04 | Asset Ingestion & Quarantine Pipeline | **PASS** | 6ms | Asset ast_5471fd01d1e5 transitioned from quarantine to ready; SHA-256 verified |
-| STG-05 | Curated Template Resolution & Variable Substitution | **PASS** | 8ms | Template tpl_retail_promo_v1 resolved with Vietnamese diacritics; schemaValid=true, semanticValid=true |
-| STG-06 | Idempotent Job Submission & Quota Reservation | **PASS** | 7ms | Job job_a11991b00b29 admitted; re-submit with same idempotency key returned identical job (isReplayed=true) |
-| STG-07 | Lease Claim, Stage Transitions & Heartbeats | **PASS** | 3ms | Job transitioned queued -> rendering -> succeeded with 1 artifact |
-| STG-08 | Published Artifact Verification & Expiry TTL | **PASS** | 5ms | Artifact art_vid_aa172e54 downloaded & verified SHA-256; expires_at=2026-11-04T15:11:12.457Z |
-| STG-09 | Transactional Outbox Webhook Delivery & HMAC Signature | **PASS** | 1ms | Webhook HMAC-SHA256 signature verified via CreativantaWebhookReceiver (event_id=evt_staging_smoke_1793804772461) |
+| STG-02 | Health, Readiness & Capabilities Probes | **PASS** | 11ms | Engines: html-v1, canvas-v1, svg-v1; custom-html-v1=false; profiles: mp4-720p-v1, preview-360p-v1 |
+| STG-03 | Tenant Identity, API Key Authentication & Scope Enforcement | **PASS** | 7ms | Invalid key rejected with 401: true; Cross-tenant access rejected with 404: true |
+| STG-04 | Asset Ingestion & Quarantine Pipeline | **PASS** | 13ms | Asset ast_e64882c39898 transitioned from quarantine to ready; SHA-256 verified |
+| STG-05 | Curated Template Resolution & Variable Substitution | **PASS** | 12ms | Template tpl_retail_promo_v1 resolved with Vietnamese diacritics; schemaValid=true, semanticValid=true |
+| STG-06 | Idempotent Job Submission & Quota Reservation | **PASS** | 12ms | Job job_6ed5f1b0dea0 admitted; re-submit with same idempotency key returned identical job (isReplayed=true) |
+| STG-07 | Lease Claim, Stage Transitions & Heartbeats | **PASS** | 7ms | Job transitioned queued -> rendering -> succeeded with 1 artifact |
+| STG-08 | Published Artifact Verification & Expiry TTL | **PASS** | 50ms | Artifact art_vid_4caf67ab downloaded & verified SHA-256; expires_at=2026-11-04T15:12:40.105Z |
+| STG-09 | Transactional Outbox Webhook Delivery & HMAC Signature | **PASS** | 9ms | Webhook HMAC-SHA256 signature verified via CreativantaWebhookReceiver (event_id=evt_staging_smoke_1793804860154) |
 | STG-10 | Post-Render Storage Sweeper & Isolation Clean-up | **PASS** | 0ms | Usage settled: 15s output, 4s CPU; 0 orphan artifacts |
 
 ---
