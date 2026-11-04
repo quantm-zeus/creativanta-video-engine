@@ -1165,3 +1165,271 @@ export function runMaliciousPayloadSuite(options?: {
 }>;
 
 export function runP704IsolatedBuildAndSecuritySelfTest(): Promise<Record<string, any>>;
+
+/* =========================================================================
+ * Task P7-05 Declarations (C1–C6 Signed Security Review, Kill Switch, Canary,
+ * Allowlist, Off-by-Default Regression & Runtime Rollback Suite)
+ * ========================================================================= */
+
+export const DEFAULT_P705_REVIEW_SIGNING_SECRET: string;
+export const DEFAULT_P705_CANARY_SECRET: string;
+export const CANARY_SCENE_FIXTURES: ReadonlyArray<Record<string, any>>;
+
+export interface RuntimeDigestManifest {
+  adrId: string;
+  runtime: string;
+  rootfsImageDigest: string;
+  guestKernelDigest: string;
+  approvedImportsBundleDigest: string;
+  compositeRuntimeFingerprint: string;
+  preinstalledPackages: ReadonlyArray<{
+    packageName: string;
+    version: string;
+    license: string;
+    sha256: string;
+  }>;
+}
+
+export function computeRuntimeDigestManifest(options?: {
+  runtime?: string;
+  rootfsImageDigest?: string;
+  guestKernelDigest?: string;
+  overrideApprovedImportsDigest?: string;
+}): RuntimeDigestManifest;
+
+export interface C1ToC6SignedReviewPacket {
+  reviewId: string;
+  taskId: string;
+  adrId: string;
+  runtime: string;
+  rootfsImageDigest: string;
+  guestKernelDigest: string;
+  approvedImportsBundleDigest: string;
+  compositeRuntimeFingerprint: string;
+  reviewer: string;
+  reviewApprovalScope: string;
+  reviewedAt: string;
+  expiresAt: string;
+  killSwitchVerified: boolean;
+  canaryVerified: boolean;
+  allowlistVerified: boolean;
+  offByDefaultVerified: boolean;
+  rollbackVerified: boolean;
+  gates: Record<string, boolean>;
+  gateAttestationSignatureHex: string;
+  gateEvidenceSummaries: Readonly<Record<string, Record<string, unknown>>>;
+  gateAttestation: C1ToC6GateAttestation;
+  signatureHex: string;
+}
+
+export function signC1ToC6ReviewPacket(
+  payload: {
+    reviewId?: string;
+    runtimeManifest: RuntimeDigestManifest;
+    reviewer: string;
+    reviewedAt: string;
+    expiresAt: string;
+    killSwitchVerified: boolean;
+    canaryVerified: boolean;
+    allowlistVerified: boolean;
+    offByDefaultVerified: boolean;
+    rollbackVerified: boolean;
+    gates: Record<string, boolean>;
+    gateEvidenceSummaries?: Record<string, Record<string, unknown>>;
+    reviewApprovalScope?: string;
+  },
+  signingSecret: string,
+): C1ToC6SignedReviewPacket;
+
+export function verifyC1ToC6ReviewPacket(
+  packet: Record<string, any> | null | undefined,
+  expectedManifest: RuntimeDigestManifest,
+  signingSecret: string,
+  now?: Date,
+): boolean;
+
+export class CustomRuntimeRolloutController {
+  runtime: DisposableMicroVmRuntime;
+  runtimeManifest: RuntimeDigestManifest;
+  signingSecret: string;
+  canarySecret: string;
+  customCodeEnabled: boolean;
+  customRuntime: string;
+  tenantAllowlist: Set<string>;
+  killSwitchActive: boolean;
+  killSwitchReason: string | null;
+  restoreLockActive: boolean;
+  restoreLockReason: string | null;
+  activeReviewPacket: Record<string, any> | null;
+  lastCanaryReport: Record<string, any> | null;
+  revokedRuntimeDigests: Set<string>;
+  customJobs: Map<string, Record<string, any>>;
+  issuedGrants: Map<string, Record<string, any>>;
+  auditEvents: Array<Record<string, any>>;
+
+  constructor(options?: {
+    runtime?: DisposableMicroVmRuntime;
+    runtimeManifest?: RuntimeDigestManifest;
+    signingSecret?: string;
+    canarySecret?: string;
+  });
+
+  getConfigSnapshot(): Readonly<{
+    CVE_CUSTOM_CODE_ENABLED: boolean;
+    CVE_CUSTOM_RUNTIME: string;
+    CVE_CUSTOM_TENANT_ALLOWLIST: readonly string[];
+    killSwitchActive: boolean;
+    killSwitchReason: string | null;
+    restoreLockActive: boolean;
+    restoreLockReason: string | null;
+    activeRuntimeFingerprint: string;
+    rootfsImageDigest: string;
+    guestKernelDigest: string;
+    approvedImportsBundleDigest: string;
+    revokedRuntimeDigests: readonly string[];
+  }>;
+
+  verifyStructuredRenderingPathUnaffected(engine?: string): Readonly<{
+    engine: string;
+    allowed: boolean;
+    customCodeEnabled: boolean;
+    killSwitchActive: boolean;
+    restoreLockActive: boolean;
+    structuredPathUnaffected: boolean;
+  }>;
+
+  runCanaryVerificationSuite(): Promise<Readonly<{
+    passed: boolean;
+    fixturesCount: number;
+    passedFixturesCount: number;
+    hostCanaryEnvKey: string;
+    canarySecretLeaked: boolean;
+    trustedApiExecutionsCount: number;
+    evaluatedAt: string;
+    fixtures: ReadonlyArray<Record<string, any>>;
+  }>>;
+
+  enablePilotRollout(input: {
+    signedReviewPacket: Record<string, any>;
+    pilotTenants: readonly string[];
+    signingSecret?: string;
+    hostProbe?: HostVirtualizationProbeResult;
+    skipCanaryRerunIfPassed?: boolean;
+  }): Promise<ReturnType<CustomRuntimeRolloutController['getConfigSnapshot']>>;
+
+  assertTenantAllowedForCustomCode(
+    tenantId: string,
+    options?: { hostProbe?: HostVirtualizationProbeResult },
+  ): ReturnType<typeof evaluateCustomRuntimePolicy>;
+
+  enrollPilotTenant(tenantId: string): string[];
+
+  revokePilotTenant(
+    tenantId: string,
+    reason?: string,
+  ): {
+    tenantId: string;
+    allowlist: string[];
+    terminatedJobsCount: number;
+    revokedGrantsCount: number;
+  };
+
+  registerActiveCustomJob(input: {
+    jobId: string;
+    tenantId: string;
+    kind?: 'build' | 'preview' | 'render' | 'authoring';
+    onTerminate?: (reason: string) => void;
+    hostProbe?: HostVirtualizationProbeResult;
+  }): Record<string, any>;
+
+  registerIssuedDownloadGrant(input: {
+    grantId: string;
+    previewId: string;
+    tenantId: string;
+  }): Record<string, any>;
+
+  assertDownloadGrantActive(grantId: string): Record<string, any>;
+
+  triggerEmergencyKillSwitch(
+    reason?: string,
+    triggeredBy?: string,
+  ): Readonly<{
+    killSwitchActive: boolean;
+    CVE_CUSTOM_CODE_ENABLED: boolean;
+    CVE_CUSTOM_RUNTIME: string;
+    reason: string;
+    triggeredBy: string;
+    triggeredAt: string;
+    terminatedCustomJobsCount: number;
+    terminatedJobIds: readonly string[];
+    revokedGrantsCount: number;
+    revokedGrantIds: readonly string[];
+    structuredRenderingUnaffected: boolean;
+  }>;
+
+  clearEmergencyKillSwitchAfterRevalidation(input: {
+    signedReviewPacket: Record<string, any>;
+    signingSecret?: string;
+  }): Promise<ReturnType<CustomRuntimeRolloutController['getConfigSnapshot']>>;
+
+  activatePostRestoreSafetyLock(
+    restoreId?: string,
+  ): ReturnType<CustomRuntimeRolloutController['getConfigSnapshot']>;
+
+  revalidateAfterRestore(input: {
+    signedReviewPacket: Record<string, any>;
+    signingSecret?: string;
+  }): Promise<ReturnType<CustomRuntimeRolloutController['getConfigSnapshot']>>;
+
+  revokeCompromisedRuntimeDigest(
+    vulnerableDigest: string,
+    reason?: string,
+  ): Readonly<{
+    vulnerableDigest: string;
+    reason: string;
+    abortedRunningJobsCount: number;
+    abortedJobIds: readonly string[];
+    customCodeDisabled: boolean;
+  }>;
+
+  rollbackToDefaultOff(reason?: string): Readonly<{
+    CVE_CUSTOM_CODE_ENABLED: boolean;
+    CVE_CUSTOM_RUNTIME: string;
+    reason: string;
+    canceledCustomJobsCount: number;
+    structuredRenderingUnaffected: boolean;
+  }>;
+
+  rollbackToPinnedRuntime(input: {
+    targetManifest: RuntimeDigestManifest;
+    signedReviewPacket: Record<string, any>;
+    pilotTenants: readonly string[];
+    signingSecret?: string;
+    hostProbe?: HostVirtualizationProbeResult;
+  }): Promise<ReturnType<CustomRuntimeRolloutController['getConfigSnapshot']>>;
+}
+
+export function evaluateAllC1ToC6Gates(options?: {
+  signingSecret?: string;
+  canarySecret?: string;
+  reviewer?: string;
+  reviewedAt?: string;
+  expiresAt?: string;
+}): Promise<Readonly<{
+  passed: boolean;
+  runtimeManifest: RuntimeDigestManifest;
+  gates: Readonly<Record<string, boolean>>;
+  gateEvidenceSummaries: Readonly<Record<string, Record<string, any>>>;
+  signedReviewPacket: C1ToC6SignedReviewPacket;
+}>>;
+
+export function runOffByDefaultAndRollbackSuite(options?: {
+  signedReviewPacket?: Record<string, any>;
+  signingSecret?: string;
+}): Promise<Readonly<{
+  passed: boolean;
+  offByDefaultRegression: Readonly<Record<string, boolean>>;
+  rollbackDrill: Readonly<Record<string, any>>;
+}>>;
+
+export function runP705SecurityReviewSelfTest(): Promise<Record<string, any>>;
