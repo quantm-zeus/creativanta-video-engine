@@ -1,0 +1,229 @@
+{
+  "schema_version": "1.0",
+  "canvas": {
+    "width": 1280,
+    "height": 720,
+    "background": "#0B132B"
+  },
+  "fps": {
+    "num": 30,
+    "den": 1
+  },
+  "duration_frames": 900,
+  "seed": 2026,
+  "locale": "vi-VN",
+  "direction": "ltr",
+  "fonts": [
+    {
+      "id": "font_title",
+      "asset_id": "ast_font_noto_sans_bold",
+      "sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "family": "Noto Sans",
+      "weight": 700,
+      "style": "normal"
+    },
+    {
+      "id": "font_body",
+      "asset_id": "ast_font_noto_sans_regular",
+      "sha256": "41b78294a53e54b6cf481f21db5976b3cf92da630713b6326e0e02c6735a28c4",
+      "family": "Noto Sans",
+      "weight": 400,
+      "style": "normal"
+    }
+  ],
+  "scenes": [
+    {
+      "id": "scene_problem",
+      "revision": 1,
+      "start_frame": 0,
+      "duration_frames": 210,
+      "engine": "html-v1",
+      "transition_out": {
+        "type": "fade_to_background",
+        "duration_frames": 30
+      },
+      "layers": [
+        {
+          "id": "layer_problem_text",
+          "type": "text",
+          "start_frame": 0,
+          "duration_frames": 210,
+          "z_index": 1,
+          "box": {
+            "x": 80,
+            "y": 280,
+            "width": 1120,
+            "height": 160
+          },
+          "content": {
+            "text": "Chi phí sản xuất video thủ công quá cao và thiếu nhất quán?",
+            "font_id": "font_title",
+            "font_size": 42,
+            "color": "#E0E1DD",
+            "align": "center",
+            "max_lines": 3,
+            "overflow": "error"
+          }
+        }
+      ]
+    },
+    {
+      "id": "scene_solution",
+      "revision": 1,
+      "start_frame": 210,
+      "duration_frames": 240,
+      "engine": "html-v1",
+      "transition_out": {
+        "type": "fade_to_background",
+        "duration_frames": 30
+      },
+      "layers": [
+        {
+          "id": "layer_solution_title",
+          "type": "text",
+          "start_frame": 0,
+          "duration_frames": 240,
+          "z_index": 1,
+          "box": {
+            "x": 80,
+            "y": 280,
+            "width": 1120,
+            "height": 160
+          },
+          "content": {
+            "text": "Creativanta Video Engine: Nền tảng tự động hóa render cấp doanh nghiệp",
+            "font_id": "font_title",
+            "font_size": 42,
+            "color": "#4CC9F0",
+            "align": "center",
+            "max_lines": 3,
+            "overflow": "error"
+          }
+        }
+      ]
+    },
+    {
+      "id": "scene_features",
+      "revision": 1,
+      "start_frame": 450,
+      "duration_frames": 240,
+      "engine": "html-v1",
+      "transition_out": {
+        "type": "fade_to_background",
+        "duration_frames": 30
+      },
+      "layers": [
+        {
+          "id": "layer_feature_item",
+          "type": "text",
+          "start_frame": 0,
+          "duration_frames": 240,
+          "z_index": 1,
+          "box": {
+            "x": 80,
+            "y": 280,
+            "width": 1120,
+            "height": 160
+          },
+          "content": {
+            "text": "Độc lập CPU • Bản quyền kiểm soát • Tự động hoá tuyệt đối",
+            "font_id": "font_body",
+            "font_size": 38,
+            "color": "#72EFDD",
+            "align": "center",
+            "max_lines": 2,
+            "overflow": "error"
+          }
+        }
+      ]
+    },
+    {
+      "id": "scene_summary",
+      "revision": 1,
+      "start_frame": 690,
+      "duration_frames": 210,
+      "engine": "html-v1",
+      "transition_out": {
+        "type": "fade_to_background",
+        "duration_frames": 30
+      },
+      "layers": [
+        {
+          "id": "layer_summary_headline",
+          "type": "text",
+          "start_frame": 0,
+          "duration_frames": 210,
+          "z_index": 1,
+          "box": {
+            "x": 80,
+            "y": 280,
+            "width": 1120,
+            "height": 160
+          },
+          "content": {
+            "text": "Liên hệ trải nghiệm giải pháp doanh nghiệp ngay hôm nay",
+            "font_id": "font_title",
+            "font_size": 44,
+            "color": "#F72585",
+            "align": "center",
+            "max_lines": 2,
+            "overflow": "error"
+          }
+        }
+      ]
+    }
+  ],
+  "audio_tracks": [
+    {
+      "id": "track_explainer_narration",
+      "asset_id": "ast_audio_narration_poc02",
+      "start_frame": 0,
+      "duration_frames": 900,
+      "source_in_samples": 0,
+      "gain_db": 0,
+      "role": "voice"
+    }
+  ],
+  "subtitles": [
+    {
+      "id": "sub_vi",
+      "locale": "vi-VN",
+      "burn_in": true,
+      "style": {
+        "font_id": "font_body",
+        "font_size": 28,
+        "color": "#FFFFFF",
+        "background": "#000000B3",
+        "align": "center",
+        "max_lines": 2,
+        "safe_margin_px": 48
+      },
+      "cues": [
+        {
+          "id": "cue_1",
+          "start_frame": 15,
+          "end_frame": 195,
+          "text": "Khó khăn trong việc mở rộng quy trình sản xuất video?"
+        },
+        {
+          "id": "cue_2",
+          "start_frame": 225,
+          "end_frame": 435,
+          "text": "Creativanta Video Engine: Giải pháp render bằng mã nguồn độc lập."
+        },
+        {
+          "id": "cue_3",
+          "start_frame": 465,
+          "end_frame": 675,
+          "text": "Tối ưu hoá cho vi xử lý CPU, hạ thấp chi phí vận hành và bảo vệ bản quyền."
+        },
+        {
+          "id": "cue_4",
+          "start_frame": 705,
+          "end_frame": 885,
+          "text": "Bắt đầu tích hợp quy trình render video tự động ngay hôm nay."
+        }
+      ]
+    }
+  ]
+}

@@ -10,3 +10,4 @@ export * from './narrated-explainer.js';
 export * from './captioned-story.js';
 export * from './catalog.js';
 export * from './template-engine.js';
+export * from './beta-samples.js';

@@ -18,6 +18,18 @@
       "types": "./dist/client/index.d.ts",
       "default": "./dist/client/index.js"
     },
+    "./subtitles": {
+      "types": "./dist/subtitles/index.d.ts",
+      "default": "./dist/subtitles/index.js"
+    },
+    "./rights": {
+      "types": "./dist/rights/index.d.ts",
+      "default": "./dist/rights/index.js"
+    },
+    "./regression": {
+      "types": "./dist/regression/index.d.ts",
+      "default": "./dist/regression/index.js"
+    },
     "./examples": {
       "types": "./dist/examples/index.d.ts",
       "default": "./dist/examples/index.js"
