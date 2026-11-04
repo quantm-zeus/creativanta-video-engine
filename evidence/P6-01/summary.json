@@ -1,0 +1,132 @@
+{
+  "$schema": "creativanta.video-engine.p6-01-summary.v1",
+  "task_id": "P6-01",
+  "stream": "C",
+  "phase": "P6",
+  "base_commit": "fbc77b94ce508be6cbb19b88939b4b9dc8c474d2",
+  "tested_commit": "HEAD (agy/p6-01)",
+  "acceptance_ref": "docs/IMPLEMENTATION_PLAN.md: P6-01",
+  "acceptance_criteria": "Metrics/traces/redacted logs/alerts/dashboards + per-tenant cost reporting; runbooks tái hiện job/queue/artifact/webhook issues bằng synthetic IDs",
+  "status": "implemented_local",
+  "metrics": {
+    "total_metrics_count": 23,
+    "forbidden_labels": ["job_id", "jobid", "tenant_id", "tenantid", "customer_id", "user_id", "url", "payload", "prompt"],
+    "allowed_bounded_labels": ["method", "route", "status", "profile", "adapter", "stage", "error_code", "pool", "state", "bucket", "mount", "meter", "reason", "severity"],
+    "canonical_metrics": [
+      "cve_api_requests_total",
+      "cve_api_duration_seconds",
+      "cve_jobs_queued",
+      "cve_queue_oldest_seconds",
+      "cve_queue_wait_seconds",
+      "cve_jobs_terminal_total",
+      "cve_job_stage_seconds",
+      "cve_worker_slots",
+      "cve_lease_expired_total",
+      "cve_stale_publish_rejected_total",
+      "cve_render_cpu_seconds",
+      "cve_render_wall_seconds",
+      "cve_peak_memory_bytes",
+      "cve_temp_bytes",
+      "cve_orphan_objects",
+      "cve_disk_free_ratio",
+      "cve_webhook_pending",
+      "cve_webhook_delivery_seconds",
+      "cve_webhook_attempts_total",
+      "cve_usage_reserved_units",
+      "cve_usage_settled_units",
+      "cve_usage_reconcile_errors_total",
+      "cve_sandbox_denials_total",
+      "cve_asset_rejections_total"
+    ]
+  },
+  "tracing": {
+    "correlation_chain": "request_id -> job_id -> attempt_id / lease_epoch -> artifact_ids -> event_id / delivery_id",
+    "standard": "W3C Trace Context (traceparent 00-{trace_id}-{span_id}-01)"
+  },
+  "logging": {
+    "redaction_targets": [
+      "API Keys (cve_live_*, cve_test_*, 32-hex)",
+      "Bearer authorization tokens",
+      "Signed capability URLs (strips query parameters, preserves origin/path)",
+      "Prompts, scripts, subtitles, voice text, secrets"
+    ],
+    "stderr_capping": {
+      "max_bytes_per_attempt": 65536,
+      "truncation_marker": "[STDERR_TRUNCATED_MAX_64KIB]"
+    }
+  },
+  "alerts": {
+    "total_rules": 11,
+    "rules": [
+      { "alert": "CveOldestQueueStalled", "severity": "critical", "threshold": "queue_oldest > 120s for 5m" },
+      { "alert": "CveWorkerHeartbeatMissing", "severity": "critical", "threshold": "lease_expired > 0" },
+      { "alert": "CveDiskFreeWarning", "severity": "warning", "threshold": "disk_free < 20%" },
+      { "alert": "CveDiskFreeCritical", "severity": "critical", "threshold": "disk_free < 10%" },
+      { "alert": "CveHighMemoryUsage", "severity": "warning", "threshold": "peak_memory > 3.6GiB (90%) for 5m" },
+      { "alert": "CveTerminalFailureRateHigh", "severity": "critical", "threshold": "failure_rate > 5% over 15m (sample >= 20)" },
+      { "alert": "CveWebhookDeliveryBacklog", "severity": "warning", "threshold": "webhook_pending > 0 for 5m" },
+      { "alert": "CveDbBackupLag", "severity": "critical", "threshold": "backup_lag > 900s (15m RPO)" },
+      { "alert": "CveUsageReconciliationAnomaly", "severity": "critical", "threshold": "reconcile_errors > 0" },
+      { "alert": "CveSandboxDenialsAnomaly", "severity": "critical", "threshold": "sandbox_denials > 0" },
+      { "alert": "CveAssetRejectionsAnomaly", "severity": "warning", "threshold": "asset_rejections > 10 in 2m" },
+      { "alert": "CveStalePublishRejected", "severity": "critical", "threshold": "stale_publishes_blocked > 0" }
+    ]
+  },
+  "dashboards": [
+    { "uid": "cve-overview-slo", "title": "Creativanta Video Engine - Overview & SLOs", "file": "ops/dashboards/cve-overview-slo.json" },
+    { "uid": "cve-render-performance", "title": "Creativanta Video Engine - Render Pipeline & Sizing", "file": "ops/dashboards/cve-render-performance.json" },
+    { "uid": "cve-tenant-security", "title": "Creativanta Video Engine - Tenant Security & Ledger", "file": "ops/dashboards/cve-tenant-security.json" }
+  ],
+  "cost_reporting": {
+    "pricing_basis": {
+      "vcpu_hourly_rate_usd": 0.04,
+      "host_vcpus": 4,
+      "reserved_vcpus": 2,
+      "storage_rate_per_gb_month": 0.02,
+      "egress_rate_per_gb": 0.05,
+      "retention_days": 7,
+      "compute_budget_ceiling_usd_per_min": 0.05
+    },
+    "utilization_scenarios": ["10%", "50%", "80%"],
+    "formats": ["json", "markdown"],
+    "reports_supported": ["daily", "weekly"]
+  },
+  "runbooks": [
+    {
+      "id": "RUNBOOK-01",
+      "file": "ops/runbooks/RUNBOOK-01-JOB-STALLED.md",
+      "title": "Accepted job không tiến triển",
+      "synthetic_ids": { "tenant_id": "tenant-synth-alpha-11111111", "job_id": "job-synth-stalled-001", "attempt_id": "att-synth-001-epoch1" }
+    },
+    {
+      "id": "RUNBOOK-02",
+      "file": "ops/runbooks/RUNBOOK-02-VIDEO-DEFECT.md",
+      "title": "Video đen, thiếu font hoặc audio lệch",
+      "synthetic_ids": { "tenant_id": "tenant-synth-beta-22222222", "job_id": "job-synth-defect-002", "artifact_id": "art-synth-vid-002" }
+    },
+    {
+      "id": "RUNBOOK-03",
+      "file": "ops/runbooks/RUNBOOK-03-WORKER-CRASH-OOM.md",
+      "title": "Worker crash, disk/OOM và duplicate risk",
+      "synthetic_ids": { "tenant_id": "tenant-synth-gamma-33333333", "worker_id": "wrk-synth-worker-003", "job_id": "job-synth-oom-003" }
+    },
+    {
+      "id": "RUNBOOK-04",
+      "file": "ops/runbooks/RUNBOOK-04-WEBHOOK-DELIVERY.md",
+      "title": "Webhook không tới",
+      "synthetic_ids": { "tenant_id": "tenant-synth-delta-44444444", "endpoint_id": "ep-synth-delta-004", "event_id": "evt-synth-004-complete" }
+    },
+    {
+      "id": "RUNBOOK-05",
+      "file": "ops/runbooks/RUNBOOK-05-DB-STORAGE-OUTAGE.md",
+      "title": "DB/storage outage và restore",
+      "synthetic_ids": { "tenant_id": "tenant-synth-epsilon-55555555", "snapshot_id": "snap-synth-005-dr", "job_id": "job-synth-res-005" }
+    },
+    {
+      "id": "RUNBOOK-06",
+      "file": "ops/runbooks/RUNBOOK-06-TENANT-ISOLATION.md",
+      "title": "Tenant isolation/abuse incident",
+      "synthetic_ids": { "attacker_tenant_id": "tenant-synth-attacker-66666666", "victim_tenant_id": "tenant-synth-victim-66666667" }
+    }
+  ]
+}
