@@ -773,6 +773,17 @@ export class SceneBundleRegistry {
    *   change_summary?: string;
    *   declared_capabilities?: string[];
    *   created_by?: string;
+   *   provenance?: {
+   *     authoring_type?: 'human' | 'ai' | 'fork' | 'import';
+   *     author?: string;
+   *     ai_metadata?: Record<string, unknown>;
+   *     rights_and_license?: {
+   *       license: string;
+   *       copyright_holder?: string;
+   *       rights_provenance?: string;
+   *       commercial_use_allowed?: boolean;
+   *     };
+   *   };
    * }} input
    * @returns {SceneBundleRevisionRecord}
    */
@@ -852,14 +863,15 @@ export class SceneBundleRegistry {
     const { buildSha256 } = computeDeterministicBuildDigest(sourceFiles);
 
     const provenance = createSceneBundleProvenance({
-      authoring_type: 'human',
-      author: input.created_by || tenantId,
+      authoring_type: input.provenance?.authoring_type || 'human',
+      author: input.provenance?.author || input.created_by || tenantId,
       base_revision: baseRevNum > 0 ? baseRevNum : null,
-      rights_and_license: baseRevRecord?.provenance?.rights_and_license || {
-        license: 'Proprietary-Tenant',
-        copyright_holder: tenantId,
-        rights_provenance: 'tenant-authored',
-        commercial_use_allowed: true,
+      ai_metadata: input.provenance?.ai_metadata || null,
+      rights_and_license: {
+        license: input.provenance?.rights_and_license?.license || baseRevRecord?.provenance?.rights_and_license?.license || 'Proprietary-Tenant',
+        copyright_holder: input.provenance?.rights_and_license?.copyright_holder || baseRevRecord?.provenance?.rights_and_license?.copyright_holder || tenantId,
+        rights_provenance: input.provenance?.rights_and_license?.rights_provenance || baseRevRecord?.provenance?.rights_and_license?.rights_provenance || 'tenant-authored',
+        commercial_use_allowed: input.provenance?.rights_and_license?.commercial_use_allowed ?? baseRevRecord?.provenance?.rights_and_license?.commercial_use_allowed ?? true,
       },
       declared_capabilities: input.declared_capabilities || baseRevRecord?.declared_capabilities || ['canvas-2d'],
       source_sha256: sourceSha256,
