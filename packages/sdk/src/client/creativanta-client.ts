@@ -344,7 +344,7 @@ export class CreativantaClient {
       });
 
       // If grant expired in transit (410), refresh and retry
-      if (res.status === 410 && attempts <= maxRetries + 1) {
+      if (res.status === 410 && attempts <= maxRetries) {
         grant = await this.refreshDownloadGrant(artifactId);
         continue;
       }

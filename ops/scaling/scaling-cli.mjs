@@ -10,6 +10,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { ScaleChaosTester } from './scale-chaos-tester.mjs';
 import { Autoscaler, AUTOSCALE_POLICY } from './autoscaler.mjs';
+import { CommercialSuite } from './commercial-suite.mjs';
 import { DbQueueProfiler } from './db-queue-profiler.mjs';
 import { QueueRecoveryTester } from './queue-recovery-tester.mjs';
 
@@ -284,6 +285,46 @@ async function main() {
   const writeEvidenceIdx = args.indexOf('--write-evidence');
   const writeEvidenceDir = writeEvidenceIdx !== -1 ? args[writeEvidenceIdx + 1] : null;
 
+  const runCommercial = args.includes('--run-commercial-evaluation') || args.includes('--write-commercial-evidence');
+  const writeCommercialIdx = args.indexOf('--write-commercial-evidence');
+  const writeCommercialDir = writeCommercialIdx !== -1 ? args[writeCommercialIdx + 1] : null;
+
+  // Commercial & Scaling Evaluation (Task P9-02)
+  if (runCommercial) {
+    console.log('=== Creativanta Video Engine: Commercial & Scaling Evaluation (Task P9-02) ===');
+    const suite = new CommercialSuite();
+    const evalReport = suite.runFullEvaluation();
+
+    console.log(`Summary All Checks Passed: ${evalReport.summary.allChecksPassed}`);
+    console.log(`Quota Plans: ${evalReport.quotaResults.plansCount} tiers, 80% warning: ${evalReport.quotaResults.warningTriggered}`);
+    console.log(`Retention Scan: ${evalReport.retentionResults.purgeCandidatesCount} purge candidates, ${evalReport.retentionResults.legalHoldPreservedCount} legal hold preserved`);
+    console.log(`Usage Export: ${evalReport.exportResults.totalRecordsExported} records exported (JSON, CSV, JSONL)`);
+    console.log(`Pricing Scenarios: ${evalReport.pricingResults.scenariosCount} utilization levels (10%, 50%, 80%)`);
+    console.log(`Reconciliation: ${evalReport.reconciliationResults.compensationsGeneratedCount} compensating entries generated, Post-Recon Balanced: ${evalReport.reconciliationResults.postCompensationBalanced}`);
+    console.log(`Mock Billing Statement: ${evalReport.billingResults.invoiceId} (Real Charging: ${evalReport.billingResults.realChargingExecuted})`);
+
+    if (writeCommercialDir) {
+      const targetDir = path.resolve(process.cwd(), writeCommercialDir);
+      fs.mkdirSync(targetDir, { recursive: true });
+
+      const mdContent = suite.generateMarkdownReport(evalReport);
+      fs.writeFileSync(path.join(targetDir, 'report.md'), mdContent, 'utf-8');
+
+      fs.writeFileSync(
+        path.join(targetDir, 'summary.json'),
+        JSON.stringify(evalReport, null, 2),
+        'utf-8'
+      );
+
+      console.log(`Commercial evidence written successfully to ${targetDir}`);
+    }
+
+    if (args.includes('--json') || args.includes('--commercial-json')) {
+      console.log(JSON.stringify(evalReport, null, 2));
+    }
+    return;
+  }
+
   // 1. P9-03: Queue Profiling
   if (profileQueue) {
     console.log('=== Creativanta Video Engine: DB & Queue Profiling Benchmark ===');
@@ -427,7 +468,7 @@ async function main() {
       console.log(JSON.stringify(report, null, 2));
     }
   } else {
-    console.log('Usage: node ops/scaling/scaling-cli.mjs [--profile-queue] [--test-recovery] [--generate-p903-evidence] [--run-chaos] [--verify-invariants] [--json]');
+    console.log('Usage: node ops/scaling/scaling-cli.mjs [--profile-queue] [--test-recovery] [--generate-p903-evidence] [--run-chaos] [--verify-invariants] [--run-commercial-evaluation] [--write-commercial-evidence <dir>] [--json]');
   }
 }
 
