@@ -1,5 +1,5 @@
 {
-  "timestamp": "2026-11-05T03:01:47.605Z",
+  "timestamp": "2026-11-05T03:20:53.765Z",
   "summary": {
     "allChecksPassed": true
   },
@@ -180,7 +180,7 @@
     "nonNegativeBalancesInvariant": true
   },
   "billingResults": {
-    "invoiceId": "inv_1793847707635_8dcafee7",
+    "invoiceId": "inv_1793848853772_2f69917a",
     "tenantId": "tenant_starter",
     "status": "SIMULATED_DRAFT",
     "realChargingExecuted": false,

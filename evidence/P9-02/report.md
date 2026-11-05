@@ -17,7 +17,7 @@ Báo cáo nghiệm thu kỹ thuật cho nhiệm vụ **P9-02: A / P9** (Usage ex
 ```text
 Task: P9-02
 Role / Phase: A / P9
-Base commit: 526d3c8 / HEAD (agy/p9-02)
+Base commit: a3313e0 / HEAD (agy/p9-02)
 Environment: Linux x86_64, Node.js v24.x, TypeScript 5.7.3, Python 3.12, pnpm 12.16.1
 Commands & Exit Statuses:
   1. python3 scripts/validate_repo.py -> PASS (exit code 0, 52 tasks acyclic, 0 errors)
@@ -43,7 +43,7 @@ Acceptance mapping:
   - Pricing simulation: PASS — Mô phỏng chi phí và doanh thu đa mô hình (Cost-Plus margin, Tiered Subscription, PAYG volume tiers) qua 3 kịch bản sử dụng máy chủ (10%, 50%, 80%) theo chuẩn OPERATIONS.md và TESTING.md; tính toán điểm hòa vốn và biên lợi nhuận gộp.
   - Reconciliation: PASS — Đối soát toàn diện trạng thái job và sổ cái usage; bảo đảm bất biến 0 duplicate billable entries; tự động sinh bản ghi bù trừ (compensating entries) theo nguyên tắc append-only để cân bằng sổ cái khi phát hiện bất thường.
   - Billing processor riêng: PASS — Bộ tạo hóa đơn dự thảo cách ly, chốt an toàn cấm thanh toán thực tế (realChargingExecuted = false, SIMULATION_ONLY), tạo hóa đơn có chữ ký băm toàn vẹn SHA-256.
-Reviewer / reviewed commit / decision: implemented_local / 526d3c8 / Acceptance met, full commercial verification pass
+Reviewer / reviewed commit / decision: implemented_local / a3313e0 / Acceptance met, full commercial verification pass
 ```
 
 ---
