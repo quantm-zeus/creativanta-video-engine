@@ -1,0 +1,50 @@
+{
+  "schema_version": "1.0",
+  "canvas": {
+    "width": 1280,
+    "height": 720,
+    "background": "#0b0f19"
+  },
+  "fps": {
+    "num": 30,
+    "den": 1
+  },
+  "duration_frames": 150,
+  "seed": 42,
+  "locale": "vi-VN",
+  "direction": "ltr",
+  "fonts": [],
+  "scenes": [
+    {
+      "id": "scn_custom_variant_01",
+      "revision": 1,
+      "start_frame": 0,
+      "duration_frames": 150,
+      "engine": "custom-html-v1",
+      "bundle": {
+        "id": "bnd_p706_promo_kinetic",
+        "revision": 2,
+        "source_sha256": "acc8114648548eb41763e1763c6352cc8cbfd67c85a4fdc363f9f1172b61399e",
+        "build_sha256": "0b344a8f5adb6e708009c6aa67e462f14b7bedf9c7d7d3453d8d35b910570f31",
+        "entrypoint": "index.js",
+        "parameters": {
+          "headline": "Khuyến Mãi Đặc Quyền Tháng 11 — Giảm 50%",
+          "subheadline": "Creativanta Video Engine CPU-First",
+          "badgeText": "ĐẶC QUYỀN PILOT",
+          "accentColor": "#f43f5e",
+          "speedMultiplier": 1,
+          "showBadge": true
+        }
+      }
+    }
+  ],
+  "audio_tracks": [],
+  "subtitles": [],
+  "metadata": {
+    "composition_id": "cmp_approved_variant-promo-kinetic_r2",
+    "approved_variant": "promo-kinetic",
+    "brief_hash": "212f5fe00d6b196a241f597218723f5d8c0fcf0a21dc9e2d996588a8f09961a2",
+    "source_sha256": "acc8114648548eb41763e1763c6352cc8cbfd67c85a4fdc363f9f1172b61399e",
+    "build_sha256": "0b344a8f5adb6e708009c6aa67e462f14b7bedf9c7d7d3453d8d35b910570f31"
+  }
+}
