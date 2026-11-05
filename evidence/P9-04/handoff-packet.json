@@ -1,0 +1,252 @@
+{
+  "$schema": "https://video.example.invalid/schemas/creativanta-handoff-packet.json",
+  "packet_version": "1.0.0",
+  "task_id": "P9-04",
+  "phase": "P9",
+  "stream": "D+Supervisor",
+  "target_service": "Creativanta Video Engine (CVE) REST API v1",
+  "target_client": "@creativanta/sdk",
+  "generated_at": "2026-11-05T03:00:00Z",
+  "coordination_status": {
+    "overall_status": "HARNESS_VERIFIED_LIVE_PENDING_SEPARATE_SCOPE",
+    "in_repo_harness": {
+      "status": "VERIFIED_READY",
+      "test_suite": "packages/sdk/test/creativanta-e2e-contract-harness.test.mjs",
+      "mock_implementation": "packages/sdk/src/client/contract-mock.ts",
+      "summary": "100% contract compatibility verified locally across 102 SDK tests and 72 ops regression tests with zero shared DB assumptions."
+    },
+    "live_integration": {
+      "status": "BLOCKED_PENDING_SEPARATE_AUTHORIZED_SCOPE",
+      "gate_id": "EXT-GATE-CREATIVANTA-02",
+      "description": "Integration tasks outside this repository (modifying existing Creativanta service repo, production DNS, live credentials, production deployment) require separate authorized assignment.",
+      "boundary_rules": [
+        "Do not modify neighboring repositories or parent checkout from this workspace.",
+        "Do not deploy live infrastructure or modify production host services without separate authorized scope.",
+        "Do not inject or commit live production credentials; use strictly verified placeholder schemas.",
+        "Coordinate external integration tasks only upon separate scope assignment by supervisor."
+      ]
+    }
+  },
+  "base_urls": {
+    "local_harness": {
+      "environment": "local_mock",
+      "base_url": "http://127.0.0.1:4000/v1",
+      "tls_required": false,
+      "auth_header": "Authorization: Bearer cve_live_placeholder_key_000000000000000000000000",
+      "description": "In-memory mock or local harness instance for unit & contract testing"
+    },
+    "staging_private_beta": {
+      "environment": "staging_private_beta",
+      "base_url": "https://staging-cve.creativanta.internal/v1",
+      "tls_required": true,
+      "auth_header": "Authorization: Bearer <STAGING_API_KEY>",
+      "description": "Isolated staging environment for pre-production integration testing"
+    },
+    "production": {
+      "environment": "production_target",
+      "base_url": "https://video.creativanta.com/v1",
+      "tls_required": true,
+      "auth_header": "Authorization: Bearer <PRODUCTION_API_KEY>",
+      "description": "Commercial production endpoint (pending GA decision gate P9-05)"
+    }
+  },
+  "env_specification": {
+    "variables": [
+      {
+        "name": "CREATIVANTA_API_BASE_URL",
+        "required": true,
+        "type": "string (URL)",
+        "default": "http://127.0.0.1:4000/v1",
+        "staging_example": "https://staging-cve.creativanta.internal/v1",
+        "production_example": "https://video.creativanta.com/v1",
+        "description": "Target endpoint for CVE REST API v1. Must enforce HTTPS outside local development."
+      },
+      {
+        "name": "CREATIVANTA_API_KEY",
+        "required": true,
+        "type": "string (secret)",
+        "pattern": "^cve_(live|test)_[0-9a-f]{32,64}$",
+        "placeholder": "cve_live_placeholder_key_000000000000000000000000",
+        "description": "High-entropy 32-byte bearer token. Stored as salted/keyed hash at rest on server. Never commit."
+      },
+      {
+        "name": "CREATIVANTA_WEBHOOK_SECRET",
+        "required": true,
+        "type": "string (secret)",
+        "pattern": "^whsec_[0-9a-f]{64}$",
+        "placeholder": "whsec_placeholder_secret_000000000000000000000000",
+        "description": "Shared signing secret for HMAC-SHA256 signature verification on incoming callbacks."
+      },
+      {
+        "name": "CREATIVANTA_WEBHOOK_ENDPOINT_URL",
+        "required": true,
+        "type": "string (URL)",
+        "staging_example": "https://staging-app.creativanta.internal/api/webhooks/video-engine",
+        "production_example": "https://creativanta.internal/api/webhooks/video-engine",
+        "description": "Public or internal HTTPS webhook receiver URL registered with CVE."
+      },
+      {
+        "name": "CREATIVANTA_CLIENT_TIMEOUT_MS",
+        "required": false,
+        "type": "integer (milliseconds)",
+        "default": 30000,
+        "description": "Timeout budget for outgoing HTTP requests to CVE API."
+      },
+      {
+        "name": "CREATIVANTA_MAX_RETRIES",
+        "required": false,
+        "type": "integer",
+        "default": 3,
+        "description": "Maximum automatic retries on retryable errors (409 IN_PROGRESS, 429, 503)."
+      },
+      {
+        "name": "CREATIVANTA_INITIAL_BACKOFF_MS",
+        "required": false,
+        "type": "integer (milliseconds)",
+        "default": 1000,
+        "description": "Initial backoff delay before first retry attempt."
+      },
+      {
+        "name": "CREATIVANTA_MAX_BACKOFF_MS",
+        "required": false,
+        "type": "integer (milliseconds)",
+        "default": 10000,
+        "description": "Upper bound on exponential backoff delay."
+      },
+      {
+        "name": "CREATIVANTA_POLL_INTERVAL_INITIAL_MS",
+        "required": false,
+        "type": "integer (milliseconds)",
+        "default": 2000,
+        "description": "Initial polling interval during reconciliation (per docs/API.md line 139)."
+      },
+      {
+        "name": "CREATIVANTA_POLL_INTERVAL_MAX_MS",
+        "required": false,
+        "type": "integer (milliseconds)",
+        "default": 10000,
+        "description": "Maximum ceiling for reconciliation polling interval."
+      },
+      {
+        "name": "CREATIVANTA_GRANT_REFRESH_BUFFER_MS",
+        "required": false,
+        "type": "integer (milliseconds)",
+        "default": 60000,
+        "description": "Time buffer prior to artifact URL expiration (TTL <= 300s) to trigger proactive refresh."
+      }
+    ]
+  },
+  "scopes": {
+    "all_available_scopes": [
+      {
+        "scope": "jobs:read",
+        "description": "Query render jobs, status progression, execution events, and download grants"
+      },
+      {
+        "scope": "jobs:write",
+        "description": "Submit render jobs, preview requests, and cancel commands"
+      },
+      {
+        "scope": "templates:read",
+        "description": "Query template catalog, inspect schemas, default variables, and bindings"
+      },
+      {
+        "scope": "templates:write",
+        "description": "Create or update tenant-specific templates and revisions"
+      },
+      {
+        "scope": "compositions:read",
+        "description": "Read scene composition specifications and historical revisions"
+      },
+      {
+        "scope": "compositions:write",
+        "description": "Create compositions, validate scene specs, and instantiate templates"
+      },
+      {
+        "scope": "assets:read",
+        "description": "Query asset metadata, quarantine probe status, and access grants"
+      },
+      {
+        "scope": "assets:write",
+        "description": "Request quarantine upload grants, complete uploads, and revoke assets"
+      },
+      {
+        "scope": "webhooks:manage",
+        "description": "Register webhook endpoints, respond to challenge echo, and rotate secrets"
+      },
+      {
+        "scope": "usage:read",
+        "description": "Query operational rendering metrics, render minutes, and cost estimates"
+      },
+      {
+        "scope": "authoring:write",
+        "description": "Restricted AI provider scene generation (not required for standard rendering)"
+      }
+    ],
+    "creativanta_integration_recommended_scopes": [
+      "jobs:read",
+      "jobs:write",
+      "templates:read",
+      "compositions:write",
+      "assets:read",
+      "assets:write",
+      "webhooks:manage",
+      "usage:read"
+    ]
+  },
+  "entity_mappings": {
+    "domain_mappings": [
+      {
+        "creativanta_concept": "OrderId / VideoTaskId / CampaignId",
+        "cve_concept": "external_reference (client_reference)",
+        "notes": "Client provides business identifier; CVE echoes it on status, webhooks, and reconciliation without semantic interpretation."
+      },
+      {
+        "creativanta_concept": "Video Request Submission",
+        "cve_concept": "POST /v1/render-jobs with Idempotency-Key",
+        "notes": "Mandatory 1-128 char ASCII key; RFC 8785 canonical hash prevents duplicate billing or duplicate render jobs."
+      },
+      {
+        "creativanta_concept": "Video Template & Variables",
+        "cve_concept": "POST /v1/templates/{id}/instantiate",
+        "notes": "Pins exact template revision (e.g. revision 1). Returns immutable composition revision 1."
+      },
+      {
+        "creativanta_concept": "Product Image / Audio Media",
+        "cve_concept": "Quarantine Asset (POST /assets/uploads -> PUT -> POST /assets/{id}/complete)",
+        "notes": "Isolated probe checks magic bytes, dimension bounds (<=40MP), and duration. Marked 'ready' before render."
+      },
+      {
+        "creativanta_concept": "Real-time Notification",
+        "cve_concept": "Signed Webhook Event (X-CVE-Signature: v1=<hex>, HMAC-SHA256)",
+        "notes": "Requires challenge handshake echo at registration. Constant-time timingSafeEqual verification."
+      },
+      {
+        "creativanta_concept": "Status Polling Fallback",
+        "cve_concept": "GET /v1/jobs/{id} with 2s -> 10s exponential backoff",
+        "notes": "Reconciliation stops upon reaching terminal state (succeeded, failed, canceled)."
+      },
+      {
+        "creativanta_concept": "Rendered MP4 Retrieval",
+        "cve_concept": "GET /v1/artifacts/{id}/download (TTL <= 300s)",
+        "notes": "Signed bearer URL expires in 5 minutes. Auto-refreshes on 410 GRANT_EXPIRED without rerendering."
+      }
+    ],
+    "job_state_lifecycle": {
+      "non_terminal_states": ["queued", "preparing", "rendering", "encoding", "verifying", "cancel_requested"],
+      "terminal_states": ["succeeded", "failed", "canceled"],
+      "state_version_rule": "Monotonic integer. Client must discard incoming webhook events with state_version <= last_known_state_version."
+    }
+  },
+  "fixtures": {
+    "template_instantiate": "evidence/P9-04/fixtures/template-instantiate-retail-promo.json",
+    "render_job_request": "evidence/P9-04/fixtures/render-job-request.json",
+    "webhook_job_succeeded": "evidence/P9-04/fixtures/webhook-job-succeeded.json",
+    "webhook_job_failed": "evidence/P9-04/fixtures/webhook-job-failed.json",
+    "webhook_challenge_handshake": "evidence/P9-04/fixtures/webhook-challenge-handshake.json",
+    "asset_upload_grant": "evidence/P9-04/fixtures/asset-upload-grant-and-complete.json",
+    "error_catalog": "evidence/P9-04/fixtures/error-responses.json",
+    "idempotency_replay": "evidence/P9-04/fixtures/idempotency-replay-response.json"
+  },
+  "runbook_reference": "evidence/P9-04/handoff-runbook.md"
+}
