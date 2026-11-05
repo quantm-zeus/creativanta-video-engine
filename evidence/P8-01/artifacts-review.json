@@ -1,0 +1,242 @@
+{
+  "task_id": "P8-01",
+  "evaluated_on": "2026-11-05",
+  "stream": "D+C",
+  "base_commit": "e9046baeb51bbe335ffaf629bb41cc6aaed8b395",
+  "method": "Cryptographic package tarball audit, npm registry metadata inspection, lifecycle scripts analysis, license and distribution obligations evaluation (MPL-2.0, MIT, BSD-3-Clause), patent pool licensing review (MPEG-LA AVC, Via LA AAC), browser WebCodecs capability verification, and non-shipping gate validation. Zero unreviewed code installed or shipped before review approval.",
+  "review_summary": {
+    "mediabunny": "CONDITIONALLY_ALLOWED_FOR_SPIKE",
+    "webav_cliper": "CONDITIONALLY_ALLOWED_FOR_SPIKE",
+    "webav_canvas": "CONDITIONALLY_ALLOWED_FOR_SPIKE",
+    "webav_recorder": "CONDITIONALLY_ALLOWED_FOR_SPIKE",
+    "webav_internal_utils": "CONDITIONALLY_ALLOWED_FOR_SPIKE",
+    "webav_mp4box_js": "CONDITIONALLY_ALLOWED_FOR_SPIKE",
+    "opfs_tools": "AUDITED_CLIENT_DEPENDENCY",
+    "wave_resampler": "AUDITED_CLIENT_DEPENDENCY",
+    "client_software_wasm_h264": "STRICTLY_BLOCKED",
+    "webav_pro_closed_source": "STRICTLY_BLOCKED",
+    "upstream_demo_assets_unlocalized": "STRICTLY_BLOCKED"
+  },
+  "artifacts": [
+    {
+      "name": "mediabunny",
+      "scope": "browser_demux_mux_container_toolkit",
+      "version": "1.65.2",
+      "pushed_at": "2026-11-04T19:26:16.808Z",
+      "git_head": "173f6b70765fa3a6ffc1c82737514416fa559ef5",
+      "tarball_url": "https://registry.npmjs.org/mediabunny/-/mediabunny-1.65.2.tgz",
+      "shasum": "ef1db034a70f11702dba2fbe65e8342d268dfd38",
+      "integrity": "sha512-goZpibvo/5hkc/56WVNm93Ini+o7K4y8aXA20c/BN1B+m3L5aHQa8MTvO+S1APg/YI8kMILtrX6QCqUtxLW7bA==",
+      "unpacked_size_bytes": 11355831,
+      "license": "MPL-2.0",
+      "install_scripts": {
+        "has_lifecycle_scripts": false
+      },
+      "dependencies": {
+        "runtime": {},
+        "peer": {},
+        "dev_types": {
+          "@types/dom-webcodecs": "0.1.13",
+          "@types/dom-mediacapture-transform": "^0.1.11"
+        }
+      },
+      "legal_analysis": {
+        "spdx_id": "MPL-2.0",
+        "copyleft_scope": "File-level weak copyleft (Section 3.1). Any direct modifications to Mediabunny source files must remain licensed under MPL-2.0 and made available upon distribution.",
+        "larger_work_provision": "Section 3.3 explicitly permits combining Mediabunny with independent software modules to form a Larger Work without subjecting the other modules to MPL-2.0, provided Mediabunny source files remain separate.",
+        "distribution_obligations": "Section 3.2 governs distribution of Executable Form (client-side bundled/minified JS). Recipients must be informed of how they can obtain the Source Code of Mediabunny (e.g. by providing a link to https://github.com/Vanilagy/mediabunny or public archive), and copyright/NOTICE statements must be preserved.",
+        "patent_grant": "Section 5 provides an express patent license from each contributor covering patent claims inevitably infringed by the covered code."
+      },
+      "findings": [
+        "Pure TypeScript implementation providing high-performance media container parsing, demuxing, muxing, WebCodecs integration, and fragmented MP4 generation.",
+        "Completely self-contained runtime: zero runtime npm dependencies, zero network requests, no postinstall scripts.",
+        "Safe integration pattern requires keeping Mediabunny as an un-modified external dependency package rather than copying/vendoring its source into proprietary modules."
+      ],
+      "verdict": "CONDITIONALLY_ALLOWED_FOR_SPIKE",
+      "usage_policy": "Approved for evaluation in P8-02 browser export spike as an unmodified external package dependency. Bundle notices must include MPL-2.0 attribution and public source code repository link."
+    },
+    {
+      "name": "@webav/av-cliper",
+      "scope": "webcodecs_timeline_synthesis_engine",
+      "version": "1.2.8",
+      "pushed_at": "2026-01-10T09:54:37.602Z",
+      "tarball_url": "https://registry.npmjs.org/@webav/av-cliper/-/av-cliper-1.2.8.tgz",
+      "shasum": "d1ad2e65f8baa0f37dca91c070d582ff4f5d5daa",
+      "integrity": "sha512-lxCXgP5AJsl+6xRo1puU5lTv7rAsxX9StQVK8xYdbg02p9FswCt76iTPqNxmlJ0ZfV1g+lmyNufLXu/qBAnJnA==",
+      "unpacked_size_bytes": 661760,
+      "license": "MIT (root repo)",
+      "install_scripts": {
+        "has_lifecycle_scripts": false
+      },
+      "dependencies": {
+        "runtime": {
+          "@webav/mp4box.js": "^0.5.7",
+          "opfs-tools": "^0.7.2",
+          "wave-resampler": "^1.0.0",
+          "@webav/internal-utils": "1.2.8"
+        }
+      },
+      "legal_analysis": {
+        "spdx_id": "MIT",
+        "copyleft_scope": "Permissive license; no copyleft requirements.",
+        "distribution_obligations": "Copyright notice and MIT permission notice must be retained in client bundle distributions.",
+        "package_json_issue": "Sub-package package.json published on npm omits explicit 'license' field; root repo WebAV-Tech/WebAV defines standard MIT license (1059 bytes).",
+        "commercial_pro_distinction": "Author maintains closed-source 'WebAV Pro' features (commercial timeline UI, advanced visual transitions) under proprietary terms. Only open-source core @webav/av-cliper is evaluated.",
+        "patent_grant": "Standard MIT; no express patent grant clause."
+      },
+      "findings": [
+        "WebCodecs-based timeline synthesis combining video, audio, image, and canvas layers directly in browser context.",
+        "Zero lifecycle install scripts; reproducible local build without network postinstall fetches.",
+        "Relies on @webav/mp4box.js (BSD-3-Clause) for ISO BMFF packaging, opfs-tools for Origin Private File System staging, and wave-resampler for audio rate conversion.",
+        "Upstream demo clips (Big Buck Bunny, Tears of Steel) lack commercial rights clearance and Vietnamese typography; strictly blocked under P0-03 rights policy."
+      ],
+      "verdict": "CONDITIONALLY_ALLOWED_FOR_SPIKE",
+      "usage_policy": "Approved for P8-02 browser export spike evaluation with explicit MIT attribution. Pro proprietary extensions and unreviewed demo assets strictly blocked."
+    },
+    {
+      "name": "@webav/av-canvas",
+      "scope": "browser_canvas_mediastream_compositor",
+      "version": "1.2.8",
+      "pushed_at": "2026-01-10T09:54:54.759Z",
+      "tarball_url": "https://registry.npmjs.org/@webav/av-canvas/-/av-canvas-1.2.8.tgz",
+      "shasum": "87a059ef51b6b61e331f06e183fdb1fccd0bf0a5",
+      "integrity": "sha512-j7wvlmdQcwSeMDPiOjfnw2LR/+F/yqYScs9dzwh8SHQre6nnnxS/eOPBghhgVx/RlqFk6VR4UYtnXlhfgnhWtA==",
+      "unpacked_size_bytes": 489210,
+      "license": "MIT (root repo)",
+      "install_scripts": {
+        "has_lifecycle_scripts": false
+      },
+      "dependencies": {
+        "runtime": {
+          "@webav/internal-utils": "1.2.8"
+        }
+      },
+      "findings": [
+        "Combines Text, Image, Video, and Audio into MediaStream in browser DOM/Canvas environment.",
+        "Zero lifecycle scripts.",
+        "Requires active DOM or OffscreenCanvas context."
+      ],
+      "verdict": "CONDITIONALLY_ALLOWED_FOR_SPIKE",
+      "usage_policy": "Allowed for DOM/Canvas frame synthesis in P8-02 spike under strict MIT notice preservation."
+    },
+    {
+      "name": "@webav/av-recorder",
+      "scope": "webcodecs_stream_recorder",
+      "version": "1.2.8",
+      "pushed_at": "2026-01-10T09:54:45.372Z",
+      "tarball_url": "https://registry.npmjs.org/@webav/av-recorder/-/av-recorder-1.2.8.tgz",
+      "shasum": "f55ac27806c370c1c2e6d03fd5701620a683192e",
+      "integrity": "sha512-Ju7/BOTU7p/BPXh98oZHzBGF2B849lmEI1j0G76y4Aiv8S3MoX1l5FTIj0J2gFZudw0p0/NS41AGqsT4PhY6ng==",
+      "unpacked_size_bytes": 352110,
+      "license": "MIT (root repo)",
+      "install_scripts": {
+        "has_lifecycle_scripts": false
+      },
+      "dependencies": {
+        "runtime": {
+          "@webav/mp4box.js": "^0.5.7",
+          "@webav/internal-utils": "1.2.8"
+        }
+      },
+      "findings": [
+        "Encodes MediaStream to MP4 using WebCodecs API and mp4box.js muxer.",
+        "Zero lifecycle scripts."
+      ],
+      "verdict": "CONDITIONALLY_ALLOWED_FOR_SPIKE",
+      "usage_policy": "Alternative stream recorder candidate for browser export evaluation."
+    },
+    {
+      "name": "@webav/internal-utils",
+      "scope": "internal_browser_helpers",
+      "version": "1.2.8",
+      "pushed_at": "2026-01-10T09:54:28.060Z",
+      "tarball_url": "https://registry.npmjs.org/@webav/internal-utils/-/internal-utils-1.2.8.tgz",
+      "shasum": "dd16608363eb1bedbbb6e592bfdd0bdcba26d353",
+      "integrity": "sha512-ZiEXl4U6PRqotkux0eTUdVn5zxbzXYm4Xfjt+HvH5bowwGSJVho/mmbPrdPf3ZRtfIu0aWCWa04LUDBQuY5ltA==",
+      "license": "MIT (root repo)",
+      "install_scripts": {
+        "has_lifecycle_scripts": false
+      },
+      "findings": [
+        "Shared internal utilities for WebAV packages with disclaimer warning against direct external usage."
+      ],
+      "verdict": "CONDITIONALLY_ALLOWED_FOR_SPIKE",
+      "usage_policy": "Transitive dependency only; do not import directly."
+    },
+    {
+      "name": "@webav/mp4box.js",
+      "scope": "iso_bmff_stream_muxer",
+      "version": "0.5.7",
+      "pushed_at": "2025-07-14T07:53:52.512Z",
+      "tarball_url": "https://registry.npmjs.org/@webav/mp4box.js/-/mp4box.js-0.5.7.tgz",
+      "shasum": "fa100d724c3ddd4cd24fb1243f8a274823c49d38",
+      "integrity": "sha512-KgScEtDpiLnWvj1Rj8Ri9fDWxTjfdNr7cmY/PT88EmttHh6cLxMAeyD/W8Vydes4z7qV/c5VDAaP4cTlaO0E9g==",
+      "license": "BSD-3-Clause",
+      "install_scripts": {
+        "has_lifecycle_scripts": false
+      },
+      "findings": [
+        "JavaScript port of GPAC MP4Box for ISO BMFF stream parsing, demuxing, and fragmented packaging.",
+        "Zero lifecycle scripts."
+      ],
+      "verdict": "CONDITIONALLY_ALLOWED_FOR_SPIKE",
+      "usage_policy": "Transitive dependency; retain BSD-3-Clause notices in client bundle."
+    },
+    {
+      "name": "opfs-tools",
+      "scope": "origin_private_file_system_driver",
+      "version": "0.7.2",
+      "tarball_url": "https://registry.npmjs.org/opfs-tools/-/opfs-tools-0.7.2.tgz",
+      "shasum": "3d1be1260fe1efd43f61de981ec57cd133effd60",
+      "integrity": "sha512-ITMh4BnRCh/wFDFFaTsZOFLGUCoXbtn4KH1qh4S2LLF31+afqhXxz0NK74wqyRB5tbgnDD2SDcn7J4HeEVuvgg==",
+      "license": "MIT",
+      "install_scripts": {
+        "has_lifecycle_scripts": false
+      },
+      "findings": [
+        "Provides high-performance disk-backed chunk streaming via OPFS in Web Workers."
+      ],
+      "verdict": "AUDITED_CLIENT_DEPENDENCY",
+      "usage_policy": "Allowed for large-frame buffering in browser Web Workers."
+    },
+    {
+      "name": "wave-resampler",
+      "scope": "pcm_audio_resampler",
+      "version": "1.0.0",
+      "tarball_url": "https://registry.npmjs.org/wave-resampler/-/wave-resampler-1.0.0.tgz",
+      "shasum": "127502338d28e6d5315be1abb06665c04bbb4fc6",
+      "integrity": "sha512-bE3rbpZXuKAV52Cd8/BeJvy82ZqEHK8pPWHrZ9JioaVVTBlmWbDC+u4p9blhFcf0Skepb4hlOAHc25XfqLC48g==",
+      "license": "MIT",
+      "install_scripts": {
+        "has_lifecycle_scripts": false
+      },
+      "findings": [
+        "Pure JS linear/sinc audio resampling utility for 48kHz normalization."
+      ],
+      "verdict": "AUDITED_CLIENT_DEPENDENCY",
+      "usage_policy": "Allowed for audio sample rate normalization before WebCodecs AudioEncoder."
+    }
+  ],
+  "patent_and_regulatory_evaluation": {
+    "h264_avc": {
+      "patent_pool": "MPEG-LA / Via LA AVC Patent Portfolio",
+      "browser_native_webcodecs": "ALLOWED_NO_ROYALTY_FOR_WEBAPP: WebCodecs VideoEncoder invokes host platform hardware/OS encoder (Apple VideoToolbox, Microsoft Media Foundation, Android MediaCodec). Platform vendors hold hardware/OS licenses; web app distributes no codec binaries and incurs no direct patent royalties.",
+      "client_software_wasm": "STRICTLY_BLOCKED: Bundling software H.264 encoders (such as GPL libx264 compiled to WASM) into client web application is strictly prohibited due to GPL viral copyleft, Creativanta commercial boundary violation, and unindemnified MPEG-LA royalty exposure."
+    },
+    "aac_audio": {
+      "patent_pool": "Via LA AAC Patent Portfolio",
+      "browser_native_webcodecs": "ALLOWED_NO_ROYALTY_FOR_WEBAPP: Native WebCodecs AudioEncoder with mp4a.40.2 (AAC-LC) is covered by host platform licensing. Server fallback applied when browser lacks native AAC encoder.",
+      "client_software_wasm": "STRICTLY_BLOCKED: No software AAC encoders with non-free or patent-encumbered licenses."
+    },
+    "vp9_av1_opus": {
+      "patent_pool": "Royalty-Free Open Standards (AOMedia, Google, IETF)",
+      "status": "ALLOWED_ROYALTY_FREE: Fully permitted for WebM packaging and MP4 AV1 streams."
+    }
+  },
+  "non_shipping_gate": {
+    "gate_id": "EXT-P8-01",
+    "status": "PENDING_EXTERNAL_REVIEW",
+    "rule": "No code shipping trước review",
+    "enforcement": "assertBrowserExportGateApproved() throws BrowserExportGatePendingError on any attempt to execute browser rendering pipeline before formal reviewer sign-off."
+  }
+}
