@@ -1,0 +1,194 @@
+{
+  "timestamp": "2026-11-05T03:01:47.605Z",
+  "summary": {
+    "allChecksPassed": true
+  },
+  "quotaResults": {
+    "plansCount": 4,
+    "normalAdmissionAllowed": true,
+    "warningTriggered": true,
+    "warningDetails": [
+      {
+        "code": "CVE_QUOTA_WARNING_80",
+        "metric": "monthlyBillableMinutesQuota",
+        "ratio": 0.8833333333333333,
+        "message": "Tenant has utilized 88.3% of monthly billable minutes quota (53.00/60 min)"
+      },
+      {
+        "code": "CVE_BUDGET_WARNING_80",
+        "metric": "monthlyComputeBudgetCapUsd",
+        "ratio": 0.8670000000000001,
+        "message": "Tenant has utilized 86.7% of monthly budget cap ($13.01/$15.00)"
+      }
+    ],
+    "breachedAdmissionBlocked": true,
+    "breachStatusCode": 429,
+    "breachReason": "Tenant monthly billable minutes quota exceeded (11.00 > 10 min)"
+  },
+  "retentionResults": {
+    "tiersCount": 4,
+    "scannedCount": 7,
+    "purgeCandidatesCount": 3,
+    "preservedCount": 4,
+    "legalHoldPreservedCount": 1,
+    "freedGigabytes": 0.166,
+    "estimatedMonthlySavingsUsd": 0.00332
+  },
+  "exportResults": {
+    "totalRecordsExported": 4,
+    "operationalCostTotalUsd": 0.008617,
+    "billableMinutesTotal": 1,
+    "csvHeaderValid": true,
+    "jsonlLinesCount": 5
+  },
+  "pricingResults": {
+    "scenariosCount": 3,
+    "scenario10": {
+      "utilizationPercent": 10,
+      "activeSlotSeconds": 525600,
+      "billableOutputMinutes": 2190,
+      "rtf": 4,
+      "infrastructure": {
+        "provisionedHostCostUsd": 116.8,
+        "activeComputeCostUsd": 11.68,
+        "storageCostUsd": 0.4,
+        "egressCostUsd": 2.5,
+        "fullyAllocatedTotalOpExUsd": 119.7
+      },
+      "unitEconomics": {
+        "marginalUnitCostPerMinuteUsd": 0.0067,
+        "fullyAllocatedUnitCostPerMinuteUsd": 0.0547
+      },
+      "commercialProjections": {
+        "costPlus35": {
+          "projectedRevenueUsd": 161.6,
+          "grossProfitUsd": 41.9,
+          "grossMarginPercent": 25.9
+        },
+        "paygTiered": {
+          "projectedRevenueUsd": 237.3,
+          "effectiveRatePerMinuteUsd": 0.1084,
+          "grossProfitUsd": 117.6,
+          "grossMarginPercent": 49.6
+        },
+        "subscriptionBlended": {
+          "projectedRevenueUsd": 262.8,
+          "grossProfitUsd": 143.1,
+          "grossMarginPercent": 54.5
+        }
+      }
+    },
+    "scenario50": {
+      "utilizationPercent": 50,
+      "activeSlotSeconds": 2628000,
+      "billableOutputMinutes": 10950,
+      "rtf": 4,
+      "infrastructure": {
+        "provisionedHostCostUsd": 116.8,
+        "activeComputeCostUsd": 58.4,
+        "storageCostUsd": 0.4,
+        "egressCostUsd": 2.5,
+        "fullyAllocatedTotalOpExUsd": 119.7
+      },
+      "unitEconomics": {
+        "marginalUnitCostPerMinuteUsd": 0.0056,
+        "fullyAllocatedUnitCostPerMinuteUsd": 0.0109
+      },
+      "commercialProjections": {
+        "costPlus35": {
+          "projectedRevenueUsd": 161.6,
+          "grossProfitUsd": 41.9,
+          "grossMarginPercent": 25.9
+        },
+        "paygTiered": {
+          "projectedRevenueUsd": 850.5,
+          "effectiveRatePerMinuteUsd": 0.0777,
+          "grossProfitUsd": 730.8,
+          "grossMarginPercent": 85.9
+        },
+        "subscriptionBlended": {
+          "projectedRevenueUsd": 1314,
+          "grossProfitUsd": 1194.3,
+          "grossMarginPercent": 90.9
+        }
+      }
+    },
+    "scenario80": {
+      "utilizationPercent": 80,
+      "activeSlotSeconds": 4204800,
+      "billableOutputMinutes": 17520,
+      "rtf": 4,
+      "infrastructure": {
+        "provisionedHostCostUsd": 116.8,
+        "activeComputeCostUsd": 93.44,
+        "storageCostUsd": 0.4,
+        "egressCostUsd": 2.5,
+        "fullyAllocatedTotalOpExUsd": 119.7
+      },
+      "unitEconomics": {
+        "marginalUnitCostPerMinuteUsd": 0.0055,
+        "fullyAllocatedUnitCostPerMinuteUsd": 0.0068
+      },
+      "commercialProjections": {
+        "costPlus35": {
+          "projectedRevenueUsd": 161.6,
+          "grossProfitUsd": 41.9,
+          "grossMarginPercent": 25.9
+        },
+        "paygTiered": {
+          "projectedRevenueUsd": 1310.4,
+          "effectiveRatePerMinuteUsd": 0.0748,
+          "grossProfitUsd": 1190.7,
+          "grossMarginPercent": 90.9
+        },
+        "subscriptionBlended": {
+          "projectedRevenueUsd": 2102.4,
+          "grossProfitUsd": 1982.7,
+          "grossMarginPercent": 94.3
+        }
+      }
+    },
+    "workloadSimulation": {
+      "workload": {
+        "totalJobs": 1000,
+        "promoJobsCount": 800,
+        "footageJobsCount": 200,
+        "totalOutputSeconds": 21000,
+        "totalBillableMinutes": 350,
+        "totalWallSeconds": 88500
+      },
+      "costs": {
+        "marginalComputeCostUsd": 1.9667,
+        "unitMarginalCostPerMinuteUsd": 0.0056,
+        "monthlyNodeProvisioningCostUsd": 116.8
+      },
+      "revenueProjections": {
+        "costPlus35Usd": 2.66,
+        "paygRevenueUsd": 53,
+        "effectivePaygRateUsd": 0.1514
+      }
+    }
+  },
+  "reconciliationResults": {
+    "initialDiscrepanciesCount": 2,
+    "initialBalanced": false,
+    "compensationsGeneratedCount": 2,
+    "postCompensationDiscrepanciesCount": 0,
+    "postCompensationBalanced": true,
+    "zeroDuplicateBilledEntriesInvariant": true,
+    "reservationReleaseConsistentInvariant": true,
+    "nonNegativeBalancesInvariant": true
+  },
+  "billingResults": {
+    "invoiceId": "inv_1793847707635_8dcafee7",
+    "tenantId": "tenant_starter",
+    "status": "SIMULATED_DRAFT",
+    "realChargingExecuted": false,
+    "paymentGatewayEngaged": false,
+    "basePlanFeeUsd": 29,
+    "overageFeeUsd": 2.32,
+    "totalDueUsd": 32.33,
+    "integrityHashPresent": true,
+    "statementTextGenerated": true
+  }
+}
