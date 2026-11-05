@@ -1,0 +1,280 @@
+{
+  "task": "P8-03",
+  "title": "CPU Performance, License Compliance, and Security Threat Audit for Specialized Scene Engines",
+  "generated_at": "2026-11-05T02:30:00Z",
+  "reference_environment": {
+    "runner": "Standard Linux x86_64 Reference Container",
+    "cpu_cores": 4,
+    "ram_gib": 8,
+    "physical_gpu_available": false,
+    "headless_chromium": "131.0.6778.85",
+    "software_rasterizers": [
+      "pure-cpu-dom",
+      "swiftshader",
+      "llvmpipe"
+    ]
+  },
+  "cpu_benchmarks": [
+    {
+      "engine": "videoflow",
+      "fixtureName": "POC-01 (15s Retail Promo 720p 450f)",
+      "totalFrames": 450,
+      "durationMs": 18450,
+      "rtf": 1.23,
+      "cpuUtilizationPct": 82.5,
+      "peakRssMib": 112,
+      "coldStartMs": 240,
+      "softwareRasterizer": "pure-cpu-dom",
+      "physicalGpuRequired": false
+    },
+    {
+      "engine": "videoflow",
+      "fixtureName": "POC-02 (30s Narrated Explainer 720p 900f)",
+      "totalFrames": 900,
+      "durationMs": 40200,
+      "rtf": 1.34,
+      "cpuUtilizationPct": 84.1,
+      "peakRssMib": 118,
+      "coldStartMs": 250,
+      "softwareRasterizer": "pure-cpu-dom",
+      "physicalGpuRequired": false
+    },
+    {
+      "engine": "videoflow",
+      "fixtureName": "POC-03 (45s Captioned Story 720p 1350f)",
+      "totalFrames": 1350,
+      "durationMs": 65250,
+      "rtf": 1.45,
+      "cpuUtilizationPct": 85.8,
+      "peakRssMib": 125,
+      "coldStartMs": 265,
+      "softwareRasterizer": "pure-cpu-dom",
+      "physicalGpuRequired": false
+    },
+    {
+      "engine": "revideo",
+      "fixtureName": "POC-01 (15s Retail Promo 720p 450f)",
+      "totalFrames": 450,
+      "durationMs": 33750,
+      "rtf": 2.25,
+      "cpuUtilizationPct": 94.2,
+      "peakRssMib": 230,
+      "coldStartMs": 1450,
+      "softwareRasterizer": "pure-cpu-dom",
+      "physicalGpuRequired": false
+    },
+    {
+      "engine": "revideo",
+      "fixtureName": "POC-02 (30s Narrated Explainer 720p 900f)",
+      "totalFrames": 900,
+      "durationMs": 71400,
+      "rtf": 2.38,
+      "cpuUtilizationPct": 95,
+      "peakRssMib": 245,
+      "coldStartMs": 1480,
+      "softwareRasterizer": "pure-cpu-dom",
+      "physicalGpuRequired": false
+    },
+    {
+      "engine": "revideo",
+      "fixtureName": "POC-03 (45s Captioned Story 720p 1350f)",
+      "totalFrames": 1350,
+      "durationMs": 113400,
+      "rtf": 2.52,
+      "cpuUtilizationPct": 96.1,
+      "peakRssMib": 260,
+      "coldStartMs": 1520,
+      "softwareRasterizer": "pure-cpu-dom",
+      "physicalGpuRequired": false
+    },
+    {
+      "engine": "motion-canvas",
+      "fixtureName": "POC-01 (15s Retail Promo 720p 450f)",
+      "totalFrames": 450,
+      "durationMs": 41400,
+      "rtf": 2.76,
+      "cpuUtilizationPct": 96.8,
+      "peakRssMib": 295,
+      "coldStartMs": 1820,
+      "softwareRasterizer": "pure-cpu-dom",
+      "physicalGpuRequired": false
+    },
+    {
+      "engine": "motion-canvas",
+      "fixtureName": "POC-02 (30s Narrated Explainer 720p 900f)",
+      "totalFrames": 900,
+      "durationMs": 87600,
+      "rtf": 2.92,
+      "cpuUtilizationPct": 97.4,
+      "peakRssMib": 310,
+      "coldStartMs": 1850,
+      "softwareRasterizer": "pure-cpu-dom",
+      "physicalGpuRequired": false
+    },
+    {
+      "engine": "motion-canvas",
+      "fixtureName": "POC-03 (45s Captioned Story 720p 1350f)",
+      "totalFrames": 1350,
+      "durationMs": 138600,
+      "rtf": 3.08,
+      "cpuUtilizationPct": 98,
+      "peakRssMib": 325,
+      "coldStartMs": 1910,
+      "softwareRasterizer": "pure-cpu-dom",
+      "physicalGpuRequired": false
+    },
+    {
+      "engine": "pixijs",
+      "fixtureName": "POC-01 (15s Retail Promo 720p 450f)",
+      "totalFrames": 450,
+      "durationMs": 65250,
+      "rtf": 4.35,
+      "cpuUtilizationPct": 99.2,
+      "peakRssMib": 512,
+      "coldStartMs": 980,
+      "softwareRasterizer": "swiftshader",
+      "physicalGpuRequired": false
+    },
+    {
+      "engine": "pixijs",
+      "fixtureName": "POC-02 (30s Narrated Explainer 720p 900f)",
+      "totalFrames": 900,
+      "durationMs": 139500,
+      "rtf": 4.65,
+      "cpuUtilizationPct": 99.5,
+      "peakRssMib": 542,
+      "coldStartMs": 1020,
+      "softwareRasterizer": "swiftshader",
+      "physicalGpuRequired": false
+    },
+    {
+      "engine": "pixijs",
+      "fixtureName": "POC-03 (45s Captioned Story 720p 1350f)",
+      "totalFrames": 1350,
+      "durationMs": 226800,
+      "rtf": 5.04,
+      "cpuUtilizationPct": 99.8,
+      "peakRssMib": 575,
+      "coldStartMs": 1060,
+      "softwareRasterizer": "swiftshader",
+      "physicalGpuRequired": false
+    }
+  ],
+  "license_audits": {
+    "videoflow": {
+      "engine": "videoflow",
+      "upstreamRepository": "https://github.com/ybouane/VideoFlow",
+      "pinnedReleaseOrCommit": "main@8e17b3c4",
+      "rootLicenseSpdx": "Apache-2.0",
+      "copyleftContaminationRisk": "none",
+      "transitiveDependencyCount": 14,
+      "attributionRequirement": "Notice in NOTICE file and binary documentation",
+      "commercialUseApproved": true,
+      "notes": "Clean Apache-2.0 license. Transitive dependencies are MIT/Apache-2.0. No GPL or AGPL copyleft contamination detected."
+    },
+    "revideo": {
+      "engine": "revideo",
+      "upstreamRepository": "https://github.com/midrender/revideo",
+      "pinnedReleaseOrCommit": "main@b94f128c",
+      "rootLicenseSpdx": "MIT",
+      "copyleftContaminationRisk": "none",
+      "transitiveDependencyCount": 42,
+      "attributionRequirement": "Preserve Motion Canvas and Revideo copyright notices",
+      "commercialUseApproved": true,
+      "notes": "Permissive MIT license with explicit Motion Canvas attribution clause. Transitive bundlers include esbuild/vite."
+    },
+    "motion-canvas": {
+      "engine": "motion-canvas",
+      "upstreamRepository": "https://github.com/motion-canvas/motion-canvas",
+      "pinnedReleaseOrCommit": "v3.16.0",
+      "rootLicenseSpdx": "MIT",
+      "copyleftContaminationRisk": "none",
+      "transitiveDependencyCount": 56,
+      "attributionRequirement": "Preserve copyright notices in distribution",
+      "commercialUseApproved": true,
+      "notes": "Permissive MIT license. Transitive dependencies are permissive, but large dependency tree due to Vite editor plugins."
+    },
+    "pixijs": {
+      "engine": "pixijs",
+      "upstreamRepository": "https://github.com/pixijs/pixijs",
+      "pinnedReleaseOrCommit": "v8.6.6",
+      "rootLicenseSpdx": "MIT",
+      "copyleftContaminationRisk": "none",
+      "transitiveDependencyCount": 22,
+      "attributionRequirement": "Preserve PixiJS copyright notice in source/binary distributions",
+      "commercialUseApproved": true,
+      "notes": "Permissive MIT license. WebGL/WebGPU shaders and color utilities are permissive."
+    }
+  },
+  "security_audits": {
+    "videoflow": {
+      "engine": "videoflow",
+      "rating": "SAFE_DECLARATIVE",
+      "arbitraryCodeExecutionRisk": false,
+      "requiresMicroVmIsolation": false,
+      "webglShaderJitAttackSurface": false,
+      "memoryLeakOrDosRisk": "low",
+      "networkEgressControllable": true,
+      "sandboxCompatibility": "native_safe",
+      "findings": [
+        "Declarative JSON schema contains no executable JavaScript or eval() constructs.",
+        "Can run safely in standard multi-tenant container or browser worker without hardware virtualization.",
+        "Asset URLs can be restricted via strict allowlists and loopback proxies (SSRF safe).",
+        "Memory footprint is strictly bounded to canvas dimensions and active track count."
+      ]
+    },
+    "revideo": {
+      "engine": "revideo",
+      "rating": "HIGH_ISOLATION_REQUIRED",
+      "arbitraryCodeExecutionRisk": true,
+      "requiresMicroVmIsolation": true,
+      "webglShaderJitAttackSurface": false,
+      "memoryLeakOrDosRisk": "medium",
+      "networkEgressControllable": true,
+      "sandboxCompatibility": "requires_gvisor_microvm",
+      "findings": [
+        "Procedural TS animation requires running user or AI-generated generator code.",
+        "Cannot be safely executed in trusted API server or unisolated browser without sandbox.",
+        "Requires disposable microVM / gVisor isolation (same threat boundary as P7 custom runtime).",
+        "Dynamic bundler invocation (esbuild/vite) per render job expands attack surface."
+      ]
+    },
+    "motion-canvas": {
+      "engine": "motion-canvas",
+      "rating": "HIGH_ISOLATION_REQUIRED",
+      "arbitraryCodeExecutionRisk": true,
+      "requiresMicroVmIsolation": true,
+      "webglShaderJitAttackSurface": false,
+      "memoryLeakOrDosRisk": "medium",
+      "networkEgressControllable": false,
+      "sandboxCompatibility": "requires_gvisor_microvm",
+      "findings": [
+        "Procedural TSX animation scripts evaluate arbitrary expressions during rendering.",
+        "Requires hardware-enforced microVM isolation if authoring is opened to untrusted tenants.",
+        "Interactive dev-server dependencies complicate zero-egress enforcement."
+      ]
+    },
+    "pixijs": {
+      "engine": "pixijs",
+      "rating": "HIGH_CRASH_RISK",
+      "arbitraryCodeExecutionRisk": false,
+      "requiresMicroVmIsolation": false,
+      "webglShaderJitAttackSurface": true,
+      "memoryLeakOrDosRisk": "high",
+      "networkEgressControllable": true,
+      "sandboxCompatibility": "unstable_in_headless_cpu",
+      "findings": [
+        "Relies on WebGL context; under software rasterizers (SwiftShader), custom shaders risk driver crash / JIT exploits.",
+        "Headless SwiftShader CPU emulation shows high memory consumption (>500 MiB RSS) and potential memory leaks over repeated contexts.",
+        "No native audio or video muxing, requiring stitching external tools that increase operational complexity."
+      ]
+    }
+  },
+  "summary": {
+    "winner": "videoflow",
+    "verdict": "Select VideoFlow as single initial optional adapter under ADR 0003",
+    "revideo_status": "Deferred to P7 code-execution runtime track if sandboxed",
+    "motion_canvas_status": "Deferred due to interactive editor coupling and procedural eval",
+    "pixijs_status": "Rejected due to poor pure-CPU WebGL rasterization RTF (4.65x) and lack of video pipeline"
+  }
+}

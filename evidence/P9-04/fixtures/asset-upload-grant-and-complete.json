@@ -1,0 +1,82 @@
+{
+  "$schema": "https://video.example.invalid/schemas/asset-upload-fixtures.json",
+  "upload_request": {
+    "method": "POST",
+    "path": "/v1/assets/uploads",
+    "headers": {
+      "Authorization": "Bearer cve_live_placeholder_key_000000000000000000000000",
+      "Content-Type": "application/json",
+      "Idempotency-Key": "cve_idemp_asset_promo_banner_01"
+    },
+    "body": {
+      "filename": "holiday_promo_banner_1080x1920.png",
+      "mime_type": "image/png",
+      "bytes": 524288,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "rights": {
+        "basis": "owned",
+        "source": "creativanta_marketing_assets_dam",
+        "attribution": "Creativanta Commerce Inc.",
+        "expires_at": "2027-11-05T00:00:00Z"
+      }
+    }
+  },
+  "upload_grant_response": {
+    "status": 201,
+    "headers": {
+      "Content-Type": "application/json"
+    },
+    "body": {
+      "asset_id": "ast_promo_banner_01",
+      "upload_method": "PUT",
+      "upload_url": "https://storage.creativanta.internal/quarantine/ast_promo_banner_01?grant=placeholder_signed_grant_token",
+      "required_headers": {
+        "Content-Type": "image/png"
+      },
+      "expires_at": "2026-11-05T03:40:00Z",
+      "max_bytes": 524288
+    }
+  },
+  "complete_request": {
+    "method": "POST",
+    "path": "/v1/assets/ast_promo_banner_01/complete",
+    "headers": {
+      "Authorization": "Bearer cve_live_placeholder_key_000000000000000000000000",
+      "Content-Type": "application/json",
+      "Idempotency-Key": "cve_idemp_asset_complete_ast_promo_banner_01"
+    },
+    "body": {
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    }
+  },
+  "complete_response": {
+    "status": 202,
+    "body": {
+      "asset_id": "ast_promo_banner_01",
+      "status": "processing",
+      "message": "Quarantine probe scheduled asynchronously"
+    }
+  },
+  "ready_asset_response": {
+    "status": 200,
+    "body": {
+      "id": "ast_promo_banner_01",
+      "status": "ready",
+      "filename": "holiday_promo_banner_1080x1920.png",
+      "mime_type": "image/png",
+      "bytes": 524288,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "dimensions": {
+        "width": 1080,
+        "height": 1920
+      },
+      "rights": {
+        "basis": "owned",
+        "source": "creativanta_marketing_assets_dam",
+        "attribution": "Creativanta Commerce Inc.",
+        "expires_at": "2027-11-05T00:00:00Z"
+      },
+      "created_at": "2026-11-05T03:30:00Z"
+    }
+  }
+}

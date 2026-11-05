@@ -1,0 +1,17 @@
+{
+  "$schema": "https://video.example.invalid/schemas/render-job-request.json",
+  "composition_id": "cmp_retail_promo_20261105",
+  "revision": 1,
+  "profile": "mp4-720p-v1",
+  "client_reference": "creativanta-order-20261105-001",
+  "webhook_endpoint_id": "wh_creativanta_production_01",
+  "metadata": {
+    "tenant_order_id": "ord_8829104",
+    "delivery_tier": "standard",
+    "requested_format": "mp4"
+  },
+  "client_options": {
+    "idempotency_key": "cve_idemp_retail_ord_8829104_rev1",
+    "callback_url": "https://creativanta.internal/api/webhooks/video-engine"
+  }
+}

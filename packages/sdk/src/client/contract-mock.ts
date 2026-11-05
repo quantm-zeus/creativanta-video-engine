@@ -729,7 +729,7 @@ export class CreativantaContractMock {
       }
 
       const token = `tok_${crypto.randomBytes(12).toString('hex')}`;
-      const expiresAtMs = Date.now() + this.grantTtlSeconds * 1000;
+      const expiresAtMs = this.grantTtlSeconds <= 0 ? Date.now() - 1000 : Date.now() + this.grantTtlSeconds * 1000;
       this.downloadTokens.set(token, {
         artifactId: artId,
         expiresAtMs,

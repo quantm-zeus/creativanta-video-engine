@@ -1,0 +1,39 @@
+{
+  "$schema": "https://video.example.invalid/schemas/webhook-challenge-handshake.json",
+  "challenge_request": {
+    "url": "https://creativanta.internal/api/webhooks/video-engine",
+    "method": "POST",
+    "headers": {
+      "Content-Type": "application/json",
+      "X-CVE-Event-Id": "evt_challenge_init_001",
+      "X-CVE-Timestamp": "1793849500",
+      "X-CVE-Key-Id": "default",
+      "X-CVE-Signature": "v1=placeholder_challenge_hmac_signature_hex_00000000000000000000"
+    },
+    "body": {
+      "id": "evt_challenge_init_001",
+      "type": "endpoint.challenge",
+      "api_version": "1.0",
+      "created_at": "2026-11-05T03:31:40Z",
+      "data": {
+        "challenge": "cve_challenge_token_abc123xyz789",
+        "endpoint_id": "wh_creativanta_production_01"
+      }
+    }
+  },
+  "expected_receiver_response": {
+    "status": 200,
+    "headers": {
+      "Content-Type": "application/json"
+    },
+    "body": {
+      "challenge": "cve_challenge_token_abc123xyz789"
+    }
+  },
+  "verification_policy": {
+    "handshake_timeout_seconds": 10,
+    "max_retries": 3,
+    "timing_safe_compare": true,
+    "clock_skew_tolerance_seconds": 300
+  }
+}

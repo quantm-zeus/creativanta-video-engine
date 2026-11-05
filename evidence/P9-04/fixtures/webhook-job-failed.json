@@ -1,0 +1,29 @@
+{
+  "$schema": "https://video.example.invalid/schemas/webhook-event.json",
+  "id": "evt_wh_failed_20261105_002",
+  "type": "job.failed",
+  "api_version": "1.0",
+  "created_at": "2026-11-05T03:31:00Z",
+  "data": {
+    "job_id": "job_render_retail_promo_002",
+    "state": "failed",
+    "state_version": 3,
+    "client_reference": "creativanta-order-20261105-002",
+    "error": {
+      "code": "RENDER_EXECUTION_TIMEOUT",
+      "message": "Renderer execution exceeded maximum allowed time budget (60s)",
+      "retryable": false,
+      "details": {
+        "stage": "rendering",
+        "attempt": 1,
+        "timeout_seconds": 60
+      }
+    }
+  },
+  "signature_headers": {
+    "X-CVE-Event-Id": "evt_wh_failed_20261105_002",
+    "X-CVE-Timestamp": "1793849460",
+    "X-CVE-Key-Id": "default",
+    "X-CVE-Signature": "v1=placeholder_hmac_sha256_signature_hex_00000000000000000000000000000000"
+  }
+}

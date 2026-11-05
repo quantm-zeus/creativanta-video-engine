@@ -1,0 +1,158 @@
+{
+  "$schema": "https://video.example.invalid/schemas/api-error-responses.json",
+  "errors": {
+    "400_INVALID_IDEMPOTENCY_KEY": {
+      "status": 400,
+      "body": {
+        "error": {
+          "code": "INVALID_IDEMPOTENCY_KEY",
+          "message": "Idempotency key must be 1-128 ASCII characters [A-Za-z0-9._:-]",
+          "retryable": false
+        }
+      },
+      "handling": "Client must fix the idempotency key format before re-sending."
+    },
+    "401_UNAUTHORIZED": {
+      "status": 401,
+      "body": {
+        "error": {
+          "code": "UNAUTHORIZED",
+          "message": "Invalid or missing Bearer API key in Authorization header",
+          "retryable": false
+        }
+      },
+      "handling": "Verify CREATIVANTA_API_KEY environment variable and tenant provisioning status."
+    },
+    "403_FORBIDDEN_SCOPE": {
+      "status": 403,
+      "body": {
+        "error": {
+          "code": "FORBIDDEN",
+          "message": "API key lacks required scope 'jobs:write'",
+          "retryable": false,
+          "required_scope": "jobs:write"
+        }
+      },
+      "handling": "Request updated API key with required scope from tenant administrator."
+    },
+    "404_NOT_FOUND": {
+      "status": 404,
+      "body": {
+        "error": {
+          "code": "NOT_FOUND",
+          "message": "Resource 'cmp_unknown_id' not found in tenant workspace",
+          "retryable": false
+        }
+      },
+      "handling": "Do not retry without changing resource ID. Verify tenant boundary."
+    },
+    "409_IDEMPOTENCY_IN_PROGRESS": {
+      "status": 409,
+      "headers": {
+        "Retry-After": "1"
+      },
+      "body": {
+        "error": {
+          "code": "IDEMPOTENCY_IN_PROGRESS",
+          "message": "A concurrent request with the same Idempotency-Key is currently being processed",
+          "retryable": true
+        }
+      },
+      "handling": "Wait for Retry-After seconds and retry with the SAME Idempotency-Key."
+    },
+    "409_IDEMPOTENCY_CONFLICT": {
+      "status": 409,
+      "body": {
+        "error": {
+          "code": "IDEMPOTENCY_CONFLICT",
+          "message": "Payload does not match previously committed request for this Idempotency-Key",
+          "retryable": false
+        }
+      },
+      "handling": "Generate a new unique Idempotency-Key for a distinct payload."
+    },
+    "409_JOB_TERMINAL": {
+      "status": 409,
+      "body": {
+        "error": {
+          "code": "JOB_TERMINAL",
+          "message": "Cannot cancel job 'job_123' because it is already in terminal state 'succeeded'",
+          "retryable": false
+        }
+      },
+      "handling": "Accept that the job has already finished; retrieve artifact or inspect failure."
+    },
+    "410_GRANT_EXPIRED": {
+      "status": 410,
+      "body": {
+        "error": {
+          "code": "GRANT_EXPIRED",
+          "message": "The download grant URL has expired (TTL <= 300s)",
+          "retryable": true
+        }
+      },
+      "handling": "Call GET /v1/artifacts/{id}/download to refresh signed URL without rerendering."
+    },
+    "422_VALIDATION_FAILED": {
+      "status": 422,
+      "body": {
+        "error": {
+          "code": "VALIDATION_FAILED",
+          "message": "Scene specification schema validation failed: missing required variable 'headline'",
+          "retryable": false,
+          "details": [
+            {
+              "path": "/variables/headline",
+              "error": "Required field missing"
+            }
+          ]
+        }
+      },
+      "handling": "Correct template variable payload according to template schema."
+    },
+    "429_RATE_LIMITED": {
+      "status": 429,
+      "headers": {
+        "Retry-After": "2",
+        "X-RateLimit-Limit": "20",
+        "X-RateLimit-Remaining": "0"
+      },
+      "body": {
+        "error": {
+          "code": "RATE_LIMITED",
+          "message": "Rate limit exceeded (token bucket capacity 20, refill 1/s)",
+          "retryable": true
+        }
+      },
+      "handling": "Apply exponential backoff with jitter and retry with the SAME Idempotency-Key."
+    },
+    "429_QUOTA_EXCEEDED": {
+      "status": 429,
+      "headers": {
+        "Retry-After": "60"
+      },
+      "body": {
+        "error": {
+          "code": "QUOTA_EXCEEDED",
+          "message": "Tenant monthly render minutes quota exhausted",
+          "retryable": false
+        }
+      },
+      "handling": "Contact Creativanta account manager to increase tenant tier quota."
+    },
+    "503_SERVICE_UNAVAILABLE": {
+      "status": 503,
+      "headers": {
+        "Retry-After": "5"
+      },
+      "body": {
+        "error": {
+          "code": "SERVICE_UNAVAILABLE",
+          "message": "Engine cluster is shedding load or undergoing brief maintenance",
+          "retryable": true
+        }
+      },
+      "handling": "Wait Retry-After duration and retry with the SAME Idempotency-Key."
+    }
+  }
+}
