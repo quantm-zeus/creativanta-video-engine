@@ -186,6 +186,19 @@ importers:
         specifier: 5.7.3
         version: 5.7.3
 
+  packages/browser-export:
+    dependencies:
+      '@creativanta/contracts':
+        specifier: workspace:*
+        version: link:../contracts
+    devDependencies:
+      '@types/node':
+        specifier: 22.10.5
+        version: 22.10.5
+      typescript:
+        specifier: 5.7.3
+        version: 5.7.3
+
   packages/contracts:
     devDependencies:
       '@types/node':

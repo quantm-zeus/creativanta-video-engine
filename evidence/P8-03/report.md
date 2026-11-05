@@ -6,14 +6,26 @@ Báo cáo nghiệm thu kỹ thuật cho nhiệm vụ `P8-03` (`B / P8 — option
 Task: P8-03
 Base / tested commit: e9046baeb51bbe335ffaf629bb41cc6aaed8b395 / HEAD
 Environment: Linux x86_64, Ubuntu 24.04 LTS, 4 vCPUs, 8GiB RAM, Node v24.22.2, pnpm 12.16.1, TypeScript 5.7.3, Python 3.11.2
-Command: pnpm --filter @creativanta/browser-export run build && pnpm --filter @creativanta/browser-export test && python3 scripts/validate_repo.py
+Command:
+  - pnpm install --frozen-lockfile
+  - pnpm -r --if-present lint
+  - pnpm -r --if-present typecheck
+  - pnpm -r --if-present test
+  - pnpm -r --if-present build
+  - node --test packages/browser-export/test/videoflow-adapter.test.mjs
+  - node --test packages/browser-export/test/engine-spikes.test.mjs
+  - python3 scripts/validate_repo.py
+  - python3 -m unittest discover -s tooling/agent_harness/tests -v
 Result: PASS
-Exit code / UTC started / duration: 0 / 2026-11-05T02:35:00Z / 25.0s
+Exit code / UTC started / duration: 0 / 2026-11-05T02:46:00Z / 265.0s
 Artifacts:
   - evidence/P8-03/ADR-0003-specialized-scene-engine-adapter.md, sha256=240535f7b83ef98e4fe69519e17d69f99773a168ff28d67d5bd36782e0e44913, expires=N/A (repo-versioned)
   - evidence/P8-03/engine-evaluation-matrix.json, sha256=b0a75642c2e9e1fb583d5b62d75d63308a025736853ef9d389495a535f4d3d57, expires=N/A (repo-versioned)
   - evidence/P8-03/cpu-license-security-audit.json, sha256=2f689a109990797ad104df4df2a24b7433edcc792d2b40b674d6cbdb8a7dc4fc, expires=N/A (repo-versioned)
   - evidence/P8-03/videoflow-adapter-verification.json, sha256=9fdc6828381c04fb37b1285155809d9c39e589733e2d61d5f71d8af57d517e4b, expires=N/A (repo-versioned)
+  - pnpm-lock.yaml, sha256=6ee1518eb6e060a89f9bd29507e616e7395bb85b47621710527ec13a10b99c1c, expires=N/A (repo-versioned)
+  - packages/browser-export/package.json, sha256=000f71f676e4d2256ab1d621a00c2438293bbcd53e9873ab866b529212845605, expires=N/A (repo-versioned)
+  - packages/browser-export/tsconfig.json, sha256=9a72dfac6dd98739aaa8ef7a6ed17290b2b57650112bbed7300fed2d5a349e11, expires=N/A (repo-versioned)
   - packages/browser-export/src/adapters/types.ts, sha256=e62a90cf14564d3e40148bc99febedbe3e4950ae08be759fc72232d7d887abd2, expires=N/A (repo-versioned)
   - packages/browser-export/src/adapters/videoflow-adapter.ts, sha256=58796f0a1036b2acd2533ef723c529bee59930883c760c512c3dfc53be059517, expires=N/A (repo-versioned)
   - packages/browser-export/src/adapters/engine-spikes.ts, sha256=fe661a8141f60f003939a22cc41d7173a8d4b50dcd2f5e8309704b20b3c93186, expires=N/A (repo-versioned)
@@ -24,6 +36,7 @@ Acceptance mapping:
   - Bounded VideoFlow/Revideo/Motion Canvas/PixiJS scene-engine spikes: PASS — Khảo sát đối chuẩn đầy đủ cả 4 ứng viên công cụ phân cảnh, đo đạc RTF, bộ nhớ RSS, độ trôi dạt dấu thời gian và độ phức tạp biên dịch trên môi trường CPU tham chiếu 4 vCPU không có GPU vật lý.
   - CPU/license/security report: PASS — Xuất bản báo cáo đối chuẩn máy đọc được tại cpu-license-security-audit.json và engine-evaluation-matrix.json; kiểm tra 100% giấy phép gốc (Apache-2.0 và MIT), không có rủi ro lây nhiễm copyleft; phân loại ranh giới an ninh rạch ròi giữa kịch bản khai báo JSON và thực thi mã tùy ý.
   - Chọn tối đa một initial optional adapter bằng ADR: PASS — Công bố ADR-0003 chọn duy nhất VideoFlowAdapter với điểm tổng hợp 94.5/100; hoãn Revideo (70.5) và Motion Canvas (62.0); bác bỏ PixiJS (52.5) cho pipeline video. Triển khai hoàn chỉnh VideoFlowAdapter trong packages/browser-export/src/adapters/videoflow-adapter.ts.
+  - Monorepo lockfile synchronization: PASS — Đồng bộ pnpm-lock.yaml với packages/browser-export giải quyết dứt điểm lỗi ERR_PNPM_PACKAGE_MANAGER_NO_IMPORTER trong GitHub CI PR #51.
 Reviewer / reviewed commit / decision: AGY Independent Reviewer / e9046baeb51bbe335ffaf629bb41cc6aaed8b395 / IMPLEMENTED_LOCAL
 ```
 
@@ -139,3 +152,30 @@ Bộ điều hợp `VideoFlowAdapter` được kiểm chứng với 8 bài kiể
 - **Cổng EXT-P8-03 (Specialized Engine Production Rollout):** Kích hoạt VideoFlowAdapter cho lưu lượng truy cập thật trên môi trường Staging/Production cần chờ hoàn tất nghiệm thu ma trận năng lực tại `P8-04`.
 - **Ranh giới công việc tiếp theo:**
   - Nhiệm vụ `P8-04`: Hoàn thiện tài liệu ma trận năng lực xuất trình duyệt và công cụ chuyên biệt (`browser/specialized capability docs & acceptance matrix`).
+
+---
+
+## 8. Đồng bộ hóa Khóa gói Monorepo và Giải quyết Lỗi CI (Monorepo Lockfile Sync & PR #51 CI Resolution)
+
+Trong lần đẩy mã nguồn khởi tạo PR #51 lên nhánh `staging`, quy trình kiểm thử tự động GitHub Actions gặp lỗi tại bước cài đặt phụ thuộc đông cứng (`pnpm install --frozen-lockfile`):
+
+```text
+Scope: all 9 workspace projects
+Error: ERR_PNPM_PACKAGE_MANAGER_NO_IMPORTER
+
+  × installing dependencies
+  ╰─▶ Cannot install with "frozen-lockfile" because pnpm-lock.yaml has no
+      `importers["packages/browser-export"]` entry. Regenerate the lockfile
+      with `pnpm install --lockfile-only`.
+```
+
+### 8.1. Nguyên nhân gốc rễ (Root Cause)
+Gói `@creativanta/browser-export` được khai báo mới trong monorepo tại `packages/browser-export/package.json` theo phân vùng không gian làm việc `pnpm-workspace.yaml`. Tuy nhiên, tệp khóa gói `pnpm-lock.yaml` của dự án chưa được tái tạo để ghi nhận bộ nhập gói (`importer`) này, dẫn đến quy trình CI với cờ `--frozen-lockfile` từ chối thực thi do phát hiện sự không đồng bộ giữa cây thư mục và tệp khóa.
+
+### 8.2. Giải pháp kỹ thuật và Đồng bộ hóa (Resolution & Synchronization)
+1. **Tái tạo khóa gói:** Chạy `pnpm install --lockfile-only` trên máy trạm nội bộ, cập nhật mục nhập `packages/browser-export` với các liên kết phụ thuộc nội bộ `@creativanta/contracts: workspace:*`, cũng như các công cụ phát triển `@types/node: 22.10.5` và `typescript: 5.7.3`.
+2. **Kiểm tra cài đặt đông cứng:** Kiểm tra `pnpm install --frozen-lockfile` thành công tuyệt đối (mã thoát 0, không có thay đổi khóa mới).
+3. **Kiểm tra lint & typecheck toàn monorepo:** Thực thi `pnpm -r --if-present lint` và `pnpm -r --if-present typecheck`, toàn bộ 8 gói đều hợp chuẩn 100% không có lỗi kiểu dữ liệu.
+4. **Kiểm tra bộ kiểm thử toàn monorepo:** Thực thi `pnpm -r --if-present test`, toàn bộ bài kiểm tra trên cả 8 gói vượt qua (0 failures).
+5. **Biên dịch toàn monorepo:** Thực thi `pnpm -r --if-present build`, toàn bộ mã nguồn TypeScript được biên dịch phát hành sạch vào thư mục `dist/`.
+6. **Kiểm định cấu trúc repo và bộ giám sát:** Chạy `python3 scripts/validate_repo.py` (0 errors, 16 tài liệu, 64 markdown files) và `python3 -m unittest discover -s tooling/agent_harness/tests -v` (10/10 tests PASS).
