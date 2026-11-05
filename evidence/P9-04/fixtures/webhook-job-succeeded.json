@@ -1,0 +1,29 @@
+{
+  "$schema": "https://video.example.invalid/schemas/webhook-event.json",
+  "id": "evt_wh_succeeded_20261105_001",
+  "type": "job.succeeded",
+  "api_version": "1.0",
+  "created_at": "2026-11-05T03:30:00Z",
+  "data": {
+    "job_id": "job_render_retail_promo_001",
+    "state": "succeeded",
+    "state_version": 5,
+    "client_reference": "creativanta-order-20261105-001",
+    "artifact_ids": [
+      "art_mp4_retail_promo_001"
+    ],
+    "duration_seconds": 10.0,
+    "metrics": {
+      "render_duration_ms": 3200,
+      "encode_duration_ms": 1100,
+      "output_bytes": 4829100,
+      "fps": 30.0
+    }
+  },
+  "signature_headers": {
+    "X-CVE-Event-Id": "evt_wh_succeeded_20261105_001",
+    "X-CVE-Timestamp": "1793849400",
+    "X-CVE-Key-Id": "default",
+    "X-CVE-Signature": "v1=placeholder_hmac_sha256_signature_hex_00000000000000000000000000000000"
+  }
+}

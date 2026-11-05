@@ -1,0 +1,23 @@
+{
+  "$schema": "https://video.example.invalid/schemas/template-instantiate-request.json",
+  "template_id": "tpl_retail_promo",
+  "template_revision": 1,
+  "name": "Chiến Dịch Khuyến Mãi Bán Lẻ Tháng 11",
+  "locale": "vi-VN",
+  "client_reference": "creativanta-order-20261105-001",
+  "variables": {
+    "headline": "Siêu Sale Mùa Lễ Hội 2026",
+    "subheadline": "Giảm giá đặc biệt lên tới 50% cho mọi đơn hàng hôm nay",
+    "price": "299.000 ₫",
+    "discount_badge": "-50%",
+    "call_to_action": "Mua ngay tại Creativanta",
+    "image_asset_id": "ast_promo_banner_01",
+    "accent_color": "#FF4500",
+    "background_color": "#1A1A2E"
+  },
+  "metadata": {
+    "campaign_id": "cmp_retail_holiday_2026",
+    "channel": "social_reels_9x16",
+    "created_by": "creativanta-platform-service"
+  }
+}
