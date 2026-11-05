@@ -6,19 +6,24 @@ Báo cáo bằng chứng nghiệm thu cho nhiệm vụ **P8-01: Rà soát WebAV/
 
 ```text
 Task: P8-01
-Base / tested commit: e9046baeb51bbe335ffaf629bb41cc6aaed8b395 / e9046baeb51bbe335ffaf629bb41cc6aaed8b395
+Base / tested commit: e9046baeb51bbe335ffaf629bb41cc6aaed8b395 / 97bca0129f00991cc3c40a937d4edfb3d781be36
 Environment: Linux evergreen 7.0.0-1011-gcp #11~24.04.1-Ubuntu SMP PREEMPT Tue Aug 11 20:14:48 UTC 2026 x86_64, Ubuntu 24.04.5 LTS, 4 vCPUs (Intel Xeon 2.20GHz), 15GiB RAM, Python 3.12.3 (/usr/bin/python3), Node v24.22.2, pnpm 12.16.1
 Command:
-  - npx tsc -p packages/browser-export/tsconfig.json
+  - pnpm install --frozen-lockfile
+  - pnpm -r --if-present lint
+  - pnpm -r --if-present typecheck
+  - pnpm -r --if-present test
+  - pnpm -r --if-present build
   - node --test packages/browser-export/test/capability-matrix.test.mjs
   - node scripts/health-check.mjs
   - python3 scripts/validate_repo.py
 Result: PASS
-Exit code / UTC started / duration: 0 / 2026-11-05T02:22:16Z / 1.2s
+Exit code / UTC started / duration: 0 / 2026-11-05T02:33:00Z / 295.0s
 Artifacts:
   - evidence/P8-01/report.md
   - evidence/P8-01/artifacts-review.json
   - evidence/P8-01/browser-capability-matrix.json
+  - pnpm-lock.yaml
   - packages/browser-export/package.json
   - packages/browser-export/tsconfig.json
   - packages/browser-export/src/types.ts
@@ -31,7 +36,8 @@ Acceptance mapping:
   - Capability matrix desktop/mobile/browser codec/security: PASS — Thiết lập ma trận 6 nền tảng (Chrome/Edge/Safari/Firefox Desktop, iOS Safari, Android Chrome), codec H.264/HEVC/VP9/AV1/AAC/Opus, container MP4/WebM, và giới hạn bộ nhớ jetsam di động.
   - Fallback to server job: PASS — Tự động chuyển giao sang POST /render-jobs khi trình duyệt thiếu encoder, vượt trần bộ nhớ hoặc chứa custom code.
   - No code shipping trước review: PASS — Kiểm soát nghiêm ngặt cổng EXT-P8-01 bằng assertBrowserExportGateApproved; chặn khởi tạo render pipeline trước khi có chữ ký phê duyệt độc lập.
-Reviewer / reviewed commit / decision: pending independent reviewer / e9046baeb51bbe335ffaf629bb41cc6aaed8b395 / local completion awaiting external review
+  - Monorepo lockfile synchronization: PASS — Đồng bộ pnpm-lock.yaml với packages/browser-export giải quyết dứt điểm lỗi ERR_PNPM_PACKAGE_MANAGER_NO_IMPORTER trong GitHub CI PR #49.
+Reviewer / reviewed commit / decision: pending independent reviewer / 97bca0129f00991cc3c40a937d4edfb3d781be36 / local completion awaiting external review
 ```
 
 ---
@@ -218,6 +224,17 @@ Kết quả đầu ra thực tế:
 node scripts/health-check.mjs
 ```
 Trạng thái: **PASS**, xác nhận môi trường development, các dịch vụ API, cấu hình adapter Chromium và hợp đồng profiles hoạt động hoàn hảo.
+
+### 6.5. Đồng bộ hóa khóa gói monorepo và kiểm thử CI toàn trình (Monorepo Lockfile Sync & Full CI Pipeline)
+Khi kiểm tra GitHub CI cho PR #49, tác vụ kiểm thử gặp lỗi `ERR_PNPM_PACKAGE_MANAGER_NO_IMPORTER` do tệp `pnpm-lock.yaml` thiếu mục nhập cho gói mới `packages/browser-export`. Đã thực hiện đồng bộ hóa toàn diện:
+1. `pnpm install --lockfile-only`: Cập nhật cấu hình nhập `packages/browser-export` vào `pnpm-lock.yaml`.
+2. `pnpm install --frozen-lockfile`: Kiểm tra tính khả thi cài đặt với lockfile đông cứng (PASS).
+3. `pnpm -r --if-present lint`: Kiểm tra lint toàn monorepo (PASS).
+4. `pnpm -r --if-present typecheck`: Kiểm tra typecheck toàn monorepo (PASS).
+5. `pnpm -r --if-present test`: Chạy toàn bộ các bộ kiểm thử monorepo bao gồm renderers, sdk, api, custom-runtime, browser-export (PASS, 0 failures).
+6. `pnpm -r --if-present build`: Biên dịch toàn bộ gói monorepo (PASS).
+7. `python3 scripts/validate_repo.py`: Kiểm tra tính nhất quán cấu trúc repo, tài liệu, links (PASS, 0 errors).
+8. `python3 -m unittest discover -s tooling/agent_harness/tests -v`: Kiểm tra harness supervisor và retry gates (PASS, 10/10 tests).
 
 ---
 
