@@ -241,7 +241,7 @@ export class CreativantaContractMock {
         return;
       }
 
-      if (Date.now() > grant.expiresAtMs) {
+      if (Date.now() >= grant.expiresAtMs) {
         res.writeHead(410, { 'Content-Type': 'application/json' });
         res.end(JSON.stringify({ error: { code: 'GRANT_EXPIRED', message: 'Artifact download grant expired' } }));
         return;

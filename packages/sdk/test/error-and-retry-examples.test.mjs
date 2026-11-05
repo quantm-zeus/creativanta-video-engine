@@ -241,6 +241,8 @@ describe('Task P5-04: Error Handling & Retry Recipes Test Suite', () => {
     it('3.2 Throws GrantExpiredError when retries are exhausted on expired grant', async () => {
       // Mock server permanently returns 410 for a custom expired grant
       const artId = 'art_perm_expired';
+      const expiredPayload = Buffer.from('1234567890');
+      const expiredSha = crypto.createHash('sha256').update(expiredPayload).digest('hex');
       mockServer.seedJob({
         id: 'job_perm_expired',
         kind: 'render',
@@ -249,7 +251,7 @@ describe('Task P5-04: Error Handling & Retry Recipes Test Suite', () => {
         composition_id: 'cmp_expired',
         revision: 1,
         profile: 'mp4-720p-v1',
-        artifacts: [{ id: artId, kind: 'video', mime_type: 'video/mp4', sha256: 'abc', bytes: 10, content: Buffer.from('1234567890') }],
+        artifacts: [{ id: artId, kind: 'video', mime_type: 'video/mp4', sha256: expiredSha, bytes: expiredPayload.length, content: expiredPayload }],
         usage: { output_seconds: 10, cpu_seconds: 1, billable_output_minutes: 0.16 },
         created_at: new Date().toISOString(),
       });
