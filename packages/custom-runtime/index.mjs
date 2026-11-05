@@ -31,3 +31,4 @@ export * from './src/approved-imports-registry.mjs';
 export * from './src/isolated-build-and-preview.mjs';
 export * from './src/malicious-payload-suite.mjs';
 export * from './src/c1-c6-security-review.mjs';
+export * from './src/variant-authoring-and-approval.mjs';

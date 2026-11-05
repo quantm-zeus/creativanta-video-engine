@@ -1,0 +1,154 @@
+{
+  "schema_version": "1.0",
+  "bundle_id": "bnd_p706_promo_kinetic",
+  "revision": 2,
+  "name": "Variant 1 — Kinetic Typography Promo (16:9)",
+  "variant_type": "promo-kinetic",
+  "description": "Chữ động biến hóa mạnh mẽ, huy hiệu khuyến mãi và bố cục quảng bá năng động",
+  "brief": "Khuyến mãi ra mắt Creativanta Video Engine — Nền tảng tự động hóa video CPU-first độc lập với hiệu ứng đồ họa động Tiếng Việt chuẩn NFC, giảm 50% chi phí kết xuất",
+  "brief_hash": "212f5fe00d6b196a241f597218723f5d8c0fcf0a21dc9e2d996588a8f09961a2",
+  "source_sha256": "acc8114648548eb41763e1763c6352cc8cbfd67c85a4fdc363f9f1172b61399e",
+  "build_sha256": "0b344a8f5adb6e708009c6aa67e462f14b7bedf9c7d7d3453d8d35b910570f31",
+  "csp_script_hash": "'sha256-CzRKj1rbbnCACcaqZ+Ri8Ut77fnH19NFPY01uRBXDzE='",
+  "entrypoint": "index.js",
+  "canvas": {
+    "width": 1280,
+    "height": 720
+  },
+  "fps": 30,
+  "declared_capabilities": [
+    "canvas-2d"
+  ],
+  "max_duration_seconds": 10,
+  "parameter_schema": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+      "headline": {
+        "type": "string",
+        "default": "Ưu Đãi Ra Mắt — Giảm 50%",
+        "maxLength": 120,
+        "description": "Tiêu đề khuyến mãi nổi bật chuẩn NFC"
+      },
+      "subheadline": {
+        "type": "string",
+        "default": "Creativanta Video Engine CPU-First",
+        "maxLength": 120,
+        "description": "Phụ đề mô tả nền tảng"
+      },
+      "badgeText": {
+        "type": "string",
+        "default": "ĐẶC QUYỀN PILOT",
+        "maxLength": 40,
+        "description": "Nhãn huy hiệu sự kiện"
+      },
+      "accentColor": {
+        "type": "string",
+        "pattern": "^#[0-9a-fA-F]{6}$",
+        "default": "#38bdf8",
+        "description": "Màu sắc chủ đạo cho hiệu ứng ánh sáng"
+      },
+      "speedMultiplier": {
+        "type": "number",
+        "minimum": 0.5,
+        "maximum": 2,
+        "default": 1,
+        "description": "Hệ số tốc độ chuyển động"
+      },
+      "showBadge": {
+        "type": "boolean",
+        "default": true,
+        "description": "Bật/tắt hiển thị huy hiệu"
+      }
+    },
+    "required": [
+      "headline",
+      "subheadline"
+    ],
+    "additionalProperties": false
+  },
+  "parameter_defaults": {
+    "headline": "Ưu Đãi Ra Mắt — Giảm 50%",
+    "subheadline": "Creativanta Video Engine CPU-First",
+    "badgeText": "ĐẶC QUYỀN PILOT",
+    "accentColor": "#38bdf8",
+    "speedMultiplier": 1,
+    "showBadge": true
+  },
+  "parameters": {
+    "headline": "Khuyến Mãi Đặc Quyền Tháng 11 — Giảm 50%",
+    "subheadline": "Creativanta Video Engine CPU-First",
+    "badgeText": "ĐẶC QUYỀN PILOT",
+    "accentColor": "#f43f5e",
+    "speedMultiplier": 1,
+    "showBadge": true
+  },
+  "source_files": [
+    {
+      "path": "index.js",
+      "size": 1700,
+      "sha256": "fe1269a2865cd6c2556fecc4228d45afec24204b259017688d2ce031b48cb3ae"
+    },
+    {
+      "path": "typography-helper.js",
+      "size": 107,
+      "sha256": "818f3f56c982ecb59a1cd5dd3718001be0b08c22e5d129f35e0ccf82d42b2002"
+    }
+  ],
+  "cost_summary": {
+    "authoring": {
+      "modelId": "user-interactive-editor",
+      "promptTokens": 307,
+      "completionTokens": 472,
+      "totalTokens": 779,
+      "durationMs": 30,
+      "durationSeconds": 0.03,
+      "mockCostUsd": 0,
+      "standardTierCostUsd": 0.001404,
+      "currency": "USD",
+      "isNonPremiumRoute": true
+    },
+    "render": {
+      "build": {
+        "buildDurationMs": 120,
+        "buildCpuSeconds": 0.12,
+        "buildCostUsd": 0.000002,
+        "compiledSizeBytes": 8284
+      },
+      "preview": {
+        "mode": "frame",
+        "format": "png",
+        "dimensions": {
+          "width": 640,
+          "height": 360
+        },
+        "previewDurationMs": 350,
+        "previewCpuSeconds": 0.35,
+        "previewCostUsd": 0.000005,
+        "artifactSizeBytes": 89
+      },
+      "fullRenderEstimate": {
+        "totalFrames": 150,
+        "fps": 30,
+        "estimatedDurationSeconds": 5,
+        "estimatedRenderSeconds": 2.25,
+        "estimatedRenderCostUsd": 0.000031
+      },
+      "totalComputeSeconds": 0.47,
+      "totalRenderCostUsd": 0.000007,
+      "currency": "USD"
+    },
+    "combinedCostUsd": 0.000007,
+    "standardCommercialCombinedCostUsd": 0.001411
+  },
+  "approval": {
+    "status": "approved",
+    "isSealed": true,
+    "record": {
+      "approvedBy": "lead-designer@creativanta.internal",
+      "approvedAt": "2026-11-05T02:27:24.818Z",
+      "approvalNotes": "Phê duyệt chính thức cho chiến dịch Khuyến mãi Mùa Lễ Hội"
+    }
+  },
+  "created_at": "2026-11-05T02:27:24.820Z"
+}

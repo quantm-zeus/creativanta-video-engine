@@ -10,6 +10,7 @@ import { runSceneBundleRegistrySelfTest } from './scene-bundle-registry.mjs';
 import { runAuthoringAdapterSelfTest } from './authoring-job-manager.mjs';
 import { runP704IsolatedBuildAndSecuritySelfTest } from './malicious-payload-suite.mjs';
 import { runP705SecurityReviewSelfTest } from './c1-c6-security-review.mjs';
+import { runP706CustomSceneVariantsSelfTest } from './variant-authoring-and-approval.mjs';
 import { CUSTOM_RUNTIME_ADR_0002 } from './adr-policy.mjs';
 import { getSceneBundleOpenApiSpec } from './scene-bundle-openapi.mjs';
 import { getAuthoringOpenApiSpec } from './authoring-openapi.mjs';
@@ -26,12 +27,55 @@ async function main() {
   const targetTask = taskIdx !== -1 && args[taskIdx + 1] ? args[taskIdx + 1].toUpperCase() : null;
 
   // Infer task from writeEvidenceDir if not explicitly specified
+  const isP706 = targetTask === 'P7-06' || (writeEvidenceDir && writeEvidenceDir.includes('P7-06'));
   const isP705 = targetTask === 'P7-05' || (writeEvidenceDir && writeEvidenceDir.includes('P7-05'));
   const isP704 = targetTask === 'P7-04' || (writeEvidenceDir && writeEvidenceDir.includes('P7-04'));
   const isP703 = targetTask === 'P7-03' || (writeEvidenceDir && writeEvidenceDir.includes('P7-03'));
   const isP702 = targetTask === 'P7-02' || (writeEvidenceDir && writeEvidenceDir.includes('P7-02'));
 
-  if (isP705) {
+  if (isP706) {
+    const report = await runP706CustomSceneVariantsSelfTest();
+
+    if (writeEvidenceDir) {
+      fs.mkdirSync(writeEvidenceDir, { recursive: true });
+      const auditPath = path.join(writeEvidenceDir, 'custom-scene-variants-audit.json');
+      fs.writeFileSync(
+        auditPath,
+        JSON.stringify(report, null, 2) + '\n',
+        'utf-8',
+      );
+
+      if (report.variantsManifest) {
+        const manifestPath = path.join(writeEvidenceDir, 'variants-manifest.json');
+        fs.writeFileSync(
+          manifestPath,
+          JSON.stringify(report.variantsManifest, null, 2) + '\n',
+          'utf-8',
+        );
+      }
+
+      if (report.costSummary) {
+        const costPath = path.join(writeEvidenceDir, 'cost-model-summary.json');
+        fs.writeFileSync(
+          costPath,
+          JSON.stringify(report.costSummary, null, 2) + '\n',
+          'utf-8',
+        );
+      }
+
+      if (report.approvedComposition) {
+        const compPath = path.join(writeEvidenceDir, 'approved-scene-composition.json');
+        fs.writeFileSync(
+          compPath,
+          JSON.stringify(report.approvedComposition, null, 2) + '\n',
+          'utf-8',
+        );
+      }
+    }
+
+    console.log(JSON.stringify(report, null, 2));
+    process.exit(report.status === 'PASS' ? 0 : 1);
+  } else if (isP705) {
     const report = await runP705SecurityReviewSelfTest();
 
     if (writeEvidenceDir) {
