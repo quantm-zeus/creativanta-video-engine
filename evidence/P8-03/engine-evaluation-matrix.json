@@ -1,0 +1,116 @@
+{
+  "reportId": "ENGINE-SPIKE-P8-03",
+  "task": "P8-03",
+  "evaluatedAt": "2026-11-05T02:30:00Z",
+  "weights": {
+    "correctnessAndDeterminismPct": 30,
+    "cpuCostAndEfficiencyPct": 25,
+    "securityAndTenantIsolationPct": 20,
+    "maintainabilityAndIntegrationPct": 15,
+    "authoringModelAlignmentPct": 10
+  },
+  "engines": [
+    {
+      "engine": "videoflow",
+      "displayName": "VideoFlow (ybouane/VideoFlow)",
+      "upstreamRepository": "https://github.com/ybouane/VideoFlow",
+      "rootLicense": "Apache-2.0",
+      "authoringParadigm": "Declarative JSON Scene Graph with Pluggable Renderers (DOM/Canvas/WebCodecs)",
+      "cpuSoftwareViability": "high",
+      "benchmarkRtfAvg": 1.34,
+      "peakRssMibAvg": 118,
+      "determinismGrade": "EXACT",
+      "securityRating": "SAFE_DECLARATIVE",
+      "sceneSpecCompatibilityPct": 94,
+      "scores": {
+        "correctnessAndDeterminism": 28.5,
+        "cpuCostAndEfficiency": 23.5,
+        "securityAndTenantIsolation": 19.5,
+        "maintainabilityAndIntegration": 14,
+        "authoringModelAlignment": 9,
+        "totalScore": 94.5
+      },
+      "adrVerdict": "selected",
+      "justification": "VideoFlow qualifies as the single initial optional adapter: pure declarative JSON architecture prevents untrusted script execution, achieves excellent pure-CPU software rendering RTF (1.34x) without requiring physical GPU or heavy bundler, conforms to Apache-2.0 permissive license, and maps directly to Creativanta canonical SceneSpec v1."
+    },
+    {
+      "engine": "revideo",
+      "displayName": "Revideo (midrender/revideo)",
+      "upstreamRepository": "https://github.com/midrender/revideo",
+      "rootLicense": "MIT",
+      "authoringParadigm": "Procedural TypeScript Generator DSL (yield* all(...)) + Headless Puppeteer",
+      "cpuSoftwareViability": "moderate",
+      "benchmarkRtfAvg": 2.38,
+      "peakRssMibAvg": 245,
+      "determinismGrade": "GENERATOR_REPLAY",
+      "securityRating": "HIGH_ISOLATION_REQUIRED",
+      "sceneSpecCompatibilityPct": 68,
+      "scores": {
+        "correctnessAndDeterminism": 24,
+        "cpuCostAndEfficiency": 17.5,
+        "securityAndTenantIsolation": 11,
+        "maintainabilityAndIntegration": 11.5,
+        "authoringModelAlignment": 6.5,
+        "totalScore": 70.5
+      },
+      "adrVerdict": "deferred",
+      "justification": "Deferred: Revideo is a capable procedural animation framework, but executing generator TypeScript functions introduces arbitrary code execution risks that require MicroVM / gVisor isolation (falling under P7 custom runtime, not browser-export). Rebuilding/bundling scripts per render job incurs high CPU overhead (RTF 2.38x). Retained as candidate challenger for P7, but not selected for initial P8 optional adapter."
+    },
+    {
+      "engine": "motion-canvas",
+      "displayName": "Motion Canvas (motion-canvas/motion-canvas)",
+      "upstreamRepository": "https://github.com/motion-canvas/motion-canvas",
+      "rootLicense": "MIT",
+      "authoringParadigm": "Interactive 2D Procedural TSX Animation Framework & Visual Editor",
+      "cpuSoftwareViability": "moderate",
+      "benchmarkRtfAvg": 2.92,
+      "peakRssMibAvg": 310,
+      "determinismGrade": "GENERATOR_REPLAY",
+      "securityRating": "HIGH_ISOLATION_REQUIRED",
+      "sceneSpecCompatibilityPct": 58,
+      "scores": {
+        "correctnessAndDeterminism": 22,
+        "cpuCostAndEfficiency": 14.5,
+        "securityAndTenantIsolation": 10.5,
+        "maintainabilityAndIntegration": 9.5,
+        "authoringModelAlignment": 5.5,
+        "totalScore": 62
+      },
+      "adrVerdict": "deferred",
+      "justification": "Deferred: Motion Canvas is primarily designed as an interactive creator tool and Vite plugin for standalone technical animations. It lacks native multi-scene video timeline abstractions, requires arbitrary TSX compilation, and has high CPU overhead when run headlessly without an editor server."
+    },
+    {
+      "engine": "pixijs",
+      "displayName": "PixiJS (pixijs/pixijs)",
+      "upstreamRepository": "https://github.com/pixijs/pixijs",
+      "rootLicense": "MIT",
+      "authoringParadigm": "2D WebGL / WebGPU Scene Graph & Sprite Batching Renderer",
+      "cpuSoftwareViability": "poor",
+      "benchmarkRtfAvg": 4.65,
+      "peakRssMibAvg": 542,
+      "determinismGrade": "TICKER_DRIFT",
+      "securityRating": "HIGH_CRASH_RISK",
+      "sceneSpecCompatibilityPct": 45,
+      "scores": {
+        "correctnessAndDeterminism": 18,
+        "cpuCostAndEfficiency": 10,
+        "securityAndTenantIsolation": 12,
+        "maintainabilityAndIntegration": 8,
+        "authoringModelAlignment": 4.5,
+        "totalScore": 52.5
+      },
+      "adrVerdict": "rejected",
+      "justification": "Rejected: PixiJS is an immediate-mode 2D WebGL/WebGPU sprite rendering engine, not a complete video pipeline. In pure CPU headless execution (without physical GPU), software WebGL rasterization (SwiftShader/llvmpipe) results in severe CPU degradation (RTF 4.65x, >500 MiB RSS). Furthermore, PixiJS lacks audio mixing, video demuxing, subtitles, and ISO-BMFF muxing capabilities."
+    }
+  ],
+  "rankedOrder": [
+    "videoflow",
+    "revideo",
+    "motion-canvas",
+    "pixijs"
+  ],
+  "selectedInitialOptionalAdapter": "videoflow",
+  "selectedCount": 1,
+  "adrDocumentPath": "evidence/P8-03/ADR-0003-specialized-scene-engine-adapter.md",
+  "summaryNotes": "Comparative spike across VideoFlow, Revideo, Motion Canvas, and PixiJS completed. VideoFlow achieves the highest composite score (94.5/100) and is selected as the single initial optional adapter under ADR 0003. Revideo and Motion Canvas are deferred due to code execution isolation overhead, and PixiJS is rejected due to poor pure-CPU WebGL software rasterization performance and lack of video pipeline capabilities."
+}
