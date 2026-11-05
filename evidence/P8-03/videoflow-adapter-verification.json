@@ -1,0 +1,48 @@
+{
+  "task": "P8-03",
+  "adapter_name": "VideoFlowAdapter",
+  "tested_at": "2026-11-05T02:30:00Z",
+  "conversion_summary": {
+    "success": true,
+    "converted_scenes": 2,
+    "converted_layers": 2,
+    "converted_audio_tracks": 1,
+    "deterministic_checksum_sha256": "2d76a57e0b79adb4977b852fa0c3f85c69cb2ceb13d36dc5681c8f04a6da0405"
+  },
+  "random_seek_verification": {
+    "passed": true,
+    "frames_tested": [
+      0,
+      15,
+      30,
+      60,
+      120,
+      224,
+      225,
+      300,
+      449
+    ],
+    "mismatches": [],
+    "determinism_grade": "EXACT"
+  },
+  "unsupported_feature_gates": [
+    {
+      "code": "CUSTOM_CODE_SCENE_UNSUPPORTED",
+      "tested": true,
+      "rejected": true,
+      "description": "Refuses custom-html-v1 scenes to enforce MicroVM isolation boundaries"
+    },
+    {
+      "code": "UNPINNED_FONT",
+      "tested": true,
+      "rejected": true,
+      "description": "Refuses unpinned fonts lacking SHA-256 integrity hash"
+    },
+    {
+      "code": "DIMENSIONS_EXCEED_BOUNDS",
+      "tested": true,
+      "rejected": true,
+      "description": "Refuses resolutions exceeding 4K boundaries"
+    }
+  ]
+}
