@@ -1433,3 +1433,137 @@ export function runOffByDefaultAndRollbackSuite(options?: {
 }>>;
 
 export function runP705SecurityReviewSelfTest(): Promise<Record<string, any>>;
+
+// =============================================================================
+// Task P7-06: Three Custom Scene Variants, Measured Cost & Approval Workflow
+// =============================================================================
+
+export const PILOT_CREATIVE_BRIEF: string;
+export const DEFAULT_PILOT_TENANT_ID: string;
+
+export const COST_MODEL_RATES: Readonly<{
+  mockPromptPer1kTokens: number;
+  mockCompletionPer1kTokens: number;
+  standardPromptPer1kTokens: number;
+  standardCompletionPer1kTokens: number;
+  vcpuPerHourUsd: number;
+  vcpuPerSecondUsd: number;
+}>;
+
+export function computeSha256(input: string | Buffer): string;
+
+export function createKineticPromoVariant(
+  options?: Record<string, unknown>,
+): Readonly<Record<string, any>>;
+
+export function createMetricCounterVariant(
+  options?: Record<string, unknown>,
+): Readonly<Record<string, any>>;
+
+export function createAmbientVisualizerVariant(
+  options?: Record<string, unknown>,
+): Readonly<Record<string, any>>;
+
+export function generateThreeCustomSceneVariants(
+  options?: Record<string, unknown>,
+): ReadonlyArray<Readonly<Record<string, any>>>;
+
+export function measureAuthoringCost(params: {
+  brief: string;
+  sourceFiles: readonly { relativePath: string; content: string }[];
+  durationMs: number;
+  modelId?: string;
+}): Readonly<{
+  modelId: string;
+  promptTokens: number;
+  completionTokens: number;
+  totalTokens: number;
+  durationMs: number;
+  durationSeconds: number;
+  mockCostUsd: number;
+  standardTierCostUsd: number;
+  currency: string;
+  isNonPremiumRoute: boolean;
+}>;
+
+export function measureRenderCost(params: {
+  buildResult: {
+    buildDurationMs?: number;
+    compiledBytes?: Buffer | Uint8Array;
+    sourceBytes?: number;
+  };
+  previewResult?: {
+    renderDurationMs?: number;
+    artifactBytes?: Buffer | Uint8Array;
+    mode?: string;
+    format?: string;
+    outputDimensions?: { width: number; height: number };
+  };
+  totalFrames?: number;
+  fps?: number;
+}): Readonly<Record<string, any>>;
+
+export function buildSceneBundleManifest(
+  input: Record<string, any>,
+): Readonly<Record<string, any>>;
+
+export function materializeCustomSceneComposition(
+  input: Record<string, any>,
+): Readonly<Record<string, any>>;
+
+export class CustomSceneApprovalWorkflow {
+  constructor(options?: {
+    rolloutController?: CustomRuntimeRolloutController;
+    registry?: SceneBundleRegistry;
+    runtime?: DisposableMicroVmRuntime;
+    pilotTenants?: string[];
+    signingSecret?: string;
+    canarySecret?: string;
+  });
+
+  assertPilotAuthorization(tenantId: string): void;
+
+  generateVariantsFromBrief(input: {
+    tenantId: string;
+    brief?: string;
+    modelId?: string;
+  }): Promise<ReadonlyArray<Record<string, any>>>;
+
+  buildVariantRevision(input: {
+    tenantId: string;
+    variantId: string;
+    revision?: number;
+  }): Promise<Readonly<Record<string, any>>>;
+
+  renderVariantPreview(input: {
+    tenantId: string;
+    variantId: string;
+    revision?: number;
+    mode?: 'frame' | 'clip';
+    frameIndex?: number;
+    startFrame?: number;
+    durationFrames?: number;
+    overrideParameters?: Record<string, unknown>;
+  }): Promise<Readonly<Record<string, any>>>;
+
+  applyUserRevision(input: {
+    tenantId: string;
+    variantId: string;
+    baseRevision: number;
+    customParameters?: Record<string, unknown>;
+    updatedFiles?: Array<{ path: string; content: string }>;
+    changeNote?: string;
+  }): Promise<Readonly<Record<string, any>>>;
+
+  approveVariantRevision(input: {
+    tenantId: string;
+    selectedVariantId: string;
+    selectedRevision?: number;
+    approvedBy: string;
+    approvalNotes?: string;
+  }): Promise<Readonly<Record<string, any>>>;
+
+  getWorkflowSummary(): ReadonlyArray<Record<string, any>>;
+}
+
+export function runP706CustomSceneVariantsSelfTest(): Promise<Record<string, any>>;

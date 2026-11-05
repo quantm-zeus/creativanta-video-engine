@@ -1,0 +1,72 @@
+{
+  "startedAt": "2026-11-05T02:46:20.839Z",
+  "phases": [
+    {
+      "phase": 1,
+      "name": "NOMINAL_BASELINE",
+      "activeNodes": 1,
+      "inFlightJobs": 2,
+      "queuedJobs": 2
+    },
+    {
+      "phase": 2,
+      "name": "LOAD_SURGE_SCALE_UP_1",
+      "decisions": [
+        "EVALUATING",
+        "EVALUATING",
+        "SCALE_UP"
+      ],
+      "finalAction": "SCALE_UP",
+      "activeNodes": 2,
+      "activeSlots": 4
+    },
+    {
+      "phase": 3,
+      "name": "LOAD_SURGE_SCALE_UP_2",
+      "finalAction": "BUDGET_CLAMPED",
+      "activeNodes": 3
+    },
+    {
+      "phase": 4,
+      "name": "EXTREME_OVERLOAD_BUDGET_CLAMPED",
+      "decision": "BUDGET_CLAMPED",
+      "activeNodes": 3,
+      "budgetClamped": true,
+      "sheddedJobsCount": 7
+    },
+    {
+      "phase": 5,
+      "name": "CHAOS_INJECTIONS",
+      "workerCrashSigkill": true,
+      "stalePublishBlockedByFencing": true,
+      "concurrentRaceDoubleLeasePrevented": true,
+      "cooldownSuppressedScaleDown": true,
+      "scaleDownInitiatedAfterCooldown": true,
+      "drainingNodeNewClaimsBlocked": true
+    }
+  ],
+  "invariants": {
+    "zeroDoubleLeases": true,
+    "monotonicityGuaranteed": true,
+    "stalePublishBlockedCount": 1,
+    "stalePublishAllowedCount": 0,
+    "zeroStalePublishAllowed": true,
+    "zeroLostJobs": true,
+    "zeroDuplicateArtifacts": true,
+    "budgetClampingPreserved": true,
+    "drainingIsolationPreserved": true,
+    "cooldownEnforced": true,
+    "overallStatus": "PASS"
+  },
+  "summary": {
+    "admittedJobsCount": 50,
+    "terminalJobsCount": 50,
+    "publishedArtifactsCount": 50,
+    "shedded429JobsCount": 7,
+    "doubleLeaseViolationsCount": 0,
+    "stalePublishAttemptsBlockedCount": 1,
+    "totalHistoricalLeaseEvents": 152,
+    "activeNodesFinal": 2,
+    "endedAt": "2026-11-05T03:21:10.839Z"
+  }
+}

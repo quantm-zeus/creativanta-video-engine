@@ -1,0 +1,482 @@
+{
+  "status": "PASS",
+  "task_id": "P7-06",
+  "passedCount": 12,
+  "totalCount": 12,
+  "duration_ms": 3148,
+  "evaluated_at": "2026-11-05T02:27:24.827Z",
+  "checks": [
+    {
+      "id": "VAR7-01",
+      "name": "Three Custom Scene Variants from Same Creative Brief",
+      "status": "PASS",
+      "details": "Successfully generated 3 distinct variants from same brief \"Khuyến mãi ra mắt Creativanta Video Engine — ...\": [ambient-visualizer, metric-counter, promo-kinetic]"
+    },
+    {
+      "id": "VAR7-02",
+      "name": "Approved Imports & Clean Module Dependency Graph",
+      "status": "PASS",
+      "details": "All 3 variants import strictly from approved offline packages (@creativanta/scene-runtime, @creativanta/scene-math, @creativanta/scene-easing) and relative modules"
+    },
+    {
+      "id": "VAR7-03",
+      "name": "Isolated Disposable build-vm & Deterministic Digests",
+      "status": "PASS",
+      "details": "Successfully compiled all 3 variants in disposable build-vm; produced valid sourceSha256, buildSha256, and cspScriptHash ('sha256-CzRKj1rbbnCACcaq...) with build-vm destruction confirmed"
+    },
+    {
+      "id": "VAR7-04",
+      "name": "Isolated Frame (PNG) & Clip (MP4) Previews (preview-360p-v1)",
+      "status": "PASS",
+      "details": "Successfully rendered isolated frame preview (PNG 640x360) and clip preview (MP4 640x360) in disposable render-vm with complete post-render prison teardown"
+    },
+    {
+      "id": "VAR7-05",
+      "name": "Canonical SceneBundleManifest Generation & Verification",
+      "status": "PASS",
+      "details": "Generated canonical manifest for bnd_p706_promo_kinetic containing source_sha256=acc8114648548eb4..., build_sha256=0b344a8f5adb6e70..., parameter_schema, and cost summaries"
+    },
+    {
+      "id": "VAR7-06",
+      "name": "Editable Versions & Optimistic Concurrency Control",
+      "status": "PASS",
+      "details": "Successfully created revision 2 with customized parameters and verified optimistic concurrency rejection (REVISION_CONFLICT) on stale base_revision"
+    },
+    {
+      "id": "VAR7-07",
+      "name": "Measured Authoring Cost Model (Tokens, Latency & USD)",
+      "status": "PASS",
+      "details": "Measured authoring cost: 779 tokens (prompt=307, completion=472), duration=58ms, mockCost=$0.00 (subscription-free), commercialTierCost=$0.0014"
+    },
+    {
+      "id": "VAR7-08",
+      "name": "Measured Render & Build Compute Cost Model",
+      "status": "PASS",
+      "details": "Measured render cost: buildCpu=0.12s, previewCpu=0.35s, totalCompute=0.47s ($0.000007), fullRenderEstimate=$0.000031"
+    },
+    {
+      "id": "VAR7-09",
+      "name": "End-to-End User Preview & Approval Workflow Lifecycle",
+      "status": "PASS",
+      "details": "Successfully executed user preview and approval lifecycle: variant approved, revision 2 sealed as immutable, and alternative candidate variants cleanly transitioned to archived"
+    },
+    {
+      "id": "VAR7-10",
+      "name": "Materialize Canonical Scene Spec 1.0 Composition",
+      "status": "PASS",
+      "details": "Materialized valid Scene Spec 1.0 document: engine=custom-html-v1, bundleId=bnd_p706_promo_kinetic, revision=2, sourceSha256=acc8114648548eb4..."
+    },
+    {
+      "id": "VAR7-11",
+      "name": "Pilot Tenant Allowlist Enforcement (Off-by-Default)",
+      "status": "PASS",
+      "details": "Verified strict multi-tenant authorization: non-pilot tenant \"tnt_unauthorized_external_99\" was immediately blocked with CAPABILITY_DISABLED (TENANT_NOT_ALLOWLISTED)"
+    },
+    {
+      "id": "VAR7-12",
+      "name": "Emergency Kill Switch Defense & Structured Path Independence",
+      "status": "PASS",
+      "details": "Emergency kill switch immediately blocked custom preview admission while structured template engines (html-v1, canvas-v1) remained 100% operational"
+    }
+  ],
+  "variantsManifest": {
+    "schema_version": "1.0",
+    "bundle_id": "bnd_p706_promo_kinetic",
+    "revision": 2,
+    "name": "Variant 1 — Kinetic Typography Promo (16:9)",
+    "variant_type": "promo-kinetic",
+    "description": "Chữ động biến hóa mạnh mẽ, huy hiệu khuyến mãi và bố cục quảng bá năng động",
+    "brief": "Khuyến mãi ra mắt Creativanta Video Engine — Nền tảng tự động hóa video CPU-first độc lập với hiệu ứng đồ họa động Tiếng Việt chuẩn NFC, giảm 50% chi phí kết xuất",
+    "brief_hash": "212f5fe00d6b196a241f597218723f5d8c0fcf0a21dc9e2d996588a8f09961a2",
+    "source_sha256": "acc8114648548eb41763e1763c6352cc8cbfd67c85a4fdc363f9f1172b61399e",
+    "build_sha256": "0b344a8f5adb6e708009c6aa67e462f14b7bedf9c7d7d3453d8d35b910570f31",
+    "csp_script_hash": "'sha256-CzRKj1rbbnCACcaqZ+Ri8Ut77fnH19NFPY01uRBXDzE='",
+    "entrypoint": "index.js",
+    "canvas": {
+      "width": 1280,
+      "height": 720
+    },
+    "fps": 30,
+    "declared_capabilities": [
+      "canvas-2d"
+    ],
+    "max_duration_seconds": 10,
+    "parameter_schema": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "type": "object",
+      "properties": {
+        "headline": {
+          "type": "string",
+          "default": "Ưu Đãi Ra Mắt — Giảm 50%",
+          "maxLength": 120,
+          "description": "Tiêu đề khuyến mãi nổi bật chuẩn NFC"
+        },
+        "subheadline": {
+          "type": "string",
+          "default": "Creativanta Video Engine CPU-First",
+          "maxLength": 120,
+          "description": "Phụ đề mô tả nền tảng"
+        },
+        "badgeText": {
+          "type": "string",
+          "default": "ĐẶC QUYỀN PILOT",
+          "maxLength": 40,
+          "description": "Nhãn huy hiệu sự kiện"
+        },
+        "accentColor": {
+          "type": "string",
+          "pattern": "^#[0-9a-fA-F]{6}$",
+          "default": "#38bdf8",
+          "description": "Màu sắc chủ đạo cho hiệu ứng ánh sáng"
+        },
+        "speedMultiplier": {
+          "type": "number",
+          "minimum": 0.5,
+          "maximum": 2,
+          "default": 1,
+          "description": "Hệ số tốc độ chuyển động"
+        },
+        "showBadge": {
+          "type": "boolean",
+          "default": true,
+          "description": "Bật/tắt hiển thị huy hiệu"
+        }
+      },
+      "required": [
+        "headline",
+        "subheadline"
+      ],
+      "additionalProperties": false
+    },
+    "parameter_defaults": {
+      "headline": "Ưu Đãi Ra Mắt — Giảm 50%",
+      "subheadline": "Creativanta Video Engine CPU-First",
+      "badgeText": "ĐẶC QUYỀN PILOT",
+      "accentColor": "#38bdf8",
+      "speedMultiplier": 1,
+      "showBadge": true
+    },
+    "parameters": {
+      "headline": "Khuyến Mãi Đặc Quyền Tháng 11 — Giảm 50%",
+      "subheadline": "Creativanta Video Engine CPU-First",
+      "badgeText": "ĐẶC QUYỀN PILOT",
+      "accentColor": "#f43f5e",
+      "speedMultiplier": 1,
+      "showBadge": true
+    },
+    "source_files": [
+      {
+        "path": "index.js",
+        "size": 1700,
+        "sha256": "fe1269a2865cd6c2556fecc4228d45afec24204b259017688d2ce031b48cb3ae"
+      },
+      {
+        "path": "typography-helper.js",
+        "size": 107,
+        "sha256": "818f3f56c982ecb59a1cd5dd3718001be0b08c22e5d129f35e0ccf82d42b2002"
+      }
+    ],
+    "cost_summary": {
+      "authoring": {
+        "modelId": "user-interactive-editor",
+        "promptTokens": 307,
+        "completionTokens": 472,
+        "totalTokens": 779,
+        "durationMs": 30,
+        "durationSeconds": 0.03,
+        "mockCostUsd": 0,
+        "standardTierCostUsd": 0.001404,
+        "currency": "USD",
+        "isNonPremiumRoute": true
+      },
+      "render": {
+        "build": {
+          "buildDurationMs": 120,
+          "buildCpuSeconds": 0.12,
+          "buildCostUsd": 0.000002,
+          "compiledSizeBytes": 8284
+        },
+        "preview": {
+          "mode": "frame",
+          "format": "png",
+          "dimensions": {
+            "width": 640,
+            "height": 360
+          },
+          "previewDurationMs": 350,
+          "previewCpuSeconds": 0.35,
+          "previewCostUsd": 0.000005,
+          "artifactSizeBytes": 89
+        },
+        "fullRenderEstimate": {
+          "totalFrames": 150,
+          "fps": 30,
+          "estimatedDurationSeconds": 5,
+          "estimatedRenderSeconds": 2.25,
+          "estimatedRenderCostUsd": 0.000031
+        },
+        "totalComputeSeconds": 0.47,
+        "totalRenderCostUsd": 0.000007,
+        "currency": "USD"
+      },
+      "combinedCostUsd": 0.000007,
+      "standardCommercialCombinedCostUsd": 0.001411
+    },
+    "approval": {
+      "status": "approved",
+      "isSealed": true,
+      "record": {
+        "approvedBy": "lead-designer@creativanta.internal",
+        "approvedAt": "2026-11-05T02:27:24.818Z",
+        "approvalNotes": "Phê duyệt chính thức cho chiến dịch Khuyến mãi Mùa Lễ Hội"
+      }
+    },
+    "created_at": "2026-11-05T02:27:24.820Z"
+  },
+  "costSummary": [
+    {
+      "variantId": "variant-promo-kinetic",
+      "bundleId": "bnd_p706_promo_kinetic",
+      "variantName": "Variant 1 — Kinetic Typography Promo (16:9)",
+      "variantType": "promo-kinetic",
+      "tenantId": "tnt_pilot_creativanta_01",
+      "revisions": [
+        {
+          "revision": 1,
+          "approvalStatus": "preview_ready",
+          "isSealed": false,
+          "sourceSha256": "acc8114648548eb41763e1763c6352cc8cbfd67c85a4fdc363f9f1172b61399e",
+          "buildSha256": "0b344a8f5adb6e708009c6aa67e462f14b7bedf9c7d7d3453d8d35b910570f31",
+          "authoringCost": {
+            "modelId": "deterministic-mock-v1",
+            "promptTokens": 307,
+            "completionTokens": 472,
+            "totalTokens": 779,
+            "durationMs": 58,
+            "durationSeconds": 0.058,
+            "mockCostUsd": 0,
+            "standardTierCostUsd": 0.001404,
+            "currency": "USD",
+            "isNonPremiumRoute": true
+          },
+          "renderCost": {
+            "build": {
+              "buildDurationMs": 120,
+              "buildCpuSeconds": 0.12,
+              "buildCostUsd": 0.000002,
+              "compiledSizeBytes": 8284
+            },
+            "preview": {
+              "mode": "frame",
+              "format": "png",
+              "dimensions": {
+                "width": 640,
+                "height": 360
+              },
+              "previewDurationMs": 350,
+              "previewCpuSeconds": 0.35,
+              "previewCostUsd": 0.000005,
+              "artifactSizeBytes": 89
+            },
+            "fullRenderEstimate": {
+              "totalFrames": 150,
+              "fps": 30,
+              "estimatedDurationSeconds": 5,
+              "estimatedRenderSeconds": 2.25,
+              "estimatedRenderCostUsd": 0.000031
+            },
+            "totalComputeSeconds": 0.47,
+            "totalRenderCostUsd": 0.000007,
+            "currency": "USD"
+          }
+        },
+        {
+          "revision": 2,
+          "approvalStatus": "approved",
+          "isSealed": true,
+          "sourceSha256": "acc8114648548eb41763e1763c6352cc8cbfd67c85a4fdc363f9f1172b61399e",
+          "buildSha256": "0b344a8f5adb6e708009c6aa67e462f14b7bedf9c7d7d3453d8d35b910570f31",
+          "authoringCost": {
+            "modelId": "user-interactive-editor",
+            "promptTokens": 307,
+            "completionTokens": 472,
+            "totalTokens": 779,
+            "durationMs": 30,
+            "durationSeconds": 0.03,
+            "mockCostUsd": 0,
+            "standardTierCostUsd": 0.001404,
+            "currency": "USD",
+            "isNonPremiumRoute": true
+          },
+          "renderCost": {
+            "build": {
+              "buildDurationMs": 120,
+              "buildCpuSeconds": 0.12,
+              "buildCostUsd": 0.000002,
+              "compiledSizeBytes": 8284
+            },
+            "preview": {
+              "mode": "frame",
+              "format": "png",
+              "dimensions": {
+                "width": 640,
+                "height": 360
+              },
+              "previewDurationMs": 350,
+              "previewCpuSeconds": 0.35,
+              "previewCostUsd": 0.000005,
+              "artifactSizeBytes": 89
+            },
+            "fullRenderEstimate": {
+              "totalFrames": 150,
+              "fps": 30,
+              "estimatedDurationSeconds": 5,
+              "estimatedRenderSeconds": 2.25,
+              "estimatedRenderCostUsd": 0.000031
+            },
+            "totalComputeSeconds": 0.47,
+            "totalRenderCostUsd": 0.000007,
+            "currency": "USD"
+          }
+        }
+      ]
+    },
+    {
+      "variantId": "variant-metric-counter",
+      "bundleId": "bnd_p706_metric_counter",
+      "variantName": "Variant 2 — Data Metrics & Stat Counter Cards (16:9)",
+      "variantType": "metric-counter",
+      "tenantId": "tnt_pilot_creativanta_01",
+      "revisions": [
+        {
+          "revision": 1,
+          "approvalStatus": "archived",
+          "isSealed": false,
+          "sourceSha256": "1672ed53bcaae78be75defe90ec8ca877d84e8b48e59b4f5330b45ec64742e63",
+          "buildSha256": "92b6b66ca2543a2a01b9017d0015ba75b1017dbe7bf326fdddb3fb4ede4eeba6",
+          "authoringCost": {
+            "modelId": "deterministic-mock-v1",
+            "promptTokens": 307,
+            "completionTokens": 399,
+            "totalTokens": 706,
+            "durationMs": 46,
+            "durationSeconds": 0.046,
+            "mockCostUsd": 0,
+            "standardTierCostUsd": 0.001259,
+            "currency": "USD",
+            "isNonPremiumRoute": true
+          },
+          "renderCost": null
+        }
+      ]
+    },
+    {
+      "variantId": "variant-ambient-visualizer",
+      "bundleId": "bnd_p706_ambient_visualizer",
+      "variantName": "Variant 3 — Ambient Particle Visualizer (16:9)",
+      "variantType": "ambient-visualizer",
+      "tenantId": "tnt_pilot_creativanta_01",
+      "revisions": [
+        {
+          "revision": 1,
+          "approvalStatus": "archived",
+          "isSealed": false,
+          "sourceSha256": "fa4d4dc51ad6fffbd5764c0691813e323846804afe9b71990044f32bf516d45d",
+          "buildSha256": "7402c915d6418367cfaca007acf8ff26dfa8ea198250420aa0a43f4003614ccc",
+          "authoringCost": {
+            "modelId": "deterministic-mock-v1",
+            "promptTokens": 307,
+            "completionTokens": 469,
+            "totalTokens": 776,
+            "durationMs": 55,
+            "durationSeconds": 0.055,
+            "mockCostUsd": 0,
+            "standardTierCostUsd": 0.001399,
+            "currency": "USD",
+            "isNonPremiumRoute": true
+          },
+          "renderCost": {
+            "build": {
+              "buildDurationMs": 120,
+              "buildCpuSeconds": 0.12,
+              "buildCostUsd": 0.000002,
+              "compiledSizeBytes": 8250
+            },
+            "preview": {
+              "mode": "clip",
+              "format": "mp4",
+              "dimensions": {
+                "width": 640,
+                "height": 360
+              },
+              "previewDurationMs": 350,
+              "previewCpuSeconds": 0.35,
+              "previewCostUsd": 0.000005,
+              "artifactSizeBytes": 343
+            },
+            "fullRenderEstimate": {
+              "totalFrames": 150,
+              "fps": 30,
+              "estimatedDurationSeconds": 5,
+              "estimatedRenderSeconds": 2.25,
+              "estimatedRenderCostUsd": 0.000031
+            },
+            "totalComputeSeconds": 0.47,
+            "totalRenderCostUsd": 0.000007,
+            "currency": "USD"
+          }
+        }
+      ]
+    }
+  ],
+  "approvedComposition": {
+    "schema_version": "1.0",
+    "canvas": {
+      "width": 1280,
+      "height": 720,
+      "background": "#0b0f19"
+    },
+    "fps": {
+      "num": 30,
+      "den": 1
+    },
+    "duration_frames": 150,
+    "seed": 42,
+    "locale": "vi-VN",
+    "direction": "ltr",
+    "fonts": [],
+    "scenes": [
+      {
+        "id": "scn_custom_variant_01",
+        "revision": 1,
+        "start_frame": 0,
+        "duration_frames": 150,
+        "engine": "custom-html-v1",
+        "bundle": {
+          "id": "bnd_p706_promo_kinetic",
+          "revision": 2,
+          "source_sha256": "acc8114648548eb41763e1763c6352cc8cbfd67c85a4fdc363f9f1172b61399e",
+          "build_sha256": "0b344a8f5adb6e708009c6aa67e462f14b7bedf9c7d7d3453d8d35b910570f31",
+          "entrypoint": "index.js",
+          "parameters": {
+            "headline": "Khuyến Mãi Đặc Quyền Tháng 11 — Giảm 50%",
+            "subheadline": "Creativanta Video Engine CPU-First",
+            "badgeText": "ĐẶC QUYỀN PILOT",
+            "accentColor": "#f43f5e",
+            "speedMultiplier": 1,
+            "showBadge": true
+          }
+        }
+      }
+    ],
+    "audio_tracks": [],
+    "subtitles": [],
+    "metadata": {
+      "composition_id": "cmp_approved_variant-promo-kinetic_r2",
+      "approved_variant": "promo-kinetic",
+      "brief_hash": "212f5fe00d6b196a241f597218723f5d8c0fcf0a21dc9e2d996588a8f09961a2",
+      "source_sha256": "acc8114648548eb41763e1763c6352cc8cbfd67c85a4fdc363f9f1172b61399e",
+      "build_sha256": "0b344a8f5adb6e708009c6aa67e462f14b7bedf9c7d7d3453d8d35b910570f31"
+    }
+  }
+}
