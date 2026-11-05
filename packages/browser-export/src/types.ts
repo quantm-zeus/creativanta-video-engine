@@ -114,3 +114,160 @@ export interface BrowserExportGateConfig {
   readonly signoffCommit?: string;
   readonly notes: string;
 }
+
+// =============================================================================
+// Task P8-02: Browser Export Spike, Scoped Grants, Fallback, and Parity Types
+// =============================================================================
+
+export type SupportedSubsetLayerType = 'text' | 'image' | 'shape';
+export type SupportedSubsetTransition = 'none' | 'fade' | 'crossfade';
+
+export interface SceneSubsetValidation {
+  readonly isSupported: boolean;
+  readonly reasonCode?: FallbackReasonCode;
+  readonly diagnostics: readonly string[];
+  readonly unsupportedFeatures: readonly string[];
+}
+
+export interface ScopedAssetGrantPayload {
+  readonly tenantId: string;
+  readonly assetId: string;
+  readonly version?: number;
+  readonly filename: string;
+  readonly mimeType: string;
+  readonly sha256: string;
+  readonly bytes: number;
+  readonly expiresAt: string; // ISO 8601 UTC
+  readonly grantKind: 'download' | 'artifact_download' | 'browser_export_asset';
+}
+
+export interface ScopedAssetGrant extends ScopedAssetGrantPayload {
+  readonly token: string;
+  readonly downloadUrl: string;
+  readonly sig: string;
+}
+
+export interface ScopedAssetCacheEntry {
+  readonly tenantId: string;
+  readonly assetId: string;
+  readonly sha256: string;
+  readonly mimeType: string;
+  readonly bytes: number;
+  readonly data: Uint8Array;
+  readonly cachedAt: string;
+}
+
+export interface IScopedAssetLoader {
+  loadAsset(grantTokenOrUrl: string, expectedTenantId?: string): Promise<{ data: Uint8Array; mimeType: string; sha256: string }>;
+  getCachedAsset(tenantId: string, assetId: string, expectedSha256: string): Uint8Array | null;
+  cacheAsset(entry: ScopedAssetCacheEntry): void;
+}
+
+export interface AdmittedServerJob {
+  readonly id: string;
+  readonly kind: 'render' | 'preview';
+  readonly state: 'queued' | 'admitted';
+  readonly state_version: number;
+  readonly composition_id: string;
+  readonly revision: number;
+  readonly profile: string;
+  readonly created_at: string;
+  readonly status_url: string;
+  readonly isReplayed: boolean;
+  readonly client_reference?: string;
+}
+
+export interface ServerJobDispatchPayload {
+  readonly composition_id: string;
+  readonly revision: number;
+  readonly profile: string;
+  readonly client_reference?: string;
+  readonly metadata?: Record<string, string>;
+}
+
+export interface ServerJobFallbackResult {
+  readonly action: 'fallback_to_server_job';
+  readonly reasonCode: FallbackReasonCode;
+  readonly diagnostics: readonly string[];
+  readonly admittedJob: AdmittedServerJob;
+  readonly idempotencyKey: string;
+  readonly dispatchedAt: string;
+}
+
+export interface IServerJobDispatcher {
+  dispatchRenderJob(payload: ServerJobDispatchPayload, idempotencyKey: string): Promise<AdmittedServerJob>;
+}
+
+export interface MemoryTrackerMetrics {
+  readonly activeFramesCount: number;
+  readonly peakFramesCount: number;
+  readonly activeBufferBytes: number;
+  readonly peakBufferBytes: number;
+  readonly estimatedRawTotalBytes: number;
+  readonly memoryBudgetMib: number;
+  readonly budgetExceeded: boolean;
+}
+
+export interface BrowserExportProgress {
+  readonly phase: 'validating' | 'staging_assets' | 'rendering_frames' | 'encoding' | 'muxing' | 'complete';
+  readonly currentFrame: number;
+  readonly totalFrames: number;
+  readonly percent: number;
+}
+
+export interface BrowserExportOptions {
+  readonly platform?: BrowserPlatform;
+  readonly profile?: string;
+  readonly compositionId?: string;
+  readonly revision?: number;
+  readonly tenantId?: string;
+  readonly pepper?: string;
+  readonly signal?: AbortSignal;
+  readonly serverDispatcher?: IServerJobDispatcher;
+  readonly assetLoader?: IScopedAssetLoader;
+  readonly gateConfig?: BrowserExportGateConfig;
+  readonly maxInFlightFrames?: number;
+  readonly onProgress?: (progress: BrowserExportProgress) => void;
+}
+
+export interface BrowserExportSuccessResult {
+  readonly action: 'export_locally';
+  readonly blob: Blob | Uint8Array;
+  readonly buffer: Uint8Array;
+  readonly mimeType: string;
+  readonly container: ContainerFormat;
+  readonly width: number;
+  readonly height: number;
+  readonly durationFrames: number;
+  readonly durationMs: number;
+  readonly fps: { readonly num: number; readonly den: number };
+  readonly memoryMetrics: MemoryTrackerMetrics;
+  readonly exportedAt: string;
+}
+
+export type BrowserExportResult = BrowserExportSuccessResult | ServerJobFallbackResult;
+
+export interface FrameParityCheck {
+  readonly frameIndex: number;
+  readonly ptsMicroseconds: number;
+  readonly expectedPtsMicroseconds: number;
+  readonly ptsParity: boolean;
+  readonly pixelParity: boolean;
+  readonly psnrDb?: number;
+  readonly notes?: string;
+}
+
+export interface QualityParityReport {
+  readonly compositionId: string;
+  readonly width: number;
+  readonly height: number;
+  readonly totalFrames: number;
+  readonly fps: { readonly num: number; readonly den: number };
+  readonly durationParity: boolean;
+  readonly timingParity: boolean;
+  readonly dimensionParity: boolean;
+  readonly visualParity: boolean;
+  readonly averagePsnrDb: number;
+  readonly frameChecks: readonly FrameParityCheck[];
+  readonly verdict: 'PASS' | 'FAIL';
+}
