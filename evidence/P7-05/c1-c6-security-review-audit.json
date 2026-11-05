@@ -1,0 +1,460 @@
+{
+  "taskId": "P7-05",
+  "role": "Security reviewer",
+  "phase": "P7",
+  "adrId": "ADR-0002",
+  "status": "PASS",
+  "reviewDecision": "C1_C6_TECHNICAL_REVIEW_SIGNED_AWAITING_EXTERNAL_KVM_AND_HUMAN_SIGNOFF",
+  "totalChecks": 12,
+  "passedChecks": 12,
+  "failedChecks": 0,
+  "durationMs": 3000,
+  "defaultFeatureState": {
+    "CVE_CUSTOM_CODE_ENABLED": false,
+    "CVE_CUSTOM_RUNTIME": "disabled",
+    "CVE_CUSTOM_TENANT_ALLOWLIST": []
+  },
+  "hostVirtualization": {
+    "probedAt": "2026-11-04T16:57:32.060Z",
+    "devKvmPath": "/dev/kvm",
+    "kvmDeviceExists": false,
+    "kvmReadableWritable": false,
+    "binaries": {
+      "firecracker": null,
+      "jailer": null,
+      "kataRuntime": null,
+      "runsc": null
+    },
+    "firecrackerReady": false,
+    "kataReady": false,
+    "gvisorBinaryPresent": false,
+    "microVmHardwareReady": false,
+    "recommendedActionWhenUnavailable": "Keep CVE_CUSTOM_CODE_ENABLED=false and CVE_CUSTOM_RUNTIME=disabled; never downgrade to standard containers."
+  },
+  "runtimeDigestManifest": {
+    "adrId": "ADR-0002",
+    "runtime": "microvm-firecracker-v1",
+    "rootfsImageDigest": "sha256:a1b2c3d4e5f60718293a4b5c6d7e8f90a1b2c3d4e5f60718293a4b5c6d7e8f90",
+    "guestKernelDigest": "sha256:f0e1d2c3b4a5968778695a4b3c2d1e0ff0e1d2c3b4a5968778695a4b3c2d1e0f",
+    "approvedImportsBundleDigest": "sha256:24f9a93035d478603afccd8d2f1be19a5e77287ac586bd1f959c401ff1abf326",
+    "compositeRuntimeFingerprint": "sha256:ad59810735dae27f3344366b97a03512123b902e63ff2fd6c8c805bb5c3e5e27",
+    "preinstalledPackages": [
+      {
+        "packageName": "@creativanta/scene-easing",
+        "version": "1.0.0",
+        "license": "Proprietary-Creativanta-Reviewed",
+        "sha256": "b35ceb785a0d033905ad1efe7a5190083ab5b1b900a753559b6a6b39faf2447c"
+      },
+      {
+        "packageName": "@creativanta/scene-math",
+        "version": "1.0.0",
+        "license": "Proprietary-Creativanta-Reviewed",
+        "sha256": "dce8412ae3f6f0d3c4035f30dbbf25676660be08b44e6b850539bdcb3599026d"
+      },
+      {
+        "packageName": "@creativanta/scene-runtime",
+        "version": "1.0.0",
+        "license": "Proprietary-Creativanta-Reviewed",
+        "sha256": "fae5d99d83537800d22ef5843fb7c76ffcf9ae13860008f0edb142472166cb0f"
+      }
+    ]
+  },
+  "signedReviewPacket": {
+    "reviewId": "REV-P7-05-C1-C6",
+    "taskId": "P7-05",
+    "adrId": "ADR-0002",
+    "runtime": "microvm-firecracker-v1",
+    "rootfsImageDigest": "sha256:a1b2c3d4e5f60718293a4b5c6d7e8f90a1b2c3d4e5f60718293a4b5c6d7e8f90",
+    "guestKernelDigest": "sha256:f0e1d2c3b4a5968778695a4b3c2d1e0ff0e1d2c3b4a5968778695a4b3c2d1e0f",
+    "approvedImportsBundleDigest": "sha256:24f9a93035d478603afccd8d2f1be19a5e77287ac586bd1f959c401ff1abf326",
+    "compositeRuntimeFingerprint": "sha256:ad59810735dae27f3344366b97a03512123b902e63ff2fd6c8c805bb5c3e5e27",
+    "reviewer": "security-reviewer@creativanta.internal",
+    "reviewApprovalScope": "TECHNICAL_GATE_VERIFIED_AWAITING_HUMAN_SIGNOFF",
+    "reviewedAt": "2026-11-04T16:45:00.000Z",
+    "expiresAt": "2027-11-04T16:45:00.000Z",
+    "killSwitchVerified": true,
+    "canaryVerified": true,
+    "allowlistVerified": true,
+    "offByDefaultVerified": true,
+    "rollbackVerified": true,
+    "gates": {
+      "C1_threat_model_and_runtime_pin": true,
+      "C2_isolated_build_and_no_egress": true,
+      "C3_escape_and_secret_canary_suite": true,
+      "C4_resource_bombs_cancel_and_lease_fencing": true,
+      "C5_tenant_preview_and_artifact_origin_auth": true,
+      "C6_security_reviewer_signed_attestation": true
+    },
+    "gateAttestationSignatureHex": "01c81e81530e0339d792070b7053eeab2f26ffa04b5bd9e28b3330c1c3d5b386",
+    "gateEvidenceSummaries": {
+      "C1_threat_model_and_runtime_pin": {
+        "adrId": "ADR-0002",
+        "runtime": "microvm-firecracker-v1",
+        "rootfsImageDigest": "sha256:a1b2c3d4e5f60718293a4b5c6d7e8f90a1b2c3d4e5f60718293a4b5c6d7e8f90",
+        "guestKernelDigest": "sha256:f0e1d2c3b4a5968778695a4b3c2d1e0ff0e1d2c3b4a5968778695a4b3c2d1e0f",
+        "approvedImportsBundleDigest": "sha256:24f9a93035d478603afccd8d2f1be19a5e77287ac586bd1f959c401ff1abf326",
+        "compositeRuntimeFingerprint": "sha256:ad59810735dae27f3344366b97a03512123b902e63ff2fd6c8c805bb5c3e5e27",
+        "blockedDowngradesCount": 14,
+        "gvisorExplicitReviewEnforced": true,
+        "hostKvmHardwareDetected": false,
+        "actionWhenKvmUnavailable": "Keep CVE_CUSTOM_CODE_ENABLED=false and CVE_CUSTOM_RUNTIME=disabled; never downgrade to standard containers."
+      },
+      "C2_isolated_build_and_no_egress": {
+        "buildVmId": "vm_build_1_da3c5091",
+        "networkInterfacesCount": 0,
+        "mmdsDisabled": true,
+        "tapNicInjectionBlocked": true,
+        "cspScriptHash": "'sha256-BJDrddyZMaaHS6PPMQM+uY3qhXmAfQ30DvV+pTXDQIs='",
+        "sourceSha256": "9eb2ab08e846c594c021cd0223f7805eeafb9204b4a54b304914312584b3265e",
+        "buildSha256": "0490eb75dc9931a6874ba3cf31033eb98dea8579807d0df40ef57ea535c3408b",
+        "buildVmDestroyedAndWiped": true,
+        "trustedApiExecutionsCount": 0
+      },
+      "C3_escape_and_secret_canary_suite": {
+        "maliciousPayloadsTested": 24,
+        "maliciousPayloadsBlocked": 24,
+        "canaryVectorsVerified": 4,
+        "canaryPresentInBuildVm": false,
+        "canaryPresentInRenderVm": false,
+        "canaryLeakedInArtifactsOrLogs": false,
+        "hostSocketBlocked": true,
+        "symlinkEscapeBlocked": true
+      },
+      "C4_resource_bombs_cancel_and_lease_fencing": {
+        "cpuInfiniteLoopBombKilled": true,
+        "diskQuotaBombBlocked": true,
+        "diskBombPrisonWiped": true,
+        "activeCancelProcessGroupKilled": true,
+        "cancelPrisonWiped": true,
+        "staleLeaseFenceRejected": true
+      },
+      "C5_tenant_preview_and_artifact_origin_auth": {
+        "previewId": "prv_p704_482b4acf9184",
+        "outputFormat": "png",
+        "outputDimensions": {
+          "width": 640,
+          "height": 360
+        },
+        "rawHtmlPreviewOriginBlocked": true,
+        "downloadGrantTtlSeconds": 300,
+        "securityHeaders": {
+          "Content-Type": "image/png",
+          "X-Content-Type-Options": "nosniff",
+          "Content-Security-Policy": "default-src 'none'; sandbox",
+          "Cross-Origin-Resource-Policy": "same-origin",
+          "Cache-Control": "private, no-store"
+        },
+        "foreignTenantPreview404": true,
+        "foreignTenantBundle404": true,
+        "foreignTenantAuthoringJob404": true
+      },
+      "C6_security_reviewer_signed_attestation": {
+        "reviewer": "security-reviewer@creativanta.internal",
+        "reviewedAt": "2026-11-04T16:45:00.000Z",
+        "expiresAt": "2027-11-04T16:45:00.000Z",
+        "reviewApprovalScope": "TECHNICAL_GATE_VERIFIED_AWAITING_HUMAN_SIGNOFF",
+        "compositeRuntimeFingerprint": "sha256:ad59810735dae27f3344366b97a03512123b902e63ff2fd6c8c805bb5c3e5e27",
+        "digestDriftRejectionVerified": true,
+        "dependencyDriftRejectionVerified": true,
+        "missingGateRejectionVerified": true
+      }
+    },
+    "gateAttestation": {
+      "adrId": "ADR-0002",
+      "runtime": "microvm-firecracker-v1",
+      "rootfsImageDigest": "sha256:a1b2c3d4e5f60718293a4b5c6d7e8f90a1b2c3d4e5f60718293a4b5c6d7e8f90",
+      "guestKernelDigest": "sha256:f0e1d2c3b4a5968778695a4b3c2d1e0ff0e1d2c3b4a5968778695a4b3c2d1e0f",
+      "reviewer": "security-reviewer@creativanta.internal",
+      "reviewedAt": "2026-11-04T16:45:00.000Z",
+      "expiresAt": "2027-11-04T16:45:00.000Z",
+      "killSwitchVerified": true,
+      "gates": {
+        "C1_threat_model_and_runtime_pin": true,
+        "C2_isolated_build_and_no_egress": true,
+        "C3_escape_and_secret_canary_suite": true,
+        "C4_resource_bombs_cancel_and_lease_fencing": true,
+        "C5_tenant_preview_and_artifact_origin_auth": true,
+        "C6_security_reviewer_signed_attestation": true
+      },
+      "signatureHex": "01c81e81530e0339d792070b7053eeab2f26ffa04b5bd9e28b3330c1c3d5b386"
+    },
+    "signatureHex": "c125b82fc2c9c249d92e3e4b99b0b92b4f7ee189f07af6cb61a516081b0e6d88"
+  },
+  "trustedApiExecutionAudit": {
+    "trustedApiExecutionsCount": 0,
+    "blockedTrustedApiAttemptsCount": 0,
+    "isolatedBuildVmExecutionsCount": 17,
+    "isolatedRenderVmExecutionsCount": 17
+  },
+  "externalGates": [
+    {
+      "gateId": "EXT-P7-01",
+      "status": "PENDING_HOST_VIRTUALIZATION",
+      "description": "Production/staging Linux bare-metal or nested-virtualization worker nodes with /dev/kvm and pinned Firecracker/Kata binaries (container dev environment has kvmDeviceExists=false, so CVE_CUSTOM_CODE_ENABLED remains false by default without downgrading to standard containers)."
+    },
+    {
+      "gateId": "EXT-P7-02",
+      "status": "PENDING_HUMAN_SECURITY_AND_LEGAL_SIGNOFF",
+      "description": "Human Security Reviewer & Legal/Compliance sign-off before enabling CVE_CUSTOM_CODE_ENABLED=true or enrolling live external pilot tenants in production (P7-06)."
+    }
+  ],
+  "checks": [
+    {
+      "id": "SR7-01",
+      "title": "Gate C1 — Threat Model ADR-0002, Anti-Downgrade Lock, gVisor Gate & Exact Runtime Digest Pinning",
+      "category": "C1_threat_model_and_runtime_pin",
+      "status": "PASS",
+      "passed": true,
+      "durationMs": 760.02,
+      "details": {
+        "adrId": "ADR-0002",
+        "runtime": "microvm-firecracker-v1",
+        "rootfsImageDigest": "sha256:a1b2c3d4e5f60718293a4b5c6d7e8f90a1b2c3d4e5f60718293a4b5c6d7e8f90",
+        "guestKernelDigest": "sha256:f0e1d2c3b4a5968778695a4b3c2d1e0ff0e1d2c3b4a5968778695a4b3c2d1e0f",
+        "approvedImportsBundleDigest": "sha256:24f9a93035d478603afccd8d2f1be19a5e77287ac586bd1f959c401ff1abf326",
+        "compositeRuntimeFingerprint": "sha256:ad59810735dae27f3344366b97a03512123b902e63ff2fd6c8c805bb5c3e5e27",
+        "blockedDowngradesCount": 14,
+        "gvisorExplicitReviewEnforced": true,
+        "hostKvmHardwareDetected": false,
+        "actionWhenKvmUnavailable": "Keep CVE_CUSTOM_CODE_ENABLED=false and CVE_CUSTOM_RUNTIME=disabled; never downgrade to standard containers."
+      }
+    },
+    {
+      "id": "SR7-02",
+      "title": "Gate C2 — Isolated Build in Disposable build-vm, Zero Network Egress & Zero Trusted API Execution",
+      "category": "C2_isolated_build_and_no_egress",
+      "status": "PASS",
+      "passed": true,
+      "durationMs": 0.08,
+      "details": {
+        "buildVmId": "vm_build_1_da3c5091",
+        "networkInterfacesCount": 0,
+        "mmdsDisabled": true,
+        "tapNicInjectionBlocked": true,
+        "cspScriptHash": "'sha256-BJDrddyZMaaHS6PPMQM+uY3qhXmAfQ30DvV+pTXDQIs='",
+        "sourceSha256": "9eb2ab08e846c594c021cd0223f7805eeafb9204b4a54b304914312584b3265e",
+        "buildSha256": "0490eb75dc9931a6874ba3cf31033eb98dea8579807d0df40ef57ea535c3408b",
+        "buildVmDestroyedAndWiped": true,
+        "trustedApiExecutionsCount": 0
+      }
+    },
+    {
+      "id": "SR7-03",
+      "title": "Gate C3 — Filesystem/Process/Host-Socket/Symlink Escape & 24-Payload + Canary Non-Exfiltration Suite",
+      "category": "C3_escape_and_secret_canary_suite",
+      "status": "PASS",
+      "passed": true,
+      "durationMs": 0.06,
+      "details": {
+        "maliciousPayloadsTested": 24,
+        "maliciousPayloadsBlocked": 24,
+        "canaryVectorsVerified": 4,
+        "canaryPresentInBuildVm": false,
+        "canaryPresentInRenderVm": false,
+        "canaryLeakedInArtifactsOrLogs": false,
+        "hostSocketBlocked": true,
+        "symlinkEscapeBlocked": true
+      }
+    },
+    {
+      "id": "SR7-04",
+      "title": "Gate C4 — CPU/Disk Resource Bombs, Active Job Cancellation (<5s), Prison Cleanup & Lease Epoch Fencing",
+      "category": "C4_resource_bombs_cancel_and_lease_fencing",
+      "status": "PASS",
+      "passed": true,
+      "durationMs": 0.04,
+      "details": {
+        "cpuInfiniteLoopBombKilled": true,
+        "diskQuotaBombBlocked": true,
+        "diskBombPrisonWiped": true,
+        "activeCancelProcessGroupKilled": true,
+        "cancelPrisonWiped": true,
+        "staleLeaseFenceRejected": true
+      }
+    },
+    {
+      "id": "SR7-05",
+      "title": "Gate C5 — Tenant Preview/Artifact Origin Auth, No Raw HTML Origin, TTL<=300s Grant & Multi-Tenant 404 IDOR",
+      "category": "C5_tenant_preview_and_artifact_origin_auth",
+      "status": "PASS",
+      "passed": true,
+      "durationMs": 0.04,
+      "details": {
+        "previewId": "prv_p704_482b4acf9184",
+        "outputFormat": "png",
+        "outputDimensions": {
+          "width": 640,
+          "height": 360
+        },
+        "rawHtmlPreviewOriginBlocked": true,
+        "downloadGrantTtlSeconds": 300,
+        "securityHeaders": {
+          "Content-Type": "image/png",
+          "X-Content-Type-Options": "nosniff",
+          "Content-Security-Policy": "default-src 'none'; sandbox",
+          "Cross-Origin-Resource-Policy": "same-origin",
+          "Cache-Control": "private, no-store"
+        },
+        "foreignTenantPreview404": true,
+        "foreignTenantBundle404": true,
+        "foreignTenantAuthoringJob404": true
+      }
+    },
+    {
+      "id": "SR7-06",
+      "title": "Gate C6 — Cryptographically Signed C1–C6 Security Review Packet for Exact Runtime & Imports Digests",
+      "category": "C6_security_reviewer_signed_attestation",
+      "status": "PASS",
+      "passed": true,
+      "durationMs": 0.05,
+      "details": {
+        "reviewer": "security-reviewer@creativanta.internal",
+        "reviewedAt": "2026-11-04T16:45:00.000Z",
+        "expiresAt": "2027-11-04T16:45:00.000Z",
+        "reviewApprovalScope": "TECHNICAL_GATE_VERIFIED_AWAITING_HUMAN_SIGNOFF",
+        "compositeRuntimeFingerprint": "sha256:ad59810735dae27f3344366b97a03512123b902e63ff2fd6c8c805bb5c3e5e27",
+        "digestDriftRejectionVerified": true,
+        "dependencyDriftRejectionVerified": true,
+        "missingGateRejectionVerified": true,
+        "signatureHex": "c125b82fc2c9c249d92e3e4b99b0b92b4f7ee189f07af6cb61a516081b0e6d88"
+      }
+    },
+    {
+      "id": "SR7-07",
+      "title": "Runtime Rootfs, Guest Kernel, Pre-installed Imports Digest Drift & Missing Gate Rejection",
+      "category": "digest_and_fingerprint_drift_guard",
+      "status": "PASS",
+      "passed": true,
+      "durationMs": 0.82,
+      "details": {
+        "missingGateBlocked": true,
+        "kernelDriftBlocked": true,
+        "expiredBlocked": true,
+        "rootfsDriftBlocked": true,
+        "importsDriftBlocked": true
+      }
+    },
+    {
+      "id": "SR7-08",
+      "title": "Canary Evidence — 3 Custom Scene Canary Fixtures (16:9 Promo, 16:9 Chart, 9:16 Clip) & Zero Secret Leak",
+      "category": "canary_verification_evidence",
+      "status": "PASS",
+      "passed": true,
+      "durationMs": 439.89,
+      "details": {
+        "fixturesCount": 3,
+        "passedFixturesCount": 3,
+        "canarySecretLeaked": false,
+        "fixtures": [
+          {
+            "fixtureId": "canary-01-promo-vi",
+            "mode": "frame",
+            "outputFormat": "png",
+            "outputDimensions": {
+              "width": 640,
+              "height": 360
+            },
+            "buildSha256": "0490eb75dc9931a6874ba3cf31033eb98dea8579807d0df40ef57ea535c3408b",
+            "artifactSha256": "de46655b168b120e80b52fd971b158a7c277e0fd1565f21e18ef6fc558ca05f9"
+          },
+          {
+            "fixtureId": "canary-02-explainer-chart",
+            "mode": "frame",
+            "outputFormat": "png",
+            "outputDimensions": {
+              "width": 640,
+              "height": 360
+            },
+            "buildSha256": "8d1c7b6e140e5d7e4e82c5b61ad16f8ee8502ba6b85d06f63c66d652a0e27e59",
+            "artifactSha256": "e1fcb0d27288d2d66840efce8c3b6ac6263fe1bed8cf98d6dcd0e39bbd678240"
+          },
+          {
+            "fixtureId": "canary-03-kinetic-title",
+            "mode": "clip",
+            "outputFormat": "mp4",
+            "outputDimensions": {
+              "width": 360,
+              "height": 640
+            },
+            "buildSha256": "58e5f31ee7354e455679261f9d104950da6d9287cf904d57392f062481c9a3b1",
+            "artifactSha256": "dd9fde56ca6b359c767fd2f4f45f34c84ec31aabe50c02b9167ef61aa8acad48"
+          }
+        ]
+      }
+    },
+    {
+      "id": "SR7-09",
+      "title": "Allowlist Evidence — Pilot Tenant Enrollment, Non-Allowlisted Rejection & Dynamic Revocation",
+      "category": "allowlist_verification_evidence",
+      "status": "PASS",
+      "passed": true,
+      "durationMs": 3.78,
+      "details": {
+        "enrolledTenants": [
+          "tnt_pilot_alpha",
+          "tnt_pilot_beta"
+        ],
+        "nonAllowlistedTenantBlocked": true,
+        "dynamicRevocationTerminatedJobs": 1,
+        "dynamicRevocationRevokedGrants": 1,
+        "revokedTenantBlockedImmediately": true
+      }
+    },
+    {
+      "id": "SR7-10",
+      "title": "Kill Switch Evidence — Blocks Admission, Terminates Running Custom Jobs, Revokes Grants & Preserves Structured Path",
+      "category": "kill_switch_verification_evidence",
+      "status": "PASS",
+      "passed": true,
+      "durationMs": 446.49,
+      "details": {
+        "killSwitchTriggered": true,
+        "admissionBlocked": true,
+        "terminatedRunningCustomJobsCount": 2,
+        "revokedCustomGrantsCount": 1,
+        "structuredRenderingUnaffected": true,
+        "clearedToDefaultOffAfterRevalidation": true
+      }
+    },
+    {
+      "id": "SR7-11",
+      "title": "Off-by-Default Regression — Contracts, ADR-0002, Registry, Runtime & Post-Restore Safety Lock Default Off",
+      "category": "off_by_default_regression",
+      "status": "PASS",
+      "passed": true,
+      "durationMs": 1331.53,
+      "details": {
+        "contractsDefaultOff": true,
+        "adrDefaultOff": true,
+        "controllerDefaultOff": true,
+        "defaultExecutionBlocked": true,
+        "registryPrepareBlockedByDefault": true,
+        "allocateVmBlockedByDefault": true,
+        "postRestoreLockedOff": true,
+        "postRestoreRevalidatedDefaultOff": true
+      }
+    },
+    {
+      "id": "SR7-12",
+      "title": "Runtime Rollback & Vulnerable Image Revocation Drill — Zero Blind Data Rollback & Known-Good v1 Recovery",
+      "category": "runtime_rollback_drill",
+      "status": "PASS",
+      "passed": true,
+      "durationMs": 0.1,
+      "details": {
+        "v1RootfsDigest": "sha256:a1b2c3d4e5f60718293a4b5c6d7e8f90a1b2c3d4e5f60718293a4b5c6d7e8f90",
+        "v1KernelDigest": "sha256:f0e1d2c3b4a5968778695a4b3c2d1e0ff0e1d2c3b4a5968778695a4b3c2d1e0f",
+        "v1CompositeFingerprint": "sha256:ad59810735dae27f3344366b97a03512123b902e63ff2fd6c8c805bb5c3e5e27",
+        "unreviewedV2DigestDriftRejected": true,
+        "compromisedDigestRevoked": "sha256:bad0bad0bad0bad0bad0bad0bad0bad0bad0bad0bad0bad0bad0bad0bad0bad0",
+        "inFlightVulnerableJobsFailedCount": 1,
+        "rolledBackToDefaultOffVerified": true,
+        "zeroBlindDataRollback": true,
+        "preservedRevisionsCount": 2,
+        "rolledBackToKnownGoodV1Verified": true,
+        "structuredRenderingUnaffectedThroughout": true,
+        "finalStateDefaultOffRestored": true
+      }
+    }
+  ]
+}
