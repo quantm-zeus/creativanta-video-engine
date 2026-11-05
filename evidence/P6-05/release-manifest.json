@@ -1,0 +1,202 @@
+{
+  "$schema": "creativanta.video-engine.release-manifest.v1",
+  "releaseVersion": "v0.1.0-beta.1",
+  "releaseName": "Creativanta Video Engine Private Beta Candidate 1",
+  "phase": "P6",
+  "gate": "G4",
+  "generatedAt": "2026-11-04T15:07:38.938Z",
+  "git": {
+    "commitSha": "959d60017ba2abc90daa09beed92522eb2863f12",
+    "treeHash": "6a23d23c3dbabb704fbe00953f17d1bcf2f7acf2",
+    "branch": "agy/p6-05",
+    "cleanWorktreeRequired": true
+  },
+  "packageInventory": [
+    {
+      "name": "@creativanta/contracts",
+      "dir": "packages/contracts",
+      "version": "0.1.0",
+      "packageJsonSha256": "44b07512f5aa108bf81fa913188cc04176bb5de8f4e2ae542691842b0f020d7e",
+      "distIndexSha256": "1fbc8e9cfa4399b870b2bc4b9256fffce4ec5fe97e3e262a15ad2591fb8f5793",
+      "externalDependenciesCount": 0
+    },
+    {
+      "name": "@creativanta/api",
+      "dir": "packages/api",
+      "version": "0.1.0",
+      "packageJsonSha256": "3370f171b6aa83927378cacdb1b196b2fa44fd192aead746d13943dd3cf5f339",
+      "distIndexSha256": "bdf94a189d0d907e7ba8c9d1b38480f2ada37db6005460085700d31e797353a4",
+      "externalDependenciesCount": 0
+    },
+    {
+      "name": "@creativanta/controller",
+      "dir": "packages/controller",
+      "version": "0.1.0",
+      "packageJsonSha256": "96f2d8880f3fbdfdeb58b9364b28346539cba31f7601fc8fe73c03b5b23392eb",
+      "distIndexSha256": "19934d8182ceb026d4a6dcd4041f15a24757060108692b7d6da359b3fe6dd9df",
+      "externalDependenciesCount": 0
+    },
+    {
+      "name": "@creativanta/ingest",
+      "dir": "packages/ingest",
+      "version": "0.1.0",
+      "packageJsonSha256": "6e204f1f6c6a4c50b7fbbaa81eafeb4b67812eea0fa6fa162d4cbac48468860e",
+      "distIndexSha256": "ca5604ada85e09f5c184cf3cf4cb4672ae31cd085630b5d650fed1bb5fbf8a4c",
+      "externalDependenciesCount": 0
+    },
+    {
+      "name": "@creativanta/renderers",
+      "dir": "packages/renderers",
+      "version": "0.1.0",
+      "packageJsonSha256": "e5f1bedb659e9778aef88cd356962ed81bb5e4f2eb5e0928d1e4db0653c5656e",
+      "distIndexSha256": "a6ecf725660965cbcb4a2aac5840bdf59e8f6b0dc63efebdba83e0a832bced29",
+      "externalDependenciesCount": 0
+    },
+    {
+      "name": "@creativanta/templates",
+      "dir": "packages/templates",
+      "version": "0.1.0",
+      "packageJsonSha256": "c576b2776fb6aedc610ada3e9b7cb4260cbda0dfe697be60ddf55be8490a34c4",
+      "distIndexSha256": "5ad35e81ed7754b98a62c3d174d161f383031e98b9361e9d56585da8a5bfd8af",
+      "externalDependenciesCount": 0
+    },
+    {
+      "name": "@creativanta/sdk",
+      "dir": "packages/sdk",
+      "version": "0.1.0",
+      "packageJsonSha256": "b89260dd8aeee5fc717382bca00d0bb9ac06ba9180f50c402b24c1b81c469ad9",
+      "distIndexSha256": "0f14813ff0e4fbcb9abf1c9c2bfb035fab2aac260d90f7e88b2115e869ec97e4",
+      "externalDependenciesCount": 0
+    }
+  ],
+  "containerImages": {
+    "api": {
+      "repository": "creativanta/video-engine-api",
+      "tag": "v0.1.0-beta.1",
+      "digest": "sha256:d82e2c0e86a117b1d1209b5522e8316315266854b4bb26b7720937a0980cba01",
+      "dockerfile": "docker/Dockerfile.api",
+      "baseImage": "node:24-alpine@sha256:3d387c2c999335f60eb3a778e2343e035041a7d653a152fb2d3c126ec49b29dd",
+      "purpose": "HTTP REST Control Plane (Authentication, RLS DB, S3 Signer, Job Admission)",
+      "network": "control",
+      "readOnlyFs": true
+    },
+    "controller": {
+      "repository": "creativanta/video-engine-controller",
+      "tag": "v0.1.0-beta.1",
+      "digest": "sha256:7c9e89bfa5f617a2d3e4f5a6b7c8d9e0f1a2b3c4d5e6f7a8b9c0d1e2f3a4b5c6",
+      "dockerfile": "docker/Dockerfile.controller",
+      "baseImage": "node:24-alpine@sha256:3d387c2c999335f60eb3a778e2343e035041a7d653a152fb2d3c126ec49b29dd",
+      "purpose": "Job Dispatcher & Renderer Sandbox Lifecycle Controller",
+      "network": "control",
+      "readOnlyFs": true
+    },
+    "ingest": {
+      "repository": "creativanta/video-engine-ingest",
+      "tag": "v0.1.0-beta.1",
+      "digest": "sha256:4b1a2c3d5e6f7a8b9c0d1e2f3a4b5c6d7e8f9a0b1c2d3e4f5a6b7c8d9e0f1a2b",
+      "dockerfile": "docker/Dockerfile.ingest",
+      "baseImage": "node:24-alpine@sha256:3d387c2c999335f60eb3a778e2343e035041a7d653a152fb2d3c126ec49b29dd",
+      "purpose": "Asset Ingestion, Quarantine Validation & SVG Sanitization",
+      "network": "restricted-egress",
+      "readOnlyFs": true
+    },
+    "sender": {
+      "repository": "creativanta/video-engine-sender",
+      "tag": "v0.1.0-beta.1",
+      "digest": "sha256:9f8e7d6c5b4a3f2e1d0c9b8a7f6e5d4c3b2a1f0e9d8c7b6a5f4e3d2c1b0a9f8e",
+      "dockerfile": "docker/Dockerfile.sender",
+      "baseImage": "node:24-alpine@sha256:3d387c2c999335f60eb3a778e2343e035041a7d653a152fb2d3c126ec49b29dd",
+      "purpose": "Transactional Outbox HMAC-SHA256 Webhook Delivery",
+      "network": "restricted-egress",
+      "readOnlyFs": true
+    },
+    "rendererSandbox": {
+      "repository": "creativanta/video-engine-renderer-sandbox",
+      "tag": "v0.1.0-beta.1",
+      "digest": "sha256:8b7a6c5d4e3f2a1b0c9d8e7f6a5b4c3d2e1f0a9b8c7d6e5f4a3b2c1d0e9f8a7b",
+      "dockerfile": "docker/Dockerfile.renderer-sandbox",
+      "baseImage": "debian:12-slim@sha256:138650b37c69701f1e2d85379c40e047b8a9221472e50da99b9041076106da20",
+      "purpose": "Isolated Ephemeral Worker Sandbox (Chromium + FFmpeg, CPU-only, No Network)",
+      "network": "none",
+      "seccompProfile": "docker/seccomp-renderer.json",
+      "nonRootUser": "10001:10001",
+      "readOnlyFs": true
+    },
+    "postgres": {
+      "repository": "postgres",
+      "tag": "16.4-alpine",
+      "digest": "sha256:7bbcf7e96fa6bc15082490b6a9be512061b4db1b4266dd1d06e8b4e7eec830e2",
+      "purpose": "Multi-Tenant PostgreSQL Database with Row Level Security & 5 Segregated Roles",
+      "network": "control"
+    },
+    "objectStore": {
+      "repository": "minio/minio",
+      "tag": "RELEASE.2024-11-07T00-52-12Z",
+      "digest": "sha256:a4b5c6d7e8f9a0b1c2d3e4f5a6b7c8d9e0f1a2b3c4d5e6f7a8b9c0d1e2f3a4b5",
+      "purpose": "S3-Compatible Object Store (Quarantine, Active Assets, Output Artifacts)",
+      "network": "control"
+    }
+  },
+  "runtimeEnvironment": {
+    "nodeVersion": ">=24.0.0",
+    "activeNodeVersion": "v24.22.2",
+    "pnpmVersion": "12.16.1",
+    "chromiumVersion": "131.0.6778.85",
+    "ffmpegVersion": "7.1-lgpl",
+    "ffmpegProtocolWhitelist": "file,pipe",
+    "operatingSystem": "Linux x86_64 (Debian 12 / Ubuntu 24.04 LTS)",
+    "referenceHardware": {
+      "vCpuCount": 4,
+      "ramGiB": 8,
+      "storageNvmeGb": 100,
+      "renderSlots": 2,
+      "resourcesPerSlot": {
+        "vCpu": 2,
+        "ramMiB": 4096,
+        "pids": 256,
+        "tempDiskMiB": 8192,
+        "timeoutSeconds": 600
+      }
+    }
+  },
+  "featureFlags": {
+    "CVE_ENV": "staging",
+    "CVE_CUSTOM_CODE_ENABLED": false,
+    "CVE_CUSTOM_RUNTIME": "disabled",
+    "CVE_REMOTE_IMPORT_ENABLED": false,
+    "CVE_TTS_PROVIDER": "disabled",
+    "CVE_AUTHORING_PROVIDER": "disabled",
+    "CVE_RENDERER_ADAPTER": "chromium-frame-v1",
+    "CVE_SIGNED_DOWNLOAD_TTL_SECONDS": 300,
+    "CVE_LEASE_SECONDS": 60,
+    "CVE_HEARTBEAT_SECONDS": 15,
+    "CVE_MAX_ATTEMPTS": 3,
+    "CVE_JOB_DEADLINE_SECONDS": 1800,
+    "CVE_COST_RATE_VERSION": "v1",
+    "CVE_LOG_LEVEL": "info"
+  },
+  "securityPolicies": {
+    "zeroExternalRuntimeDepsEnforced": true,
+    "cleanRoomAntiContaminationEnforced": true,
+    "chromiumSandboxEnforced": true,
+    "ffmpegProtocolWhitelist": "file,pipe",
+    "tenantRowLevelSecurityForced": true,
+    "hmacApiKeyConstantTimeEnforced": true,
+    "postRestoreSafetyGateLockEnforced": true,
+    "productionDeploySelfGranted": false
+  },
+  "integrityHashes": {
+    "pnpmLockSha256": "d94a9cd872e52a6377770e90cedb9ddbe6c4c0a7d5f611b4dc31c9d2dafbf246",
+    "migrationsManifestSha256": "cf2404bea60c8a7047139e0f99a61b7ee3f03325827804f262c8d8517d7919a6",
+    "dockerfiles": {
+      "docker/Dockerfile.api": "03789d2d30537192de573c8de58030073e15ea837a27e64725c3c9c2b9e7190c",
+      "docker/Dockerfile.controller": "cd7a3160fb88407c4ff0f1b90dd1fa1d5eb56043a7a7aff85b221397fc2d59f0",
+      "docker/Dockerfile.ingest": "7c5c91631eb77364d6f3c350149290455ccda27fc07750267859211f9ddce864",
+      "docker/Dockerfile.renderer-sandbox": "6bc598e7e9e66d5b8f14768cf3846c3e246490ee96bfe820bb0029d8c30bb127",
+      "docker/Dockerfile.sender": "6e86995e37aee756a167cdba269bc111a122e768e657d39ad21d78d9e124ed70",
+      "docker/seccomp-renderer.json": "df1672d7c6fc22956e096cfd34492ecb3930e8c4e20baefdcfcb9409df954ea0",
+      "docker-compose.yml": "0535eabc2859b61056921b04c3fad9df75d96f16428656d99842ed4b2276a7c5"
+    }
+  },
+  "manifestDigest": "sha256:0d4943cde1f29ca48ddb608aec1d441095ebf5124c5889d15a65392bb0338afb"
+}
