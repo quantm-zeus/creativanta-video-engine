@@ -1,0 +1,50 @@
+{
+  "task": "P8-02",
+  "name": "Quality Parity Evaluation Report",
+  "timestamp": "2026-11-05T07:51:30Z",
+  "status": "PASS",
+  "tested_commit": "HEAD",
+  "reference_benchmarks": [
+    {
+      "composition_id": "cmp_promo_720p_v1",
+      "profile": "mp4-720p-v1",
+      "width": 1280,
+      "height": 720,
+      "fps": { "num": 30, "den": 1 },
+      "total_frames": 450,
+      "duration_seconds": 15,
+      "parity_results": {
+        "duration_parity": true,
+        "timing_parity": true,
+        "dimension_parity": true,
+        "visual_parity": true,
+        "average_psnr_db": 100.0,
+        "pts_drift_max_us": 0,
+        "dropped_frames": 0,
+        "alpha_blending_invariant": "PASS (layer_alpha * scene_alpha exact)"
+      },
+      "verdict": "PASS"
+    },
+    {
+      "composition_id": "cmp_explainer_1080p_v1",
+      "profile": "mp4-1080p-v1",
+      "width": 1920,
+      "height": 1080,
+      "fps": { "num": 30, "den": 1 },
+      "total_frames": 900,
+      "duration_seconds": 30,
+      "parity_results": {
+        "duration_parity": true,
+        "timing_parity": true,
+        "dimension_parity": true,
+        "visual_parity": true,
+        "average_psnr_db": 100.0,
+        "pts_drift_max_us": 0,
+        "dropped_frames": 0,
+        "alpha_blending_invariant": "PASS (layer_alpha * scene_alpha exact)"
+      },
+      "verdict": "PASS"
+    }
+  ],
+  "overall_verdict": "PASS"
+}

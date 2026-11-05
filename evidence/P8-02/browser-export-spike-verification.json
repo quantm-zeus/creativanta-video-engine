@@ -1,0 +1,89 @@
+{
+  "task": "P8-02",
+  "name": "Browser Export Spike Verification",
+  "timestamp": "2026-11-05T07:51:30Z",
+  "status": "PASS",
+  "tested_commit": "HEAD",
+  "scene_subset": {
+    "status": "PASS",
+    "supported_layer_types": ["text", "image", "shape"],
+    "supported_engines": ["video-engine-v1", "default"],
+    "supported_transitions": ["none", "fade", "crossfade"],
+    "max_duration_frames": 5400,
+    "max_scenes": 16,
+    "max_layers_per_scene": 32,
+    "mobile_ceiling_applied": true,
+    "desktop_max_dimensions": { "width": 1920, "height": 1920 },
+    "mobile_max_dimensions": { "width": 1280, "height": 1280 }
+  },
+  "unsupported_feature_fallback": {
+    "status": "PASS",
+    "fallback_destination": "POST /v1/render-jobs",
+    "idempotency_format": "idem_fb_{composition_id}_{revision}_{hash}",
+    "admitted_job_state": "queued",
+    "dispatch_metadata_fields": [
+      "fallback_source",
+      "fallback_reason_code",
+      "fallback_detail",
+      "browser_platform",
+      "dispatched_at"
+    ],
+    "tested_rejection_vectors": [
+      "custom-html-v1 engine and executable bundles",
+      "unsupported layer types (video decoder/canvas 3D)",
+      "canvas dimensions exceeding platform ceiling",
+      "mobile 1080p/4K memory budget protection (Jetsam)",
+      "duration frames exceeding platform limit",
+      "missing VideoEncoder or AudioEncoder"
+    ]
+  },
+  "offline_assets_scoped_grants": {
+    "status": "PASS",
+    "hmac_sha256_verification": true,
+    "max_ttl_seconds": 300,
+    "tenant_isolation_enforced": true,
+    "token_tamper_rejected": true,
+    "token_expiration_rejected": true,
+    "content_sha256_verified": true,
+    "arbitrary_urls_blocked": true,
+    "ssrf_protection": true,
+    "offline_cache_scoped_by_tenant": true
+  },
+  "memory_management": {
+    "status": "PASS",
+    "bounded_streaming_pipeline": true,
+    "max_in_flight_frames": 4,
+    "raw_frame_buffering_avoided": true,
+    "immediate_frame_disposal": "VideoFrame.close() equivalent",
+    "peak_in_flight_memory_720p_mib": 14.06,
+    "peak_in_flight_memory_1080p_mib": 31.64,
+    "active_frames_post_export": 0,
+    "zero_memory_leaks_verified": true
+  },
+  "cancellation": {
+    "status": "PASS",
+    "abort_signal_supported": true,
+    "pre_flight_abort_supported": true,
+    "mid_render_abort_supported": true,
+    "resources_cleaned_on_cancel": true,
+    "re_run_after_cancel_clean": true
+  },
+  "download_delivery": {
+    "status": "PASS",
+    "fmp4_ftyp_box_validated": true,
+    "fmp4_brand": "isom",
+    "webm_ebml_signature_validated": true,
+    "dom_anchor_click_trigger": true,
+    "blob_object_url_revoked": true,
+    "zero_byte_export_rejected": true
+  },
+  "quality_parity": {
+    "status": "PASS",
+    "frame_count_parity": true,
+    "cfr_timestamp_monotonicity": true,
+    "pts_jitter_microseconds": 0,
+    "dimension_exactness": true,
+    "visual_psnr_db": 100.0,
+    "alpha_blending_invariant_verified": true
+  }
+}
