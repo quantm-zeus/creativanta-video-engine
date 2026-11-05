@@ -1,0 +1,245 @@
+{
+  "task_id": "P8-01",
+  "evaluated_on": "2026-11-05",
+  "base_commit": "e9046baeb51bbe335ffaf629bb41cc6aaed8b395",
+  "purpose": "Comprehensive capability and codec parity matrix across desktop and mobile browsers, hardware encoders, memory ceilings, security boundaries, and server-fallback orchestration.",
+  "platforms": {
+    "chrome_desktop": {
+      "platform_id": "chrome-desktop",
+      "family": "desktop",
+      "engine": "blink",
+      "os_matrix": ["Windows 10/11", "macOS 12+", "Ubuntu 22.04+ LTS", "ChromeOS"],
+      "webcodecs": {
+        "video_encoder": "SUPPORTED_HARDWARE_AND_SOFTWARE",
+        "video_decoder": "SUPPORTED",
+        "audio_encoder": "SUPPORTED",
+        "audio_decoder": "SUPPORTED",
+        "dedicated_worker": "SUPPORTED",
+        "offscreen_canvas": "SUPPORTED",
+        "opfs_storage": "SUPPORTED"
+      },
+      "codecs": {
+        "video": ["avc1.42E01E", "avc1.4D401F", "avc1.640028", "vp09.00.10.08", "av01.0.04M.08"],
+        "audio": ["mp4a.40.2", "opus"],
+        "containers": ["mp4", "webm"]
+      },
+      "resource_bounds": {
+        "memory_budget_mib": 4096,
+        "max_resolution": "1920x1080 (1080p)",
+        "max_duration_frames": 5400,
+        "recommended_fps": 30
+      },
+      "execution_profile": {
+        "background_throttling": "Mitigated: OffscreenCanvas + VideoEncoder inside DedicatedWorker executes uninterrupted when browser tab is hidden or minimized.",
+        "thermal_risk": "low",
+        "export_feasibility": "FULL_SUPPORT"
+      }
+    },
+    "edge_desktop": {
+      "platform_id": "edge-desktop",
+      "family": "desktop",
+      "engine": "blink",
+      "os_matrix": ["Windows 10/11", "macOS 12+"],
+      "webcodecs": {
+        "video_encoder": "SUPPORTED_HARDWARE_AND_SOFTWARE",
+        "video_decoder": "SUPPORTED",
+        "audio_encoder": "SUPPORTED",
+        "audio_decoder": "SUPPORTED",
+        "dedicated_worker": "SUPPORTED",
+        "offscreen_canvas": "SUPPORTED",
+        "opfs_storage": "SUPPORTED"
+      },
+      "codecs": {
+        "video": ["avc1.42E01E", "avc1.4D401F", "avc1.640028", "vp09.00.10.08", "av01.0.04M.08"],
+        "audio": ["mp4a.40.2", "opus"],
+        "containers": ["mp4", "webm"]
+      },
+      "resource_bounds": {
+        "memory_budget_mib": 4096,
+        "max_resolution": "1920x1080 (1080p)",
+        "max_duration_frames": 5400,
+        "recommended_fps": 30
+      },
+      "execution_profile": {
+        "background_throttling": "Mitigated via DedicatedWorker.",
+        "thermal_risk": "low",
+        "export_feasibility": "FULL_SUPPORT"
+      }
+    },
+    "safari_desktop": {
+      "platform_id": "safari-desktop",
+      "family": "desktop",
+      "engine": "webkit",
+      "os_matrix": ["macOS 14 Sonoma", "macOS 15 Sequoia"],
+      "webcodecs": {
+        "video_encoder": "SUPPORTED_HARDWARE_VIDEOTOOLBOX",
+        "video_decoder": "SUPPORTED",
+        "audio_encoder": "SUPPORTED",
+        "audio_decoder": "SUPPORTED",
+        "dedicated_worker": "SUPPORTED (macOS 16.4+)",
+        "offscreen_canvas": "SUPPORTED",
+        "opfs_storage": "SUPPORTED"
+      },
+      "codecs": {
+        "video": ["avc1.42E01E", "avc1.4D401F", "avc1.640028", "hvc1.1.6.L93.B0"],
+        "audio": ["mp4a.40.2", "opus"],
+        "containers": ["mp4"]
+      },
+      "resource_bounds": {
+        "memory_budget_mib": 4096,
+        "max_resolution": "1920x1080 (1080p)",
+        "max_duration_frames": 3600,
+        "recommended_fps": 30
+      },
+      "execution_profile": {
+        "background_throttling": "Mitigated in DedicatedWorker.",
+        "thermal_risk": "low",
+        "export_feasibility": "PARTIAL_SUPPORT_NO_VP9_AV1"
+      }
+    },
+    "firefox_desktop": {
+      "platform_id": "firefox-desktop",
+      "family": "desktop",
+      "engine": "gecko",
+      "os_matrix": ["Windows 10/11", "macOS", "Linux"],
+      "webcodecs": {
+        "video_encoder": "UNSUPPORTED_OR_FLAG_GATED",
+        "video_decoder": "SUPPORTED",
+        "audio_encoder": "UNSUPPORTED",
+        "audio_decoder": "SUPPORTED",
+        "dedicated_worker": "SUPPORTED",
+        "offscreen_canvas": "SUPPORTED",
+        "opfs_storage": "SUPPORTED"
+      },
+      "codecs": {
+        "video": [],
+        "audio": ["opus"],
+        "containers": ["webm"]
+      },
+      "resource_bounds": {
+        "memory_budget_mib": 2048,
+        "max_resolution": "N/A (Server fallback required)",
+        "max_duration_frames": 1800,
+        "recommended_fps": 30
+      },
+      "execution_profile": {
+        "background_throttling": "Aggressive background tab execution delay.",
+        "thermal_risk": "medium",
+        "export_feasibility": "UNSUPPORTED_MANDATORY_SERVER_FALLBACK"
+      }
+    },
+    "ios_safari": {
+      "platform_id": "ios-safari",
+      "family": "mobile",
+      "engine": "webkit",
+      "os_matrix": ["iOS 17+", "iPadOS 17+"],
+      "webcodecs": {
+        "video_encoder": "SUPPORTED_HARDWARE_VIDEOTOOLBOX",
+        "video_decoder": "SUPPORTED",
+        "audio_encoder": "SUPPORTED",
+        "audio_decoder": "SUPPORTED",
+        "dedicated_worker": "SUPPORTED",
+        "offscreen_canvas": "SUPPORTED",
+        "opfs_storage": "SUPPORTED"
+      },
+      "codecs": {
+        "video": ["avc1.42E01E", "avc1.4D401F", "hvc1.1.6.L93.B0"],
+        "audio": ["mp4a.40.2"],
+        "containers": ["mp4"]
+      },
+      "resource_bounds": {
+        "memory_budget_mib": 1024,
+        "max_resolution": "1280x720 / 720x1280 (720p STRICT CEILING)",
+        "max_duration_frames": 1800,
+        "recommended_fps": 30
+      },
+      "execution_profile": {
+        "background_throttling": "EXTREME: iOS WebKit suspends execution within 3-5 seconds of tab backgrounding.",
+        "thermal_risk": "high",
+        "export_feasibility": "FEASIBLE_720P_ONLY_SERVER_FALLBACK_FOR_HIGHER_RES"
+      }
+    },
+    "android_chrome": {
+      "platform_id": "android-chrome",
+      "family": "mobile",
+      "engine": "blink",
+      "os_matrix": ["Android 12+", "Android 13+", "Android 14+"],
+      "webcodecs": {
+        "video_encoder": "SUPPORTED_ANDROID_MEDIACODEC",
+        "video_decoder": "SUPPORTED",
+        "audio_encoder": "SUPPORTED",
+        "audio_decoder": "SUPPORTED",
+        "dedicated_worker": "SUPPORTED",
+        "offscreen_canvas": "SUPPORTED",
+        "opfs_storage": "SUPPORTED"
+      },
+      "codecs": {
+        "video": ["avc1.42E01E", "avc1.4D401F", "vp09.00.10.08"],
+        "audio": ["mp4a.40.2", "opus"],
+        "containers": ["mp4", "webm"]
+      },
+      "resource_bounds": {
+        "memory_budget_mib": 2048,
+        "max_resolution": "1280x720 (720p RECOMMENDED, 1080p CONDITIONAL)",
+        "max_duration_frames": 1800,
+        "recommended_fps": 30
+      },
+      "execution_profile": {
+        "background_throttling": "High background process throttling by Android OS.",
+        "thermal_risk": "high",
+        "export_feasibility": "FEASIBLE_WITH_CONCURRENT_ENCODER_LIMITS"
+      }
+    }
+  },
+  "codec_evaluation_summary": {
+    "avc1_h264": {
+      "desktop_support": "Chrome, Edge, Safari (macOS)",
+      "mobile_support": "iOS Safari, Android Chrome",
+      "patent_status": "Licensed via OS/device platform vendor. Web application has zero software patent licensing obligations when using native WebCodecs.",
+      "software_wasm_status": "STRICTLY BLOCKED (GPL risk and unlicensed MPEG-LA pool exposure)."
+    },
+    "hevc_h265": {
+      "desktop_support": "Safari macOS",
+      "mobile_support": "iOS Safari, selected Android chipsets",
+      "patent_status": "Heavy patent fragmentation (Access Advance, Velos Media, MPEG-LA). Only hardware-backed WebCodecs allowed.",
+      "software_wasm_status": "BLOCKED."
+    },
+    "vp9_av1": {
+      "desktop_support": "Chrome, Edge (Blink)",
+      "mobile_support": "Android Chrome",
+      "patent_status": "Royalty-free open standards.",
+      "software_wasm_status": "N/A; native hardware/software support in Chromium."
+    },
+    "mp4a_40_2_aac": {
+      "desktop_support": "Chrome, Edge, Safari",
+      "mobile_support": "iOS Safari, Android Chrome",
+      "patent_status": "Via LA patent pool; covered by browser/OS native license."
+    }
+  },
+  "security_boundaries": {
+    "zero_egress_and_scoped_grants": "Browser export must only fetch assets via short-lived signed URLs (TTL <= 10 min) or local user files (File / Blob / OPFS). No persistent tenant API keys or secret credentials stored in browser localStorage or IndexedDB.",
+    "memory_dos_and_jetsam_protection": "Browser memory is strictly bounded: 4096 MiB on desktop, 1024 MiB on iOS, 2048 MiB on Android. Resolutions exceeding platform ceiling (such as 4K or 1080p on iOS) are automatically rejected locally and redirected to server jobs.",
+    "no_arbitrary_code_execution": "Browser export only parses and executes deterministic Scene Spec 1.0 JSON AST. No dynamic script evaluation (eval, new Function, remote scripts) is permitted.",
+    "background_tab_handling": "Browser export render loop must execute inside a DedicatedWorker utilizing OffscreenCanvas. If running on mobile where background execution is killed by the OS, the UI must acquire a Screen WakeLock."
+  },
+  "server_fallback_contract": {
+    "trigger_reasons": [
+      "MISSING_VIDEO_ENCODER (e.g. Firefox Desktop)",
+      "DIMENSIONS_EXCEED_PLATFORM_CAP (e.g. 1080p or 4K on iOS Safari)",
+      "EXCEEDS_MEMORY_BUDGET (duration > 1800 frames on mobile)",
+      "CUSTOM_CODE_ENGINE_UNSUPPORTED (scenes with custom-html-v1)",
+      "UNSUPPORTED_CODEC (requesting profile not matched by browser hardware)"
+    ],
+    "endpoint": "POST /render-jobs",
+    "fallback_payload_template": {
+      "composition_id": "<composition_id>",
+      "profile": "mp4-720p-v1",
+      "mode": "render",
+      "fallback_metadata": {
+        "client_platform": "<detected_platform>",
+        "fallback_reason_code": "<reason_code>",
+        "diagnostics": "<diagnostic_messages>"
+      }
+    }
+  }
+}
