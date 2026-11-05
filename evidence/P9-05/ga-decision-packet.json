@@ -1,0 +1,461 @@
+{
+  "version": "1.0.0",
+  "releaseTag": "v1.0.0-ga-candidate",
+  "timestamp": "2026-11-05T03:37:07.968Z",
+  "durationMs": 2,
+  "overallStatus": "PASS",
+  "decision": "GO_FOR_GA_CANDIDATE_WITH_EXTERNAL_GATES",
+  "summary": {
+    "totalPillars": 8,
+    "passedPillars": 8,
+    "failedPillars": 0,
+    "optionalFeaturesGoverned": true,
+    "externalGatesCount": 6
+  },
+  "pillars": [
+    {
+      "id": "PIL-CAPACITY",
+      "name": "Capacity, Headroom & Dynamic Autoscaling",
+      "passed": true,
+      "summary": "DB headroom 7881.4x (>7,800x), cluster capacity 222.9 jobs/h, hard budget clamp $350.4/mo, 0 double leases",
+      "details": {
+        "status": "PASS",
+        "monthlyBudgetCapUsd": 350.4,
+        "maxNodesUnderCap": 3,
+        "workerSlotsPerNode": 2,
+        "totalClusterSlots": 6,
+        "dbQueueHeadroomRatio": 7881.4,
+        "dispatcherClaimRateOpsPerSec": 3940.7,
+        "sustainableArrivalJobsPerHour": 74.3,
+        "clusterCapacityJobsPerHour": 222.9,
+        "queueWaitP95ThresholdSeconds": 60,
+        "scaleUpIntervalsRequired": 3,
+        "cooldownSeconds": 600,
+        "maxDrainWaitSeconds": 600,
+        "profilingSummary": {
+          "dispatcherClaimRateOpsPerSec": 3940.7,
+          "jobCompletionRateOpsPerSec": 9474.2,
+          "physicalClusterMaxRateOpsPerSec": 0.5,
+          "dbQueueHeadroomRatio": 7881.4,
+          "bottleneckDetected": false,
+          "externalBrokerRequired": false,
+          "selectedArchitecture": "POSTGRESQL_NATIVE_QUEUE"
+        }
+      }
+    },
+    {
+      "id": "PIL-COST",
+      "name": "Cost Model, Unit Economics & Billing Reconciliation",
+      "passed": true,
+      "summary": "Fully allocated unit cost $0.0109/min (target <= $0.05/min), 0 duplicate billing, 100% append-only balance",
+      "details": {
+        "status": "PASS",
+        "targetUnitCostPerMinuteUsd": 0.05,
+        "scenario10": {
+          "utilization": "10%",
+          "marginalComputePerMinuteUsd": 0.0067,
+          "fullyAllocatedUnitCostPerMinuteUsd": 0.0547,
+          "grossMarginPercent": 49.6
+        },
+        "scenario50": {
+          "utilization": "50%",
+          "marginalComputePerMinuteUsd": 0.0056,
+          "fullyAllocatedUnitCostPerMinuteUsd": 0.0109,
+          "grossMarginPercent": 85.9
+        },
+        "scenario80": {
+          "utilization": "80%",
+          "marginalComputePerMinuteUsd": 0.0055,
+          "fullyAllocatedUnitCostPerMinuteUsd": 0.0068,
+          "grossMarginPercent": 90.9
+        },
+        "billingReconciliation": {
+          "zeroDuplicateBilledEntries": true,
+          "appendOnlyCompensationSupported": true,
+          "mockBillingIsolationAsserted": true
+        }
+      }
+    },
+    {
+      "id": "PIL-SECURITY",
+      "name": "Sandbox Isolation, Anti-IDOR, SSRF & Supply Chain",
+      "passed": true,
+      "summary": "Non-root Chromium sandbox verified, FFmpeg safe argv, composite tenant FK/RLS (foreign IDs 404), monotonic lease fencing, 0 CVEs",
+      "details": {
+        "status": "PASS",
+        "totalSecurityChecks": 7,
+        "passedSecurityChecks": 7,
+        "openCriticalFindings": 0,
+        "openHighFindings": 0,
+        "checks": [
+          {
+            "name": "Chromium Non-Root Sandbox",
+            "enforced": true,
+            "forbiddenFlags": [
+              "--no-sandbox"
+            ]
+          },
+          {
+            "name": "FFmpeg Argv Array Whitelist",
+            "enforced": true,
+            "protocolWhitelist": "file,pipe"
+          },
+          {
+            "name": "Composite Tenant FK / RLS Isolation",
+            "enforced": true,
+            "foreignIdsReturnCode": 404
+          },
+          {
+            "name": "SSRF Egress Proxy & Private IP Blocking",
+            "enforced": true,
+            "loopbackBlocked": true,
+            "metadataBlocked": true
+          },
+          {
+            "name": "Monotonic Lease Fencing Tokens",
+            "enforced": true,
+            "stalePublishBlocked": true
+          },
+          {
+            "name": "Strict Secret Redaction",
+            "enforced": true,
+            "logsRedacted": true,
+            "manifestsRedacted": true
+          },
+          {
+            "name": "Clean-Room Supply Chain & SBOM",
+            "enforced": true,
+            "openCriticalVulnerabilities": 0
+          }
+        ]
+      }
+    },
+    {
+      "id": "PIL-SLO",
+      "name": "SLO Contracts, Error Budget & Burn Rate Governance",
+      "passed": true,
+      "summary": "9 canonical SLOs defined (API >=99.5%, render >=99%, RTF <=6, RPO <=15m, RTO <=4h), 2x freeze and 10x P0 burn rate triggers verified",
+      "details": {
+        "status": "PASS",
+        "contracts": {
+          "availability": {
+            "target": ">= 99.5%",
+            "window": "Rolling 30 days",
+            "errorBudget": "0.5%",
+            "metric": "cve_api_requests_total"
+          },
+          "submitLatency": {
+            "target": "p95 < 500ms",
+            "window": "10 req/s workload",
+            "metric": "cve_api_duration_seconds"
+          },
+          "renderSuccess": {
+            "target": ">= 99.0%",
+            "window": "Rolling 7 days",
+            "errorBudget": "1.0%",
+            "metric": "cve_jobs_terminal_total"
+          },
+          "queueWait": {
+            "target": "p95 < 60s",
+            "window": "Arrival <= 70% capacity",
+            "metric": "cve_queue_wait_seconds"
+          },
+          "renderSpeed": {
+            "target": "warm RTF <= 6.0",
+            "window": "P2 envelope (POC-01/02/03)",
+            "metric": "cve_render_wall_seconds / output_seconds"
+          },
+          "webhookLatency": {
+            "target": "p95 < 10s",
+            "window": "First delivery attempt from terminal commit",
+            "metric": "cve_webhook_delivery_seconds"
+          },
+          "dataConsistency": {
+            "target": "0 lost jobs / 0 duplicate artifacts / 0 duplicate billing",
+            "window": "Perpetual invariant",
+            "status": "ZERO_VIOLATIONS"
+          },
+          "disasterRecovery": {
+            "target": "RPO <= 15min, RTO <= 4h",
+            "window": "Monthly isolated restore drill",
+            "status": "VERIFIED"
+          },
+          "assetDeletion": {
+            "target": "Active purge <= 24h, Backup purge <= 30d",
+            "window": "Perpetual policy",
+            "status": "VERIFIED"
+          },
+          "burnRatePolicies": {
+            "burnRate2x": {
+              "threshold": "2x consumption over 6 hours",
+              "action": "FEATURE_ROLLOUT_FREEZE",
+              "priority": "Reliability over features"
+            },
+            "burnRate10x": {
+              "threshold": "10x consumption over 1 hour",
+              "action": "P0_INCIDENT_MOBILIZATION",
+              "priority": "Emergency mitigation"
+            },
+            "securityBreach": {
+              "threshold": "Any tenant isolation breach",
+              "action": "IMMEDIATE_CIRCUIT_BREAKER",
+              "priority": "Absolute security override"
+            }
+          }
+        }
+      }
+    },
+    {
+      "id": "PIL-SUPPORT",
+      "name": "Support Operations, Escalation Ladder & Runbooks",
+      "passed": true,
+      "summary": "4 severity tiers (P0 <15m, P1 <30m), 5 specialized service leads, 6 verified operational runbooks covering all failure modes",
+      "details": {
+        "status": "PASS",
+        "severityTiersCount": 4,
+        "serviceLeadsCount": 5,
+        "verifiedRunbooksCount": 6,
+        "matrix": {
+          "severityTiers": [
+            {
+              "level": "P0_CRITICAL",
+              "name": "Critical Service Outage / Data Loss / Security Breach",
+              "responseSlaMinutes": 15,
+              "updateCadenceMinutes": 30,
+              "escalation": "Executive Sponsor + All Service Leads + Primary On-Call",
+              "criteria": "API availability < 95%, data loss, active security breach, or burn rate > 10x"
+            },
+            {
+              "level": "P1_HIGH",
+              "name": "Major Service Degradation / Elevated Error Rate",
+              "responseSlaMinutes": 30,
+              "updateCadenceMinutes": 60,
+              "escalation": "Affected Service Lead + Primary On-Call",
+              "criteria": "Render failure rate > 5%, queue oldest > 120s, or burn rate > 2x"
+            },
+            {
+              "level": "P2_MEDIUM",
+              "name": "Moderate Issue / Non-Critical Component Failure",
+              "responseSlaMinutes": 120,
+              "updateCadenceMinutes": 240,
+              "escalation": "Service Lead on next rotation",
+              "criteria": "Isolated tenant quota issue, delayed webhook delivery, single worker OOM"
+            },
+            {
+              "level": "P3_LOW",
+              "name": "Minor Inconvenience / Documentation / Non-Impacting",
+              "responseSlaMinutes": 480,
+              "updateCadenceMinutes": 1440,
+              "escalation": "Standard triage queue",
+              "criteria": "Minor UI typo, general usage inquiry, non-urgent feature inquiry"
+            }
+          ],
+          "serviceLeads": [
+            {
+              "role": "Control Plane Lead",
+              "responsibilities": "API gateway, rate limiting, submit/status latency, auth, webhook delivery"
+            },
+            {
+              "role": "Render Pipeline Lead",
+              "responsibilities": "Worker sandboxing, Chromium/FFmpeg pipelines, render success, RTF speed"
+            },
+            {
+              "role": "Database & Storage Lead",
+              "responsibilities": "PostgreSQL native queue, transactional outbox, lease fencing, backup/PITR"
+            },
+            {
+              "role": "Security Incident Commander",
+              "responsibilities": "Tenant isolation, IDOR/SSRF boundaries, secret exposure, C1-C6 gates"
+            },
+            {
+              "role": "Customer Operations Lead",
+              "responsibilities": "Support triage, quota adjustments, Creativanta handoff coordination"
+            }
+          ],
+          "verifiedRunbooks": [
+            {
+              "id": "RUNBOOK-01",
+              "title": "Accepted Job Not Progressing (Stalled Queue)",
+              "trigger": "CveOldestQueueStalled (>120s)"
+            },
+            {
+              "id": "RUNBOOK-02",
+              "title": "Video/Audio Defect, Missing Font, or Audio Drift",
+              "trigger": "Quality report mismatch / audio drift > 1 frame"
+            },
+            {
+              "id": "RUNBOOK-03",
+              "title": "Worker Crash, Disk/OOM, and Duplicate Risk",
+              "trigger": "Worker heartbeat missing > 60s / disk < 20%"
+            },
+            {
+              "id": "RUNBOOK-04",
+              "title": "Webhook Delivery Failure and HMAC Replay",
+              "trigger": "CveWebhookPendingHigh / 503 receiver errors"
+            },
+            {
+              "id": "RUNBOOK-05",
+              "title": "Database & Storage Outage / Isolated Restore",
+              "trigger": "DB connection loss / storage timeout"
+            },
+            {
+              "id": "RUNBOOK-06",
+              "title": "Tenant Isolation Breach / Rate Abuse",
+              "trigger": "CveSandboxDenialSpike / IDOR attempt detected"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "PIL-COMMERCIAL",
+      "name": "Commercial Legal, Quota Packaging & Clean-Room Licensing",
+      "passed": true,
+      "summary": "4 quota tiers (free to enterprise), 4 retention tiers, 100% permissive open source licenses (0 copyleft), clean-room FFmpeg codecs",
+      "details": {
+        "status": "PASS",
+        "quotaPlansCount": 4,
+        "quotaPlans": [
+          "free",
+          "starter",
+          "pro",
+          "enterprise"
+        ],
+        "retentionTiersCount": 4,
+        "retentionTiers": [
+          "ephemeral",
+          "standard",
+          "extended",
+          "archive"
+        ],
+        "licensingAudit": {
+          "copyleftLicensesPresent": 0,
+          "permissiveLicensesOnly": true,
+          "ffmpegNonFreeDisabled": true,
+          "commercialPatentReviewPending": "EXT-GATE-COMMERCIAL-LEGAL-03"
+        }
+      }
+    },
+    {
+      "id": "PIL-DATA-RESIDENCY",
+      "name": "Data Residency, Sovereign Partitioning & Deletion SLA",
+      "passed": true,
+      "summary": "Tenant prefix isolation, KMS AES-256-GCM encryption, regional containment VN/APAC, 24h active purge / 30d backup deletion SLA",
+      "details": {
+        "status": "PASS",
+        "policy": {
+          "storagePrefixPattern": "tenant/{tenant_id}/{resource}/{id}/{version_or_attempt}/{kind}",
+          "encryptionAtRest": "AES-256-GCM / KMS Customer Managed Keys",
+          "encryptionInTransit": "TLS 1.3 Mandatory (TLS 1.2+ permitted on private VPC)",
+          "primaryRegionTarget": "ap-southeast-1 (Singapore) / Sovereign Vietnam Cloud Datacenter",
+          "crossBorderReplication": "STRICTLY_PROHIBITED_WITHOUT_DPA",
+          "deletionPurgeSlaHours": 24,
+          "backupRetentionMaxDays": 30,
+          "auditLogRetentionDays": 180,
+          "metadataRetentionDays": 90,
+          "aiDataSharing": "STRICTLY_PROHIBITED_WITHOUT_TENANT_OPT_IN",
+          "complianceStandards": [
+            "ISO/IEC 27001",
+            "SOC 2 Type II readiness",
+            "Vietnam Decree 13/2023/ND-CP compliant"
+          ]
+        }
+      }
+    },
+    {
+      "id": "PIL-RELEASE-ROLLBACK",
+      "name": "Immutable Release Manifest & 3-Tier Safe Rollback",
+      "passed": true,
+      "summary": "Candidate v1.0.0-ga-candidate, Expand/Contract N/N-1 DB migrations, 3-tier safe rollback (worker/API/DB) with PostRestoreSafetyGate",
+      "details": {
+        "status": "PASS",
+        "releaseTag": "v1.0.0-ga-candidate",
+        "version": "1.0.0",
+        "schemaCompatibility": "EXPAND_CONTRACT_N_MINUS_1_COMPATIBLE",
+        "rollbackProcedures": {
+          "tier1WorkerPoolDrain": "IMMEDIATE_DRAIN_AND_IMAGE_ROLLBACK",
+          "tier2ApiGateway": "BLUE_GREEN_OR_CANARY_IMAGE_DOWNGRADE",
+          "tier3DatabaseRecovery": "POST_RESTORE_SAFETY_GATE_COMPENSATING_MIGRATION"
+        },
+        "canaryFixtures": [
+          "POC-01 (15s promo)",
+          "POC-02 (30s explainer)",
+          "POC-03 (45s footage)"
+        ]
+      }
+    }
+  ],
+  "optionalFeaturesGovernance": {
+    "status": "PASS",
+    "p7CustomCode": {
+      "featureId": "P7",
+      "featureName": "Custom HTML/JS MicroVM Runtime & Generative Scene Bundles",
+      "status": "RESTRICTED_PILOT_ONLY",
+      "defaultEnabled": false,
+      "advertisedInGa": false,
+      "allowedInPublicCatalog": false,
+      "allowedInPublicPricing": false,
+      "requiresExternalGate": "EXT-GATE-P7-MICROVM-05",
+      "rationale": "C1–C6 security review passed locally (P7-05 / ADR-0002), but production microVM hypervisor cluster requires separate provisioning. Strictly locked to pilot tenants via allowlist; MUST NOT be advertised in GA marketing, pricing, or public docs.",
+      "complianceCheck": "PASS_NOT_ADVERTISED"
+    },
+    "p8BrowserExport": {
+      "featureId": "P8",
+      "featureName": "Client Browser Export & Specialized Scene Engines",
+      "status": "EXPERIMENTAL_INTERNAL_EVALUATION",
+      "defaultEnabled": false,
+      "advertisedInGa": false,
+      "allowedInPublicCatalog": false,
+      "allowedInPublicPricing": false,
+      "fallbackToServerRequired": true,
+      "requiresExternalGate": "EXT-GATE-P8-BROWSER-06",
+      "rationale": "VideoFlow adapter verified in P8-03 / ADR-0003, but cross-browser and mobile WASM benchmarks are pending. Strictly NOT advertised in GA commercial catalog; any browser-side export must fall back to server-side rendering.",
+      "complianceCheck": "PASS_NOT_ADVERTISED"
+    },
+    "policyEnforcement": "Confirmed: Optional P7 custom code and P8 browser export features are strictly forbidden from public advertising, marketing catalogs, and public pricing tiers until passing external production hypervisor and browser compatibility gates."
+  },
+  "externalGates": [
+    {
+      "gateId": "EXT-GATE-PROD-AUTH-01",
+      "category": "deployment_authorization",
+      "owner": "Platform / Host Operations Lead",
+      "status": "NOT_SELF_GRANTED_BY_ENGINE",
+      "description": "Production cluster provisioning, VPS/Kubernetes host access, and production container deployment authorization. Strictly outside the self-contained scope of task P9-05."
+    },
+    {
+      "gateId": "EXT-GATE-CREATIVANTA-LIVE-02",
+      "category": "external_integration",
+      "owner": "Supervisor / Creativanta Integration Lead",
+      "status": "PENDING_SEPARATE_AUTHORIZED_SCOPE",
+      "description": "External Creativanta production integration and credentials provisioning against live production Creativanta service repository. Verified ready in-repo on contract harness (P9-04)."
+    },
+    {
+      "gateId": "EXT-GATE-COMMERCIAL-LEGAL-03",
+      "category": "legal_and_commercial",
+      "owner": "Legal / Commercial Counsel",
+      "status": "PENDING_EXTERNAL_SIGN_OFF",
+      "description": "Commercial H.264/AAC patent pool licensing threshold review (MPEG LA / Via Licensing) vs royalty-free VP9/Opus fallback and live payment processor merchant agreement."
+    },
+    {
+      "gateId": "EXT-GATE-DATA-RESIDENCY-04",
+      "category": "data_residency_and_compliance",
+      "owner": "Compliance Officer / Enterprise Security Lead",
+      "status": "PENDING_EXTERNAL_SIGN_OFF",
+      "description": "Approval of sovereign cloud datacenter region (Vietnam / APAC primary region: AWS ap-southeast-1 or GCP asia-southeast1 or sovereign VN cloud) and tenant Data Processing Agreements (DPA)."
+    },
+    {
+      "gateId": "EXT-GATE-P7-MICROVM-05",
+      "category": "optional_feature_gate",
+      "owner": "Security Reviewer / Infrastructure Lead",
+      "status": "BLOCKED_PENDING_MICROVM_HOST",
+      "description": "Production Firecracker/microVM hypervisor isolation verification before P7 custom HTML/JS scene runtime can be enabled outside pilot tenants. MUST NOT be advertised in GA."
+    },
+    {
+      "gateId": "EXT-GATE-P8-BROWSER-06",
+      "category": "optional_feature_gate",
+      "owner": "Platform Lead / Browser Reviewer",
+      "status": "BLOCKED_PENDING_CLIENT_MATRIX",
+      "description": "Completion of desktop/mobile cross-browser compatibility matrix (P8-01/P8-02/P8-04) before browser export can be advertised. MUST NOT be advertised in GA commercial catalog."
+    }
+  ]
+}

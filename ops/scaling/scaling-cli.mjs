@@ -13,6 +13,7 @@ import { Autoscaler, AUTOSCALE_POLICY } from './autoscaler.mjs';
 import { CommercialSuite } from './commercial-suite.mjs';
 import { DbQueueProfiler } from './db-queue-profiler.mjs';
 import { QueueRecoveryTester } from './queue-recovery-tester.mjs';
+import { GaDecisionEvaluator } from './ga-decision-evaluator.mjs';
 
 export function generateMarkdownReport(chaosReport, commitSha = 'c6e9b4aee13f6260cba93e402e7c8a80adbc30e3') {
   const inv = chaosReport.invariants;
@@ -289,6 +290,84 @@ async function main() {
   const writeCommercialIdx = args.indexOf('--write-commercial-evidence');
   const writeCommercialDir = writeCommercialIdx !== -1 ? args[writeCommercialIdx + 1] : null;
 
+  const evaluateGa = args.includes('--evaluate-ga-decision') || args.includes('--generate-ga-packet') || args.includes('--write-ga-evidence');
+  const verifyGaInvariants = args.includes('--verify-ga-invariants');
+  const writeGaIdx = args.indexOf('--generate-ga-packet') !== -1
+    ? args.indexOf('--generate-ga-packet')
+    : args.indexOf('--write-ga-evidence');
+  const writeGaDir = (writeGaIdx !== -1 && args[writeGaIdx + 1] && !args[writeGaIdx + 1].startsWith('--'))
+    ? args[writeGaIdx + 1]
+    : (args.includes('--generate-ga-packet') || args.includes('--write-ga-evidence') ? 'evidence/P9-05' : null);
+
+  // GA Decision Evaluation (Task P9-05)
+  if (evaluateGa) {
+    console.log('=== Creativanta Video Engine: GA Decision Packet Evaluation (Task P9-05) ===');
+    const evaluator = new GaDecisionEvaluator();
+    const packet = await evaluator.runFullGaEvaluation();
+
+    console.log(`GA Evaluation Status: ${packet.overallStatus}`);
+    console.log(`Executive Decision:   ${packet.decision}`);
+    console.log(`Core Pillars Passed:  ${packet.summary.passedPillars}/${packet.summary.totalPillars}`);
+    console.log(`Optional Features:    ${packet.optionalFeaturesGovernance.status} (P7 & P8 Advertised: NO)`);
+    console.log(`External Gates:       ${packet.summary.externalGatesCount} pending independent sign-off`);
+
+    for (const pillar of packet.pillars) {
+      console.log(`  [${pillar.passed ? 'PASS' : 'FAIL'}] ${pillar.id}: ${pillar.name}`);
+    }
+
+    if (verifyGaInvariants) {
+      if (packet.overallStatus !== 'PASS') {
+        console.error('FATAL: One or more GA readiness pillars failed!');
+        process.exit(1);
+      }
+      if (!packet.summary.optionalFeaturesGoverned) {
+        console.error('FATAL: Optional feature governance violation detected (P7/P8 improperly advertised)!');
+        process.exit(1);
+      }
+      console.log('>>> All GA Decision Invariants & Gates Verified PASSED <<<');
+    }
+
+    if (writeGaDir) {
+      const targetDir = path.resolve(process.cwd(), writeGaDir);
+      fs.mkdirSync(targetDir, { recursive: true });
+
+      const mdContent = evaluator.generateMarkdownReport(packet);
+      fs.writeFileSync(path.join(targetDir, 'report.md'), mdContent, 'utf-8');
+
+      fs.writeFileSync(
+        path.join(targetDir, 'ga-decision-packet.json'),
+        JSON.stringify(packet, null, 2),
+        'utf-8'
+      );
+
+      const summaryData = {
+        task: 'P9-05',
+        role: 'Supervisor+Reviewer',
+        phase: 'P9',
+        timestamp: packet.timestamp,
+        version: packet.version,
+        releaseTag: packet.releaseTag,
+        status: packet.overallStatus,
+        decision: packet.decision,
+        summary: packet.summary,
+        externalGates: packet.externalGates,
+      };
+
+      fs.writeFileSync(
+        path.join(targetDir, 'summary.json'),
+        JSON.stringify(summaryData, null, 2),
+        'utf-8'
+      );
+
+      console.log(`GA decision packet and evidence written successfully to ${targetDir}`);
+    }
+
+    if (args.includes('--json')) {
+      console.log(JSON.stringify(packet, null, 2));
+    }
+    return;
+  }
+
   // Commercial & Scaling Evaluation (Task P9-02)
   if (runCommercial) {
     console.log('=== Creativanta Video Engine: Commercial & Scaling Evaluation (Task P9-02) ===');
@@ -468,7 +547,7 @@ async function main() {
       console.log(JSON.stringify(report, null, 2));
     }
   } else {
-    console.log('Usage: node ops/scaling/scaling-cli.mjs [--profile-queue] [--test-recovery] [--generate-p903-evidence] [--run-chaos] [--verify-invariants] [--run-commercial-evaluation] [--write-commercial-evidence <dir>] [--json]');
+    console.log('Usage: node ops/scaling/scaling-cli.mjs [--evaluate-ga-decision] [--generate-ga-packet [dir]] [--verify-ga-invariants] [--profile-queue] [--test-recovery] [--generate-p903-evidence] [--run-chaos] [--verify-invariants] [--run-commercial-evaluation] [--write-commercial-evidence <dir>] [--json]');
   }
 }
 
