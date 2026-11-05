@@ -22,6 +22,11 @@ import { executeServerJobFallback, MockServerJobDispatcher } from './server-fall
 import { MemoryGuard } from './memory-guard.js';
 import { ScopedAssetLoader } from './scoped-asset-loader.js';
 import { assertBrowserExportGateApproved } from './legal-review.js';
+import {
+  UnsupportedFeatureRefusalError,
+  assertNoSilentDegradation,
+  validateNoFakeSupport,
+} from './acceptance-matrix.js';
 
 export class ExportCancelledError extends Error {
   public readonly code = 'EXPORT_CANCELLED';
@@ -115,9 +120,27 @@ export async function exportBrowserVideo(
     assertBrowserExportGateApproved(options.gateConfig);
   }
 
+  const exportMode = options.exportMode ?? 'allow_server_fallback';
+
+  // Step 1b: Validate no fake support for rejected engines
+  if (options.enforceNoSilentDegradation !== false) {
+    for (const scene of spec.scenes) {
+      if (scene.engine) {
+        validateNoFakeSupport(scene.engine);
+      }
+    }
+  }
+
   // Step 2: Feasibility & Platform Capability Check
   const feasibility = evaluateExportFeasibility(platform, spec, profileName);
   if (!feasibility.feasible) {
+    if (exportMode === 'strict_local_only') {
+      throw new UnsupportedFeatureRefusalError({
+        feature: `Platform ${platform} / profile ${profileName}`,
+        reasonCode: feasibility.reasonCode ?? 'UNSUPPORTED_BROWSER_PLATFORM',
+        diagnostics: feasibility.diagnostics,
+      });
+    }
     return executeServerJobFallback({
       compositionId,
       revision,
@@ -132,6 +155,13 @@ export async function exportBrowserVideo(
   // Step 3: Scene Subset Validation
   const subsetValidation = validateSceneSubset(spec, platform);
   if (!subsetValidation.isSupported) {
+    if (exportMode === 'strict_local_only') {
+      throw new UnsupportedFeatureRefusalError({
+        feature: subsetValidation.unsupportedFeatures.join(', '),
+        reasonCode: subsetValidation.reasonCode ?? 'UNSUPPORTED_BROWSER_PLATFORM',
+        diagnostics: subsetValidation.diagnostics,
+      });
+    }
     return executeServerJobFallback({
       compositionId,
       revision,
@@ -141,6 +171,11 @@ export async function exportBrowserVideo(
       platform,
       dispatcher,
     });
+  }
+
+  // Step 3b: Assert no silent degradation
+  if (options.enforceNoSilentDegradation !== false) {
+    assertNoSilentDegradation(spec as any, platform);
   }
 
   // Check Cancellation

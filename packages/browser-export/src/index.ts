@@ -17,3 +17,4 @@ export * from './memory-guard.js';
 export * from './browser-download.js';
 export * from './quality-parity.js';
 export * from './pipeline.js';
+export * from './acceptance-matrix.js';
