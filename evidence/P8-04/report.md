@@ -22,7 +22,7 @@ Artifacts:
   - evidence/P8-04/report.md, expires=N/A (repo-versioned)
   - evidence/P8-04/acceptance-matrix.json, sha256=543848a1978e95b43407907511e33c7bde8c66c27062a2442db1ae4281c2a496, expires=N/A (repo-versioned)
   - evidence/P8-04/browser-specialized-capability.md, sha256=d673084f907d491ba5c8761644df69b612b91e7e3fdd5e1d16a5072a5a72522a, expires=N/A (repo-versioned)
-  - packages/browser-export/src/types.ts, sha256=04f58f959fb8aa56ff76928cce31ee241ba2fe5944543389fbb607010aaf843b, expires=N/A (repo-versioned)
+  - packages/browser-export/src/types.ts, sha256=1d23a6a10663afd1631d68c30f488c08e7591bd4a3dd859ce477710d50ce681f, expires=N/A (repo-versioned)
   - packages/browser-export/src/acceptance-matrix.ts, sha256=97cc79b4a8e8d3215cbf7508ec0117ded5c135e78c68f7eb20ecb6abed2b6f36, expires=N/A (repo-versioned)
   - packages/browser-export/src/pipeline.ts, sha256=58d7bf160dc58a6dfe8c5269cba5261607839a066aed3b585841169def3686ed, expires=N/A (repo-versioned)
   - packages/browser-export/src/index.ts, sha256=f3508e1233e781d668a6d6a9f9e43810144fea996825a1b4a09f0be953a07b50, expires=N/A (repo-versioned)

@@ -331,4 +331,3 @@ export interface AcceptancePolicyReport {
   readonly checkedEntries: readonly AcceptanceMatrixEntry[];
   readonly noSilentDegradationGuaranteed: boolean;
 }
-
