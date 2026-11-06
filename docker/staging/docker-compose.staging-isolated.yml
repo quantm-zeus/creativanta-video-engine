@@ -1,0 +1,94 @@
+# ==============================================================================
+# Creativanta Video Engine - Isolated Non-Production Staging Compose Descriptor
+# Task: P10-A (GitHub Issue #65)
+#
+# IMPORTANT:
+# - Non-production isolated staging descriptor ONLY. Do NOT use for production.
+# - No default credentials or fallback secrets: all sensitive variables use
+#   strict `${VAR:?error}` interpolation so compose fails closed if unset.
+# - Enforces loopback-only port binding (127.0.0.1), internal control network,
+#   read-only root filesystems, dropped Linux capabilities, no-new-privileges,
+#   least-privilege DB roles, and custom code / remote import disabled.
+# - Truthfulness note: API `/readyz` will remain 503 (`not_ready`) until an
+#   async PostgreSQL wire-protocol `TenantRepository` is implemented and wired.
+# ==============================================================================
+
+services:
+  staging-postgres:
+    image: postgres:16-alpine
+    restart: "no"
+    environment:
+      POSTGRES_DB: creativanta_staging
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: "${CVE_POSTGRES_SUPERUSER_PASSWORD:?CVE_POSTGRES_SUPERUSER_PASSWORD is required}"
+    ports:
+      - "127.0.0.1:${CVE_STAGING_PG_PORT:-15432}:5432"
+    volumes:
+      - ./init-staging-roles.sql:/docker-entrypoint-initdb.d/01-init-staging-roles.sql:ro
+      - ../../migrations:/migrations:ro
+      - ../../.local/staging-postgres:/var/lib/postgresql/data
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    cap_add:
+      - CHOWN
+      - DAC_OVERRIDE
+      - FOWNER
+      - SETGID
+      - SETUID
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d creativanta_staging"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    networks:
+      - staging-control
+
+  staging-api:
+    build:
+      context: ../..
+      dockerfile: docker/Dockerfile.api
+    restart: "no"
+    read_only: true
+    tmpfs:
+      - /tmp:rw,noexec,nosuid,size=64m
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    ports:
+      - "127.0.0.1:${CVE_STAGING_API_PORT:-18080}:8080"
+    environment:
+      CVE_ENV: staging
+      CVE_BACKEND_MODE: postgres
+      HOST: "0.0.0.0"
+      CVE_PUBLIC_BASE_URL: "${CVE_PUBLIC_BASE_URL:?CVE_PUBLIC_BASE_URL is required}"
+      CVE_DATABASE_URL: "${CVE_DATABASE_URL:?CVE_DATABASE_URL (cve_api role) is required}"
+      CVE_STORAGE_ENDPOINT: "${CVE_STORAGE_ENDPOINT:?CVE_STORAGE_ENDPOINT is required}"
+      CVE_STORAGE_REGION: "${CVE_STORAGE_REGION:?CVE_STORAGE_REGION is required}"
+      CVE_STORAGE_ACCESS_KEY_ID: "${CVE_STORAGE_ACCESS_KEY_ID:?CVE_STORAGE_ACCESS_KEY_ID is required}"
+      CVE_STORAGE_SECRET_ACCESS_KEY: "${CVE_STORAGE_SECRET_ACCESS_KEY:?CVE_STORAGE_SECRET_ACCESS_KEY is required}"
+      CVE_QUARANTINE_BUCKET: "${CVE_QUARANTINE_BUCKET:?CVE_QUARANTINE_BUCKET is required}"
+      CVE_ASSET_BUCKET: "${CVE_ASSET_BUCKET:?CVE_ASSET_BUCKET is required}"
+      CVE_ARTIFACT_BUCKET: "${CVE_ARTIFACT_BUCKET:?CVE_ARTIFACT_BUCKET is required}"
+      CVE_API_KEY_PEPPER: "${CVE_API_KEY_PEPPER:?CVE_API_KEY_PEPPER is required}"
+      CVE_SECRET_ENCRYPTION_KEY_ID: "${CVE_SECRET_ENCRYPTION_KEY_ID:?CVE_SECRET_ENCRYPTION_KEY_ID is required}"
+      CVE_RENDERER_ADAPTER: "chromium-frame-v1"
+      CVE_RENDER_IMAGE_DIGEST: "${CVE_RENDER_IMAGE_DIGEST:?CVE_RENDER_IMAGE_DIGEST is required}"
+      CVE_WORKER_READINESS_URL: "${CVE_WORKER_READINESS_URL:-}"
+      CVE_REMOTE_IMPORT_ENABLED: "false"
+      CVE_CUSTOM_CODE_ENABLED: "false"
+      CVE_CUSTOM_RUNTIME: "disabled"
+      CVE_TTS_PROVIDER: "disabled"
+      CVE_AUTHORING_PROVIDER: "disabled"
+      CVE_LOG_LEVEL: "info"
+    depends_on:
+      staging-postgres:
+        condition: service_healthy
+    networks:
+      - staging-control
+
+networks:
+  staging-control:
+    internal: true
