@@ -67,7 +67,12 @@ export type FallbackReasonCode =
   | 'DIMENSIONS_EXCEED_PLATFORM_CAP'
   | 'CUSTOM_CODE_ENGINE_UNSUPPORTED'
   | 'SHIPPING_GATE_PENDING_REVIEW'
-  | 'HIGH_THERMAL_OR_BACKGROUND_RISK';
+  | 'HIGH_THERMAL_OR_BACKGROUND_RISK'
+  | 'UNAUTHENTICATED_ASSET_URL'
+  | 'UNSUPPORTED_LAYER_TYPE'
+  | 'UNSUPPORTED_TRANSITION'
+  | 'NO_ADOPTION_CONCLUDED'
+  | 'SILENT_DEGRADATION_PROHIBITED';
 
 export interface FeasibilityEvaluation {
   readonly feasible: boolean;
@@ -228,6 +233,8 @@ export interface BrowserExportOptions {
   readonly gateConfig?: BrowserExportGateConfig;
   readonly maxInFlightFrames?: number;
   readonly onProgress?: (progress: BrowserExportProgress) => void;
+  readonly exportMode?: 'allow_server_fallback' | 'strict_local_only';
+  readonly enforceNoSilentDegradation?: boolean;
 }
 
 export interface BrowserExportSuccessResult {
@@ -270,4 +277,57 @@ export interface QualityParityReport {
   readonly averagePsnrDb: number;
   readonly frameChecks: readonly FrameParityCheck[];
   readonly verdict: 'PASS' | 'FAIL';
+}
+
+// =============================================================================
+// Task P8-04: Capability Docs, Acceptance Matrix & Strict Refusal Types
+// =============================================================================
+
+export type AcceptanceVerdict =
+  | 'ACCEPTED_BASELINE_SUPPORT'
+  | 'ACCEPTED_WITH_FALLBACK'
+  | 'REFUSED_UNSUPPORTED'
+  | 'CONCLUDED_NO_ADOPTION';
+
+export type AcceptanceCategory =
+  | 'browser_platform'
+  | 'specialized_engine'
+  | 'video_codec'
+  | 'audio_codec'
+  | 'container_format'
+  | 'scene_layer'
+  | 'scene_transition'
+  | 'memory_and_resource'
+  | 'security_and_assets'
+  | 'third_party_package';
+
+export interface AcceptanceMatrixEntry {
+  readonly id: string;
+  readonly name: string;
+  readonly category: AcceptanceCategory;
+  readonly candidate: string;
+  readonly verdict: AcceptanceVerdict;
+  readonly defaultAction: 'export_locally' | 'fallback_to_server_job' | 'refuse';
+  readonly refusalCode?: FallbackReasonCode;
+  readonly noSilentDegradationPolicy: string;
+  readonly evidenceReference: string;
+  readonly rationale: string;
+  readonly benchmarks?: {
+    readonly rtf?: number;
+    readonly peakRssMib?: number;
+    readonly cpuPercent?: number;
+  };
+}
+
+export interface AcceptancePolicyReport {
+  readonly eligibleForLocalExport: boolean;
+  readonly requiresServerFallback: boolean;
+  readonly strictlyRefused: boolean;
+  readonly verdict: AcceptanceVerdict;
+  readonly reasonCode?: FallbackReasonCode;
+  readonly diagnostics: readonly string[];
+  readonly unsupportedFeatures: readonly string[];
+  readonly noAdoptionViolations: readonly string[];
+  readonly checkedEntries: readonly AcceptanceMatrixEntry[];
+  readonly noSilentDegradationGuaranteed: boolean;
 }
