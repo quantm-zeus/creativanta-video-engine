@@ -62,10 +62,13 @@ async function main() {
     if (!healthzRes.ok) throw new Error(`/healthz returned status ${healthzRes.status}`);
     const healthzData = await healthzRes.json();
 
-    // Probe /readyz
-    const readyzRes = await fetch(`${baseUrl}/readyz`);
-    if (!readyzRes.ok) throw new Error(`/readyz returned status ${readyzRes.status}`);
+    // An unbacked development server MUST reject readiness even when
+    // liveness and capabilities endpoints work.
+    const readyzRes = await fetch(baseUrl + '/readyz');
     const readyzData = await readyzRes.json();
+    if (readyzRes.status !== 503 || readyzData.reason !== 'TENANT_REPOSITORY_NOT_CONFIGURED') {
+      throw new Error('Unbacked /readyz must return 503; got ' + readyzRes.status);
+    }
 
     // Probe /v1/capabilities
     const capsRes = await fetch(`${baseUrl}/v1/capabilities`);
@@ -75,10 +78,11 @@ async function main() {
     await new Promise((resolve) => server.close(resolve));
 
     results.checks.push({
-      name: 'api_endpoints',
+      name: 'unbacked_api_contract_not_live_readiness',
       status: 'PASS',
       healthz: healthzData,
       readyz: readyzData,
+      note: 'Synthetic in-process API; live backend/worker readiness NOT verified',
       capabilities_engines: capsData.engines,
       capabilities_profiles: Object.keys(capsData.profiles),
     });
