@@ -6,27 +6,30 @@ Báo cáo nghiệm thu kỹ thuật cho luồng công việc `P10-A` (GitHub iss
 
 ```text
 Task: P10-A
-Base / tested commit: f37bf5f784ce7533f88f8be8bc98d78ef2bf1082 / f37bf5f784ce7533f88f8be8bc98d78ef2bf1082
-Environment: Linux x86_64, evergreen worktree (.worktrees/p10-backend), Node v24.21.0, pnpm v12.16.1, Python 3.12.3
+Base / tested commit: 96a6995ab6c9b4e3567371722e8f15202dc170fe / 96a6995ab6c9b4e3567371722e8f15202dc170fe
+Environment: Linux x86_64, evergreen worktree (.worktrees/p10-backend), Node v24.22.2, pnpm v12.16.1, Python 3.12.3
 Command: node ops/staging/staging-backend-verifier.mjs && node --test packages/api/test/p10-a-backend-bootstrap-and-probes.test.mjs && python3 scripts/validate_repo.py
 Result: PASS
-Exit code / UTC started / duration: 0 / 2026-11-06T16:05:52Z / 3.1s
+Exit code / UTC started / duration: 0 / 2026-11-07T05:17:59Z / 4.2s
 Artifacts:
-  - packages/api/src/db/backend-bootstrap.ts, sha256=23139aa7cb9008a0669e3b118a157715925f3ef9d87ff69c538a612d15e08c51, expires=N/A (repo-versioned)
-  - packages/api/src/index.ts, sha256=ceb02111c6e32ba660c962fd80cf79a38e18a457874df2e4cc7fe93ac2250681, expires=N/A (repo-versioned)
-  - packages/api/test/p10-a-backend-bootstrap-and-probes.test.mjs, sha256=d2ae5b223a46d5a1fd0ca6528fa168aa35034313ec58685fbd04ee11a31a3bdc, expires=N/A (repo-versioned)
-  - ops/staging/staging-backend-verifier.mjs, sha256=f00fc9b7c67cc018209a04abca9d11d82c93fd1f3fad7cdaa7f68f24cd814b66, expires=N/A (repo-versioned)
-  - ops/staging/STAGING_BACKEND.md, sha256=c6c690ae3cd92d7ae3c3c2c39d3b4517dbcc087cb8b6ef3266870956cf927d71, expires=N/A (repo-versioned)
-  - docker/staging/docker-compose.staging-isolated.yml, sha256=460579dfe1301a7e36e7cfeee7233f355b88706ce97805fbce4de2c9d15ce05c, expires=N/A (repo-versioned)
+  - packages/api/src/db/backend-bootstrap.ts, sha256=ab29cf81733215bfeff23f4c0484701cd969dc2b867ec1295370e6730a14cf30, expires=N/A (repo-versioned)
+  - packages/api/src/db/migration-runner.ts, sha256=384ada2639db995a4c67ad9794310b2164169ea17295553539c45c5b3fc81f1f, expires=N/A (repo-versioned)
+  - packages/api/src/index.ts, sha256=f66eaa11b1577f6230b3e101776722303318aa1cd497ef58142e43696cde0d49, expires=N/A (repo-versioned)
+  - packages/api/test/p10-a-backend-bootstrap-and-probes.test.mjs, sha256=5fbff49eea4d296ec10f5d83191fc63b4f887fc5dfb1e696ea79254407629347, expires=N/A (repo-versioned)
+  - ops/staging/staging-backend-verifier.mjs, sha256=e1d551f949ba9f8824380c24908fd032b5cdd0ddb71fff9c5242a26f7aa7397e, expires=N/A (repo-versioned)
+  - ops/staging/STAGING_BACKEND.md, sha256=073f393c741e412666e1a6df6f38e70e23b22b2dea6a90f517c1c7db0a0845ea, expires=N/A (repo-versioned)
+  - docker/Dockerfile.api, sha256=b056a01dbfda71a2d1f7efc33b20b6137cd647b715f902a59eec1fde7e87bf04, expires=N/A (repo-versioned)
+  - docker/staging/docker-compose.staging-isolated.yml, sha256=1a80fe2bdc4fca5165c83e9b04bfe855d748edeb8e7d99f3fe8be9f45da69f25, expires=N/A (repo-versioned)
   - docker/staging/init-staging-roles.sql, sha256=930d1af280d957b4a5a03cf83f981a466a1b857e4c3b6b58078bcaaaabe63065, expires=N/A (repo-versioned)
   - docker/staging/staging.env.example, sha256=4c3455668af048216fd55c0883539c32bc4f85dc349c26d40e562a86cc30a033, expires=N/A (repo-versioned)
-  - evidence/P10-A/backend-verification-summary.json, sha256=e7c45f3cd12caa542094dc2f5b80388a0ce1e3306419e106b01a7d358531d5a8, expires=N/A (repo-versioned)
+  - evidence/P10-A/backend-verification-summary.json, sha256=0ba9988a20a2dc697aefb8849c23f64adf754a356a71555ad50c1e1352de57f6, expires=N/A (repo-versioned)
+  - evidence/P10-A/codex-remediation.md, expires=N/A (repo-versioned)
 Acceptance mapping:
   - Fail-closed staging environment validation (no default secrets, explicit vars, HTTPS, distinct buckets, least-privilege cve_api DB role, custom code & remote import off): PASS — Verified by P10A-ENV-01 in ops/staging/staging-backend-verifier.mjs and packages/api/test/p10-a-backend-bootstrap-and-probes.test.mjs
-  - Honest node:sqlite vs PostgreSQL driver evaluation & 21-table RLS/FORCE RLS audit: PASS — Verified by P10A-RLS-02 (canServePostgresTraffic=false, 21/21 tables RLS & FORCE RLS verified, 5 DB roles verified)
-  - Bounded protocol connectivity probes (PG v3 wire StartupMessage + Terminate, S3 AWS4-HMAC-SHA256 HEAD with redirect:manual, Worker readiness HTTP): PASS — Verified by P10A-PROBE-03 and unit fault-injection tests
-  - Real child-process API startup in staging fail-closed mode & isolated sqlite-test-only two-tenant loopback mode: PASS — Verified by P10A-PROC-STAGING-04 and P10A-PROC-SQLITE-TEST-05 against packages/api/dist/index.js
-Reviewer / reviewed commit / decision: pending independent reviewer / f37bf5f784ce7533f88f8be8bc98d78ef2bf1082 / local completion awaiting review
+  - Honest node:sqlite vs PostgreSQL driver evaluation, 21-table RLS/FORCE RLS audit & Dockerfile.api read-only /app/migrations packaging: PASS — Verified by P10A-RLS-02 (canServePostgresTraffic=false, 21/21 tables RLS & FORCE RLS verified, 5 DB roles verified, isolated /app container layout verified)
+  - Bounded protocol connectivity probes (PG v3 wire StartupMessage + incremental fragmented frame buffering + Terminate, S3 AWS4-HMAC-SHA256 HEAD with redirect:manual, Worker readiness HTTP): PASS — Verified by P10A-PROBE-03 and unit fault-injection tests
+  - Real child-process API startup in staging fail-closed mode & isolated sqlite-test-only two-tenant loopback mode with wired HTTP /readyz probe callback: PASS — Verified by P10A-PROC-STAGING-04 and P10A-PROC-SQLITE-TEST-05 against packages/api/dist/index.js
+Reviewer / reviewed commit / decision: pending independent reviewer / 96a6995ab6c9b4e3567371722e8f15202dc170fe / local completion awaiting review
 ```
 
 ## 2. Chi tiết thực thi lệnh và trạng thái các cổng (Commands &Candid Gate Status)

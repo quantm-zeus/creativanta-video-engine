@@ -556,11 +556,20 @@ function buildPostgresStartupPacket(user: string, database: string): Buffer {
   return Buffer.concat([header, body]);
 }
 
+export const PG_WIRE_HEADER_BYTES = 5;
+export const PG_WIRE_MIN_FRAME_LENGTH = 5;
+export const PG_WIRE_MIN_AUTH_FRAME_LENGTH = 8;
+export const PG_WIRE_MAX_FRAME_LENGTH = 8192;
+export const PG_WIRE_MAX_BUFFER_BYTES = 1 + PG_WIRE_MAX_FRAME_LENGTH;
+
 /**
  * Performs a real bounded TCP + PostgreSQL v3 wire-protocol StartupMessage probe
- * against `databaseUrl`. Never logs or returns credentials, always terminates the
- * socket cleanly, and truthfully sets `repositoryDriverCompatible: false` until
- * an async PostgreSQL `TenantRepository` is implemented.
+ * against `databaseUrl`. Incrementally buffers fragmented TCP packets up to
+ * `PG_WIRE_MAX_BUFFER_BYTES`, validates complete v3 backend frame-length semantics,
+ * enforces a strict deadline, cleans up all socket event listeners, never logs or
+ * returns credentials, always terminates the socket cleanly, and truthfully sets
+ * `repositoryDriverCompatible: false` until an async PostgreSQL `TenantRepository`
+ * is implemented.
  */
 export async function probePostgresConnectivity(
   databaseUrl: string,
@@ -691,6 +700,22 @@ export async function probePostgresConnectivity(
   }>((resolve) => {
     const socket = new net.Socket();
     let settled = false;
+    let connected = false;
+    const chunks: Buffer[] = [];
+    let bufferedBytes = 0;
+    let expectedTotalBytes: number | null = null;
+
+    const cleanupListeners = () => {
+      clearTimeout(timer);
+      socket.removeListener('connect', onConnect);
+      socket.removeListener('data', onData);
+      socket.removeListener('end', onEnd);
+      socket.removeListener('close', onClose);
+      socket.removeListener('error', onError);
+      socket.on('error', () => {
+        // Suppress post-teardown socket error events
+      });
+    };
 
     const finish = (res: {
       reachable: boolean;
@@ -699,6 +724,7 @@ export async function probePostgresConnectivity(
     }) => {
       if (settled) return;
       settled = true;
+      cleanupListeners();
       try {
         if (!socket.destroyed && socket.writable) {
           // PostgreSQL Terminate ('X', Int32(4))
@@ -713,57 +739,127 @@ export async function probePostgresConnectivity(
 
     const timer = setTimeout(() => {
       finish({
-        reachable: false,
+        reachable: connected,
         wireProtocolVerified: false,
         errorType: 'TCP_CONNECT_TIMEOUT',
       });
     }, timeoutMs);
 
-    socket.once('error', () => {
-      clearTimeout(timer);
+    const onError = () => {
       finish({
-        reachable: false,
+        reachable: connected,
         wireProtocolVerified: false,
-        errorType: 'TCP_CONNECT_FAILED',
+        errorType: connected && bufferedBytes > 0 ? 'INVALID_WIRE_RESPONSE' : 'TCP_CONNECT_FAILED',
       });
-    });
+    };
 
-    socket.once('connect', () => {
+    const onConnect = () => {
+      connected = true;
       socket.setNoDelay(true);
       const packet = buildPostgresStartupPacket(role, database);
       socket.write(packet);
-    });
+    };
 
-    socket.once('data', (chunk: Buffer) => {
-      clearTimeout(timer);
-      if (chunk.byteLength >= 5) {
-        const msgType = chunk[0];
-        // 'R' (0x52) = Authentication*, 'E' (0x45) = ErrorResponse, 'N' (0x4e) = NoticeResponse
-        if (msgType === 0x52 || msgType === 0x45 || msgType === 0x4e) {
+    const onData = (chunk: Buffer) => {
+      if (settled || chunk.byteLength === 0) return;
+
+      if (bufferedBytes + chunk.byteLength > PG_WIRE_MAX_BUFFER_BYTES) {
+        finish({
+          reachable: true,
+          wireProtocolVerified: false,
+          errorType: 'INVALID_WIRE_RESPONSE',
+        });
+        return;
+      }
+
+      chunks.push(chunk);
+      bufferedBytes += chunk.byteLength;
+
+      // Validate message type byte immediately once at least 1 byte is buffered:
+      // 'R' (0x52) = Authentication*, 'E' (0x45) = ErrorResponse, 'N' (0x4e) = NoticeResponse
+      const msgType = chunks[0]![0]!;
+      if (msgType !== 0x52 && msgType !== 0x45 && msgType !== 0x4e) {
+        finish({
+          reachable: true,
+          wireProtocolVerified: false,
+          errorType: 'INVALID_WIRE_RESPONSE',
+        });
+        return;
+      }
+
+      // Wait for the 5-byte PostgreSQL v3 message header (1-byte tag + 4-byte Int32BE length)
+      if (bufferedBytes < PG_WIRE_HEADER_BYTES) {
+        return;
+      }
+
+      const combined =
+        chunks.length === 1 ? chunks[0]! : Buffer.concat(chunks, bufferedBytes);
+      chunks.length = 0;
+      chunks.push(combined);
+
+      if (expectedTotalBytes === null) {
+        const frameLength = combined.readInt32BE(1);
+        const minFrameLength =
+          msgType === 0x52 ? PG_WIRE_MIN_AUTH_FRAME_LENGTH : PG_WIRE_MIN_FRAME_LENGTH;
+        if (frameLength < minFrameLength || frameLength > PG_WIRE_MAX_FRAME_LENGTH) {
           finish({
             reachable: true,
-            wireProtocolVerified: true,
+            wireProtocolVerified: false,
+            errorType: 'INVALID_WIRE_RESPONSE',
+          });
+          return;
+        }
+        expectedTotalBytes = 1 + frameLength;
+      }
+
+      // Wait until the entire initial frame (1 + frameLength bytes) has arrived
+      if (bufferedBytes < expectedTotalBytes) {
+        return;
+      }
+
+      if (msgType === 0x52) {
+        const authCode = combined.readInt32BE(5);
+        if (authCode < 0) {
+          finish({
+            reachable: true,
+            wireProtocolVerified: false,
+            errorType: 'INVALID_WIRE_RESPONSE',
           });
           return;
         }
       }
+
       finish({
         reachable: true,
-        wireProtocolVerified: false,
-        errorType: 'INVALID_WIRE_RESPONSE',
+        wireProtocolVerified: true,
       });
-    });
+    };
 
-    socket.once('close', () => {
-      clearTimeout(timer);
+    const onEnd = () => {
       if (!settled) {
         finish({
-          reachable: false,
+          reachable: connected,
           wireProtocolVerified: false,
-          errorType: 'TCP_CONNECT_FAILED',
+          errorType: connected && bufferedBytes > 0 ? 'INVALID_WIRE_RESPONSE' : 'TCP_CONNECT_FAILED',
         });
       }
-    });
+    };
+
+    const onClose = () => {
+      if (!settled) {
+        finish({
+          reachable: connected,
+          wireProtocolVerified: false,
+          errorType: connected && bufferedBytes > 0 ? 'INVALID_WIRE_RESPONSE' : 'TCP_CONNECT_FAILED',
+        });
+      }
+    };
+
+    socket.on('error', onError);
+    socket.once('connect', onConnect);
+    socket.on('data', onData);
+    socket.once('end', onEnd);
+    socket.once('close', onClose);
 
     socket.connect(port, host);
   });
@@ -1287,7 +1383,9 @@ export function bootstrapApiBackend(options: BootstrapApiBackendOptions): Bootst
     allowLoopbackHttpInStagingTest: options.allowLoopbackHttpInStagingTest,
   });
 
-  const driverEvaluation = evaluatePostgresDriverAndRlsReadiness(options.migrationsDir);
+  const resolvedMigrationsDir =
+    options.migrationsDir ?? resolveDefaultMigrationsDir(rawEnv);
+  const driverEvaluation = evaluatePostgresDriverAndRlsReadiness(resolvedMigrationsDir);
   if (!driverEvaluation.migrationsAudit.valid) {
     throw new BackendBootstrapError(
       'MIGRATION_AUDIT_FAILED',
@@ -1354,7 +1452,7 @@ export function bootstrapApiBackend(options: BootstrapApiBackendOptions): Bootst
       const [postgres, storage, renderer] = await Promise.all([
         probePostgresConnectivity(options.config.CVE_DATABASE_URL, {
           timeoutMs: probeTimeoutMs,
-          migrationsDir: options.migrationsDir,
+          migrationsDir: resolvedMigrationsDir,
         }),
         probeObjectStorageConnectivity(options.config, {
           timeoutMs: probeTimeoutMs,
@@ -1432,7 +1530,7 @@ export function bootstrapApiBackend(options: BootstrapApiBackendOptions): Bootst
     })();
 
   try {
-    const migrationRunner = new MigrationRunner(db, options.migrationsDir);
+    const migrationRunner = new MigrationRunner(db, resolvedMigrationsDir);
     migrationRunner.migrateUp({ role: 'cve_migrator' });
 
     const pool = new TenantConnectionPool(db, { poolSize: 4 });

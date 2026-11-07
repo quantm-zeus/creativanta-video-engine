@@ -9,13 +9,13 @@
   "totalChecks": 5,
   "passedChecks": 5,
   "failedChecks": 0,
-  "durationMs": 1245,
+  "durationMs": 1285,
   "checks": [
     {
       "id": "P10A-ENV-01",
       "title": "Staging fail-closed environment guard rejects missing vars, default secrets, non-cve_api DB roles, sqlite-test-only mode, and unsafe flags",
       "passed": true,
-      "durationMs": 2.58,
+      "durationMs": 3.71,
       "details": {
         "rejectedMissingEnv": true,
         "rejectedDefaultCredentials": true,
@@ -27,9 +27,9 @@
     },
     {
       "id": "P10A-RLS-02",
-      "title": "PostgreSQL 21-table RLS/FORCE RLS + 5 least-privilege roles audit and truthful node:sqlite vs PostgreSQL driver incompatibility evaluation",
+      "title": "PostgreSQL 21-table RLS/FORCE RLS + 5 least-privilege roles audit, Dockerfile.api read-only migrations packaging, and truthful node:sqlite vs PostgreSQL driver incompatibility evaluation",
       "passed": true,
-      "durationMs": 8.96,
+      "durationMs": 11.39,
       "details": {
         "tableCount": 21,
         "rlsEnabledCount": 21,
@@ -41,18 +41,21 @@
           "cve_ingest",
           "cve_sender"
         ],
+        "dockerfileApiRunnerCopiesReadOnlyMigrations": true,
+        "composeStagingMountsReadOnlyMigrations": true,
         "currentRepositoryEngine": "node:sqlite",
         "canServePostgresTraffic": false
       }
     },
     {
       "id": "P10A-PROBE-03",
-      "title": "Bounded PostgreSQL v3 wire StartupMessage probe, S3 AWS4-HMAC-SHA256 HEAD probe, and renderer worker readiness probe with zero fake green",
+      "title": "Bounded PostgreSQL v3 wire StartupMessage probe (including 1-byte fragmented TCP chunks), S3 AWS4-HMAC-SHA256 HEAD probe, and renderer worker readiness probe with zero fake green",
       "passed": true,
-      "durationMs": 72.16,
+      "durationMs": 92.69,
       "details": {
         "pgReachable": true,
         "pgWireProtocolVerified": true,
+        "pgFragmentedOneByteChunksVerified": 9,
         "pgRepositoryDriverCompatible": false,
         "pgReadyForTraffic": false,
         "pgTerminateSent": true,
@@ -62,30 +65,40 @@
     },
     {
       "id": "P10A-PROC-STAGING-04",
-      "title": "Real child-process API startup in CVE_ENV=staging rejects default secrets and remains fail-closed (503) on authenticated endpoints without SQLite fallback",
+      "title": "Real child-process API startup in CVE_ENV=staging rejects default secrets and remains fail-closed (503) on /readyz and authenticated endpoints without SQLite fallback",
       "passed": true,
-      "durationMs": 663.01,
+      "durationMs": 652.37,
       "details": {
         "invalidStagingRejectedWithExit1": true,
         "validStagingStartedInPostgresMode": true,
         "repositoryConfiguredInStaging": false,
+        "readyzHttpStatus": 503,
+        "readyzReason": "TENANT_REPOSITORY_NOT_CONFIGURED",
         "authenticatedRouteHttpStatus": 404
       }
     },
     {
       "id": "P10A-PROC-SQLITE-TEST-05",
-      "title": "Real child-process API startup in CVE_BACKEND_MODE=sqlite-test-only (non-production) serves authenticated two-tenant workflows and enforces RLS/anti-IDOR over loopback HTTP",
+      "title": "Real child-process API startup in CVE_BACKEND_MODE=sqlite-test-only executes wired readinessProbe on GET /readyz and enforces two-tenant RLS/anti-IDOR over loopback HTTP",
       "passed": true,
-      "durationMs": 497.22,
+      "durationMs": 523.8,
       "details": {
         "nonProductionTestOnly": true,
+        "readyzHttpStatus": 503,
+        "readyzReason": "DEPENDENCY_UNAVAILABLE",
+        "readyzChecks": {
+          "database": "unavailable",
+          "storage": "ok",
+          "renderer": "ok"
+        },
+        "readyzCallbackProbedStorageAndWorker": true,
         "curatedTemplatesListed": 1,
-        "compositionInstantiated": "cmp_eab3acdfe594",
-        "renderJobQueuedAndReplayed": "job_6d96c7c06af6",
+        "compositionInstantiated": "cmp_c4837ecfd8a0",
+        "renderJobQueuedAndReplayed": "job_35bf3fa0325d",
         "crossTenantCompositionStatus": 404,
         "crossTenantJobStatus": 404
       }
     }
   ],
-  "evaluatedAt": "2026-11-06T16:06:57.125Z"
+  "evaluatedAt": "2026-11-07T05:18:06.472Z"
 }

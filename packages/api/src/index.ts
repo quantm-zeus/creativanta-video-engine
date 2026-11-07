@@ -80,15 +80,13 @@ export async function startApiServer(
     rawEnv['HOST'] ||
     (config.CVE_ENV === 'development' ? '127.0.0.1' : '0.0.0.0');
 
-  const serverOptions: CreateServerOptions & {
-    readinessProbe?: BootstrappedApiBackend['readinessProbe'];
-  } = {
+  const serverOptions: CreateServerOptions = {
     config,
     repository: backend.repository,
     quarantineStore: backend.quarantineStore,
     allowLoopbackForTesting: options.allowLoopbackForTesting,
     allowCustomPortForTesting: options.allowCustomPortForTesting,
-    ...(backend.mode !== 'unconfigured' ? { readinessProbe: backend.readinessProbe } : {}),
+    readinessProbe: backend.readinessProbe,
   };
 
   const server = createServer(serverOptions);
@@ -154,13 +152,11 @@ export function main(rawEnv: Record<string, string | undefined> = process.env): 
     return;
   }
 
-  const serverOptions: CreateServerOptions & {
-    readinessProbe?: BootstrappedApiBackend['readinessProbe'];
-  } = {
+  const serverOptions: CreateServerOptions = {
     config,
     repository: backend.repository,
     quarantineStore: backend.quarantineStore,
-    ...(backend.mode !== 'unconfigured' ? { readinessProbe: backend.readinessProbe } : {}),
+    readinessProbe: backend.readinessProbe,
   };
 
   const server = createServer(serverOptions);

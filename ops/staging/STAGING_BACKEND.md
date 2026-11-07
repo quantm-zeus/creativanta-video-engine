@@ -46,7 +46,7 @@ Consequently, `probePostgresConnectivity()` reports `repositoryDriverCompatible:
 
 All three dependency probes use Node.js built-in modules with bounded timeouts (`100ms..10000ms`, default `1500ms`) and redact credentials prior to returning diagnostics:
 
-- **`probePostgresConnectivity(databaseUrl, options)`:** Validates the `cve_api` role and migration checksums, opens a TCP socket (`node:net`), sends a PostgreSQL v3.0 `StartupMessage` (`0x00030000`), verifies a valid server response header (`'R'`, `'E'`, or `'N'`), and always transmits a `Terminate` (`'X'`) packet before destroying the socket.
+- **`probePostgresConnectivity(databaseUrl, options)`:** Validates the `cve_api` role and migration checksums, opens a TCP socket (`node:net`), sends a PostgreSQL v3.0 `StartupMessage` (`0x00030000`), incrementally buffers fragmented TCP packets up to `PG_WIRE_MAX_BUFFER_BYTES` (`8193` bytes) until the complete v3 backend frame (`1 + frameLength` bytes for `'R'`, `'E'`, or `'N'`) arrives within the deadline, cleans up all socket event listeners, and always transmits a `Terminate` (`'X'`) packet before destroying the socket.
 - **`probeObjectStorageConnectivity(config, options)`:** Signs a `HEAD /<CVE_QUARANTINE_BUCKET>` request using AWS Signature Version 4 (`AWS4-HMAC-SHA256`) and sends it with `redirect: 'manual'`. Rejects redirects (`3xx`), auth failures (`401`/`403`), missing buckets (`404`), and timeouts.
 - **`probeRendererWorkerReadiness(config, options)`:** Verifies a non-zero pinned `CVE_RENDER_IMAGE_DIGEST` and queries `CVE_WORKER_READINESS_URL` (`redirect: 'manual'`), requiring HTTP `200` with `{ "status": "ready", "adapter": "<configured-adapter>" }`.
 

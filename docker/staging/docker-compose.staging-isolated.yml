@@ -51,6 +51,8 @@ services:
       dockerfile: docker/Dockerfile.api
     restart: "no"
     read_only: true
+    volumes:
+      - ../../migrations:/app/migrations:ro
     tmpfs:
       - /tmp:rw,noexec,nosuid,size=64m
     security_opt:

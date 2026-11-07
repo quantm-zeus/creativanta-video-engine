@@ -17,8 +17,11 @@
 import assert from 'node:assert/strict';
 import { spawn } from 'node:child_process';
 import crypto from 'node:crypto';
+import fs from 'node:fs';
 import http from 'node:http';
 import net from 'node:net';
+import os from 'node:os';
+import path from 'node:path';
 import { setTimeout as delay } from 'node:timers/promises';
 import { fileURLToPath } from 'node:url';
 
@@ -186,11 +189,11 @@ export class StagingBackendVerifier {
     );
 
     // -------------------------------------------------------------------------
-    // Check 2: Migration RLS/FORCE RLS Audit & Honest Driver Incompatibility Evaluation
+    // Check 2: Migration RLS/FORCE RLS Audit, Dockerfile.api Packaging & Driver Incompatibility
     // -------------------------------------------------------------------------
     await runCheck(
       'P10A-RLS-02',
-      'PostgreSQL 21-table RLS/FORCE RLS + 5 least-privilege roles audit and truthful node:sqlite vs PostgreSQL driver incompatibility evaluation',
+      'PostgreSQL 21-table RLS/FORCE RLS + 5 least-privilege roles audit, Dockerfile.api read-only migrations packaging, and truthful node:sqlite vs PostgreSQL driver incompatibility evaluation',
       async () => {
         const evaluation = evaluatePostgresDriverAndRlsReadiness();
         assert.equal(evaluation.migrationsAudit.valid, true);
@@ -206,11 +209,43 @@ export class StagingBackendVerifier {
         assert.equal(evaluation.canServePostgresTraffic, false);
         assert.ok(evaluation.incompatibilities.length >= 3);
 
+        // Verify docker/Dockerfile.api packages migrations into both builder and runner (read-only)
+        const dockerfileApi = fs.readFileSync(
+          path.join(this.repoRoot, 'docker/Dockerfile.api'),
+          'utf8',
+        );
+        const runnerStage = dockerfileApi.split(/FROM\s+[^\n]+\s+AS\s+runner/i)[1] ?? '';
+        assert.ok(
+          /COPY\s+migrations\s+\.\/migrations/.test(dockerfileApi),
+          'Dockerfile.api builder stage must COPY migrations ./migrations',
+        );
+        assert.ok(
+          /COPY\s+--from=builder\s+\/app\/migrations\s+\.\/migrations/.test(runnerStage),
+          'Dockerfile.api runner stage must COPY --from=builder /app/migrations ./migrations',
+        );
+        assert.ok(
+          /chmod\s+0555\s+\/app\/migrations\s+&&\s+chmod\s+0444\s+\/app\/migrations\/\*/.test(
+            runnerStage,
+          ),
+          'Dockerfile.api runner stage must enforce read-only permissions on /app/migrations',
+        );
+
+        const composeStaging = fs.readFileSync(
+          path.join(this.repoRoot, 'docker/staging/docker-compose.staging-isolated.yml'),
+          'utf8',
+        );
+        assert.ok(
+          composeStaging.includes('- ../../migrations:/app/migrations:ro'),
+          'docker-compose.staging-isolated.yml must mount ../../migrations:/app/migrations:ro in staging-api',
+        );
+
         return {
           tableCount: evaluation.migrationsAudit.tableCount,
           rlsEnabledCount: evaluation.migrationsAudit.rlsEnabledCount,
           rlsForcedCount: evaluation.migrationsAudit.rlsForcedCount,
           rolesVerified: evaluation.migrationsAudit.rolesVerified,
+          dockerfileApiRunnerCopiesReadOnlyMigrations: true,
+          composeStagingMountsReadOnlyMigrations: true,
           currentRepositoryEngine: evaluation.currentRepositoryEngine,
           canServePostgresTraffic: evaluation.canServePostgresTraffic,
         };
@@ -218,25 +253,33 @@ export class StagingBackendVerifier {
     );
 
     // -------------------------------------------------------------------------
-    // Check 3: Bounded Real Protocol Probes (PG v3 Wire, S3 SigV4 HEAD, Worker HTTP)
+    // Check 3: Bounded Real Protocol Probes (PG v3 Wire + Fragmented Chunks, S3 SigV4 HEAD, Worker HTTP)
     // -------------------------------------------------------------------------
     await runCheck(
       'P10A-PROBE-03',
-      'Bounded PostgreSQL v3 wire StartupMessage probe, S3 AWS4-HMAC-SHA256 HEAD probe, and renderer worker readiness probe with zero fake green',
+      'Bounded PostgreSQL v3 wire StartupMessage probe (including 1-byte fragmented TCP chunks), S3 AWS4-HMAC-SHA256 HEAD probe, and renderer worker readiness probe with zero fake green',
       async () => {
         // 3a. Ephemeral PostgreSQL v3 wire protocol responder on 127.0.0.1:0
+        // Streams the 9-byte AuthenticationCleartextPassword ('R', len=8, code=3) 1 byte at a time
+        // to prove incremental PG frame buffering across fragmented TCP chunks.
         let receivedStartupProtocol = 0;
         let receivedTerminate = false;
+        let fragmentedChunksWritten = 0;
         const pgServer = net.createServer((socket) => {
-          socket.on('data', (chunk) => {
+          socket.setNoDelay(true);
+          socket.on('data', async (chunk) => {
             if (chunk.byteLength >= 8 && receivedStartupProtocol === 0) {
               receivedStartupProtocol = chunk.readInt32BE(4);
-              // Reply with AuthenticationCleartextPassword ('R', len=8, code=3)
               const authResp = Buffer.alloc(9);
               authResp.write('R', 0, 'ascii');
               authResp.writeInt32BE(8, 1);
               authResp.writeInt32BE(3, 5);
-              socket.write(authResp);
+              for (let i = 0; i < authResp.byteLength; i++) {
+                if (socket.destroyed) break;
+                socket.write(authResp.subarray(i, i + 1));
+                fragmentedChunksWritten++;
+                await delay(3);
+              }
             } else if (chunk.includes(0x58)) {
               receivedTerminate = true;
             }
@@ -281,6 +324,7 @@ export class StagingBackendVerifier {
           assert.equal(pgProbe.readyForTraffic, false);
           assert.equal(pgProbe.reasonCode, 'POSTGRES_DRIVER_NOT_IMPLEMENTED');
           assert.equal(receivedStartupProtocol, 196608);
+          assert.equal(fragmentedChunksWritten, 9);
           assert.ok(!pgProbe.redactedEndpoint.includes('stgruntime_9a8b7c6d5e4f3a2b1c0d9e8f'));
 
           const stgEnv = buildValidStagingEnvOverrides({
@@ -307,6 +351,7 @@ export class StagingBackendVerifier {
           return {
             pgReachable: pgProbe.reachable,
             pgWireProtocolVerified: pgProbe.wireProtocolVerified,
+            pgFragmentedOneByteChunksVerified: fragmentedChunksWritten,
             pgRepositoryDriverCompatible: pgProbe.repositoryDriverCompatible,
             pgReadyForTraffic: pgProbe.readyForTraffic,
             pgTerminateSent: receivedTerminate,
@@ -325,7 +370,7 @@ export class StagingBackendVerifier {
     // -------------------------------------------------------------------------
     await runCheck(
       'P10A-PROC-STAGING-04',
-      'Real child-process API startup in CVE_ENV=staging rejects default secrets and remains fail-closed (503) on authenticated endpoints without SQLite fallback',
+      'Real child-process API startup in CVE_ENV=staging rejects default secrets and remains fail-closed (503) on /readyz and authenticated endpoints without SQLite fallback',
       async () => {
         // 4a. Spawn child process with CVE_ENV=staging and missing/default secrets -> must exit 1
         const badChild = spawn(process.execPath, ['packages/api/dist/index.js'], {
@@ -403,6 +448,16 @@ export class StagingBackendVerifier {
           assert.equal(startedEvent.repository_configured, false);
           assert.equal(startedEvent.postgres_driver_compatible, false);
 
+          // Verify GET /readyz fails closed (503) in staging postgres mode without repository
+          const readyzRes = await fetch(`${baseUrl}/readyz`);
+          assert.equal(readyzRes.status, 503);
+          const readyzBody = await readyzRes.json();
+          assert.equal(readyzBody.status, 'not_ready');
+          assert.equal(readyzBody.reason, 'TENANT_REPOSITORY_NOT_CONFIGURED');
+          assert.equal(readyzBody.checks.database, 'unavailable');
+          assert.equal(readyzBody.checks.storage, 'unverified');
+          assert.equal(readyzBody.checks.renderer, 'unverified');
+
           // Without a Postgres-backed repository wired, tenant-scoped /v1/templates is not mounted (404 NOT_FOUND, no fake SQLite fallback!)
           const templatesRes = await fetch(`${baseUrl}/v1/templates`, {
             headers: {
@@ -417,6 +472,8 @@ export class StagingBackendVerifier {
             invalidStagingRejectedWithExit1: true,
             validStagingStartedInPostgresMode: true,
             repositoryConfiguredInStaging: startedEvent.repository_configured,
+            readyzHttpStatus: readyzRes.status,
+            readyzReason: readyzBody.reason,
             authenticatedRouteHttpStatus: templatesRes.status,
           };
         } finally {
@@ -430,17 +487,40 @@ export class StagingBackendVerifier {
     );
 
     // -------------------------------------------------------------------------
-    // Check 5: Real Child-Process Isolated SQLite-Test-Only Two-Tenant HTTP Loopback
+    // Check 5: Real Child-Process Isolated SQLite-Test-Only Two-Tenant HTTP Loopback + Live /readyz Probe Execution
     // -------------------------------------------------------------------------
     await runCheck(
       'P10A-PROC-SQLITE-TEST-05',
-      'Real child-process API startup in CVE_BACKEND_MODE=sqlite-test-only (non-production) serves authenticated two-tenant workflows and enforces RLS/anti-IDOR over loopback HTTP',
+      'Real child-process API startup in CVE_BACKEND_MODE=sqlite-test-only executes wired readinessProbe on GET /readyz and enforces two-tenant RLS/anti-IDOR over loopback HTTP',
       async () => {
         const port = await reserveLoopbackPort();
         const baseUrl = `http://127.0.0.1:${port}`;
         const testPepper = 'p10a_test_only_sqlite_pepper_secret_32bytes_min!';
         const tenantAId = '11111111-1111-4111-8111-111111111111';
         const tenantBId = '22222222-2222-4222-8222-222222222222';
+
+        // Ephemeral loopback S3 & worker readiness servers to prove the child process
+        // actually executes backend.readinessProbe when GET /readyz is requested.
+        let s3HeadHits = 0;
+        let workerReadyHits = 0;
+        const probeTargetServer = http.createServer((req, res) => {
+          if (req.method === 'HEAD' && req.url === '/cve-quarantine-dev') {
+            s3HeadHits++;
+            res.writeHead(200);
+            res.end();
+            return;
+          }
+          if (req.method === 'GET' && req.url === '/worker-readyz') {
+            workerReadyHits++;
+            res.writeHead(200, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify({ status: 'ready', adapter: 'chromium-frame-v1' }));
+            return;
+          }
+          res.writeHead(404);
+          res.end();
+        });
+        await new Promise((resolve) => probeTargetServer.listen(0, '127.0.0.1', resolve));
+        const probeTargetPort = probeTargetServer.address().port;
 
         const keyMatA = generateApiKeyMaterial({
           environment: 'test',
@@ -483,6 +563,9 @@ export class StagingBackendVerifier {
             CVE_PUBLIC_BASE_URL: `${baseUrl}/v1`,
             HOST: '127.0.0.1',
             CVE_API_KEY_PEPPER: testPepper,
+            CVE_STORAGE_ENDPOINT: `http://127.0.0.1:${probeTargetPort}`,
+            CVE_RENDER_IMAGE_DIGEST: VALID_PINNED_DIGEST,
+            CVE_WORKER_READINESS_URL: `http://127.0.0.1:${probeTargetPort}/worker-readyz`,
             CVE_TEST_BOOTSTRAP_TENANTS_JSON: bootstrapTenantsJson,
             CVE_CUSTOM_CODE_ENABLED: 'false',
             CVE_CUSTOM_RUNTIME: 'disabled',
@@ -528,6 +611,19 @@ export class StagingBackendVerifier {
           assert.equal(startedEvent.non_production_test_only, true);
           assert.equal(startedEvent.repository_configured, true);
           assert.equal(startedEvent.seeded_test_tenants_count, 2);
+
+          // 0. Verify GET /readyz executes the wired readinessProbe callback (hitting live loopback S3 + worker)
+          // while keeping database: 'unavailable' (503 DEPENDENCY_UNAVAILABLE) so sqlite-test-only never false-greens.
+          const readyzRes = await fetch(`${baseUrl}/readyz`);
+          assert.equal(readyzRes.status, 503);
+          const readyzBody = await readyzRes.json();
+          assert.equal(readyzBody.status, 'not_ready');
+          assert.equal(readyzBody.reason, 'DEPENDENCY_UNAVAILABLE');
+          assert.equal(readyzBody.checks.database, 'unavailable');
+          assert.equal(readyzBody.checks.storage, 'ok');
+          assert.equal(readyzBody.checks.renderer, 'ok');
+          assert.equal(s3HeadHits, 1, 'Expected GET /readyz to invoke S3 HEAD probe callback');
+          assert.equal(workerReadyHits, 1, 'Expected GET /readyz to invoke worker readiness probe callback');
 
           // 1. Unauthenticated GET /v1/templates -> 401
           const unauthRes = await fetch(`${baseUrl}/v1/templates`);
@@ -615,6 +711,10 @@ export class StagingBackendVerifier {
 
           return {
             nonProductionTestOnly: startedEvent.non_production_test_only,
+            readyzHttpStatus: readyzRes.status,
+            readyzReason: readyzBody.reason,
+            readyzChecks: readyzBody.checks,
+            readyzCallbackProbedStorageAndWorker: s3HeadHits === 1 && workerReadyHits === 1,
             curatedTemplatesListed: listTplBody.data.length,
             compositionInstantiated: instBody.id,
             renderJobQueuedAndReplayed: job1.id,
@@ -627,6 +727,7 @@ export class StagingBackendVerifier {
             await delay(100);
           }
           if (!childExited) child.kill('SIGKILL');
+          await new Promise((resolve) => probeTargetServer.close(resolve));
         }
       },
     );
