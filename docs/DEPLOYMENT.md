@@ -2,6 +2,44 @@
 
 Đây là outline, không có Compose/app đang chạy và không cấp quyền sửa VPS hiện hữu. `P1-01` tạo setup local sau dependency review; `P6` chuẩn bị staging/beta; production rollout cần quyền môi trường riêng. [Security](SECURITY.md) là điều kiện deploy, không option tiết kiệm chi phí.
 
+## API readiness must be verified (post-backlog staging hardening)
+
+The API process can expose `/healthz` (HTTP 200) and `/v1/capabilities` without
+a functional tenant repository, storage, or rendering backend. These are **not**
+evidence that job creation, rendering, callback delivery or downloads work.
+`packages/api/src/index.ts` currently constructs `createServer({ config })`
+without wiring an operational `TenantRepository`; a live application must
+not be marked ready in this state.
+
+`/readyz` is now **fail-closed**: it answers HTTP 503 with
+`TENANT_REPOSITORY_NOT_CONFIGURED` if no tenant repository is supplied,
+HTTP 503 with `READINESS_PROBE_NOT_CONFIGURED` if repository exists but
+there is no separate live dependency probe, and HTTP 503 if the database,
+object store or renderer checks fail. HTTP 200 is possible only when **all
+three independent checks explicitly report success** from a configured
+`readinessProbe` on an initialized repository. The Docker API healthcheck
+uses `/readyz`, not `/healthz`. Errors from readiness callbacks are redacted.
+
+For reproducible non-production startup evidence use
+`pnpm smoke:api-runtime`. This launches the actual API as a child process
+bound only to `127.0.0.1`, with clean dev-only environment and all optional
+custom code/remote import disabled. It expects 200 liveness, 503 readiness
+and disabled optional capabilities. A PASS result means **the safety gate
+worked**, NOT that a real deployment has passed an E2E test. The
+`pnpm health` script similarly verifies a synthetic unbacked API contract,
+not real infrastructure readiness.
+
+`ops/release/staging-smoke-runner.mjs` currently uses
+`CreativantaContractMock`. Existing `P4-07` tests verify extensive
+in-process SQLite/worker lifecycle but do not establish a live production
+PostgreSQL, S3 object store, hardened renderer-worker container and callback
+network on the VPS. Those real service checks, live upload-to-MP4 decode,
+security review, rollback/restore, and external approvals are still
+**release blockers** [#62](https://github.com/quantm-zeus/creativanta-video-engine/issues/62)
+and [#61](https://github.com/quantm-zeus/creativanta-video-engine/issues/61).
+Do not add a public listener, reuse production secrets or claim GA readiness
+based solely on this development smoke result.
+
 ## Môi trường và topology
 
 | Môi trường | Đề xuất ban đầu | Giới hạn |

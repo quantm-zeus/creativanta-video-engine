@@ -40,13 +40,16 @@ describe('API Server Health & Capabilities', () => {
     assert.ok(typeof body.uptime_seconds === 'number');
   });
 
-  it('responds with 200 OK on /readyz', async () => {
-    const res = await fetch(`${baseUrl}/readyz`);
-    assert.strictEqual(res.status, 200);
+  it('fails readiness closed when TenantRepository was not initialized', async () => {
+    const res = await fetch(baseUrl + '/readyz');
+    assert.strictEqual(res.status, 503);
+    assert.strictEqual(res.headers.get('cache-control'), 'no-store');
     const body = await res.json();
-    assert.strictEqual(body.status, 'ready');
-    assert.strictEqual(body.checks.database, 'ok');
-    assert.strictEqual(body.checks.storage, 'ok');
+    assert.strictEqual(body.status, 'not_ready');
+    assert.strictEqual(body.reason, 'TENANT_REPOSITORY_NOT_CONFIGURED');
+    assert.strictEqual(body.checks.database, 'unavailable');
+    assert.strictEqual(body.checks.storage, 'unverified');
+    assert.strictEqual(body.checks.renderer, 'unverified');
   });
 
   it('responds with 200 OK on /v1/capabilities matching API spec', async () => {

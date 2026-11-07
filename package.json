@@ -15,7 +15,8 @@
     "typecheck": "pnpm -r --if-present run typecheck",
     "lint": "pnpm -r --if-present run lint",
     "test": "pnpm -r --if-present run test",
-    "health": "node scripts/health-check.mjs"
+    "health": "node scripts/health-check.mjs",
+    "smoke:api-runtime": "node scripts/api-real-process-smoke.mjs"
   },
   "devDependencies": {
     "@types/node": "22.10.5",
