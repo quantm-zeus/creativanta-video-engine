@@ -21,19 +21,21 @@ Base commit: f37bf5fd67102567bd5a903a0670e167887dbeb8
 Environment: Linux x86_64, Node v24.x, pnpm 12.16.1, Python 3.12.3
 Commands & Exit Statuses:
   1. python3 scripts/validate_repo.py -> PASS (exit code 0, 52 tasks acyclic, 0 doc errors)
-  2. node --test ops/test/live-e2e.test.mjs -> PASS (exit code 0, 24/24 tests passed in 362ms)
-  3. node --test ops/test/*.test.mjs -> PASS (exit code 0, 96/96 tests passed across 17 suites)
-  4. node scripts/live-staging-e2e.mjs --write-evidence evidence/P10-B -> NOT_READY (exit code 2, preflight fail-closed on live environment)
+  2. node --test ops/test/live-e2e.test.mjs -> PASS (exit code 0, 45/45 tests passed across 12 suites)
+  3. node --test ops/test/*.test.mjs -> PASS (exit code 0, 117/117 tests passed across 33 suites)
+  4. pnpm run build && pnpm run typecheck && pnpm run lint -> PASS (exit code 0)
+  5. node scripts/live-staging-e2e.mjs --preflight-only --write-evidence evidence/P10-B -> NOT_READY (exit code 2, preflight fail-closed on live environment)
 Artifacts Created:
   - ops/staging/config.mjs (Target URL safety validation, loopback/private check, production denial)
   - ops/staging/redaction.mjs (Token masking, query signature stripping, redacted logging)
-  - ops/staging/media-verify.mjs (Synthetic licensed fixtures, ISOBMFF box check, ffprobe inspection)
-  - ops/staging/preflight.mjs (Fail-closed live preflight, health/readiness/capabilities probes)
-  - ops/staging/live-e2e.mjs (10-stage live non-mock verification harness class)
+  - ops/staging/media-verify.mjs (Synthetic licensed fixtures, ISOBMFF video track box check, fail-closed ffprobe inspection)
+  - ops/staging/preflight.mjs (Fail-closed live preflight, strict boolean-false capability guards, health/readiness/capabilities probes)
+  - ops/staging/live-e2e.mjs (10-stage live non-mock verification harness class, canonical Scene Spec 1.0, loopback webhook receiver, bounded timeouts/caps)
   - ops/staging/README.md (Operator guide, security boundaries, failure interpretation)
   - scripts/live-staging-e2e.mjs (Executable CLI runner with structured output and exit codes)
-  - ops/test/live-e2e.test.mjs (24 deterministic unit tests with labeled TestDoubleHttpServer)
+  - ops/test/live-e2e.test.mjs (45 deterministic unit & real-contract tests covering all 7 Codex findings)
   - evidence/P10-B/live-staging-preflight-result.json (Machine-readable structured run results)
+  - evidence/P10-B/codex-remediation.md (Detailed remediation report for all 7 Codex review findings)
   - evidence/P10-B/report.md (This technical evidence report)
 Acceptance Mapping:
   - Operator-invoked non-mock live HTTP staging harness: PASS — Hiện thực hóa LiveStagingE2EVerifier không phụ thuộc CreativantaContractMock.

@@ -1,49 +1,29 @@
 {
+  "ready": false,
   "status": "NOT_READY",
-  "decision": "HOLD_SERVICES_NOT_DEPLOYED",
+  "timestamp": "2026-11-07T05:32:50.277Z",
   "targetUrl": "http://127.0.0.1:8080/v1",
-  "durationMs": 86,
-  "preflight": {
-    "ready": false,
-    "status": "NOT_READY",
-    "timestamp": "2026-11-06T15:56:58.010Z",
-    "targetUrl": "http://127.0.0.1:8080/v1",
-    "dependencies": {
-      "api": "UNAVAILABLE",
-      "database": "UNAVAILABLE",
-      "storage": "UNAVAILABLE",
-      "renderer": "UNAVAILABLE"
-    },
-    "checks": [
-      {
-        "id": "PRE-01",
-        "title": "Target Endpoint Safety & Loopback/Private Restriction",
-        "status": "PASS",
-        "details": "Target URL \"http://127.0.0.1:8080/v1\" is verified loopback or approved private internal domain. Public/production targets denied."
-      },
-      {
-        "id": "PRE-02",
-        "title": "API Liveness Probe (GET /healthz)",
-        "status": "FAIL",
-        "error": "API service unreachable at http://127.0.0.1:8080/ (fetch failed)"
-      }
-    ],
-    "blockers": [
-      "API_SERVICE_UNAVAILABLE: API service unreachable at http://127.0.0.1:8080/ (fetch failed)"
-    ]
-  },
-  "stages": [],
-  "totalStages": 0,
-  "passedStages": 0,
-  "failedStages": 0,
   "dependencies": {
     "api": "UNAVAILABLE",
     "database": "UNAVAILABLE",
     "storage": "UNAVAILABLE",
     "renderer": "UNAVAILABLE"
   },
+  "checks": [
+    {
+      "id": "PRE-01",
+      "title": "Target Endpoint Safety & Loopback/Private Restriction",
+      "status": "PASS",
+      "details": "Target URL \"http://127.0.0.1:8080/v1\" is verified loopback or approved private internal domain. Public/production targets denied."
+    },
+    {
+      "id": "PRE-02",
+      "title": "API Liveness Probe (GET /healthz)",
+      "status": "FAIL",
+      "error": "API service unreachable at http://127.0.0.1:8080/ (fetch failed)"
+    }
+  ],
   "blockers": [
     "API_SERVICE_UNAVAILABLE: API service unreachable at http://127.0.0.1:8080/ (fetch failed)"
-  ],
-  "summary": "Preflight failed closed. Target API at http://127.0.0.1:8080/v1 does not have live operational services running. No mock server was invoked per NO-MOCK policy."
+  ]
 }

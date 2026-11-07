@@ -9,8 +9,15 @@
  */
 
 import { URL } from 'node:url';
-import { validateTargetEndpoint, TargetEndpointSecurityError } from './config.mjs';
+import { validateTargetEndpoint } from './config.mjs';
 import { sanitizeUrl, maskSecret } from './redaction.mjs';
+
+export const PROTECTED_CAPABILITY_FEATURES = Object.freeze([
+  { key: 'custom_code', envInvariant: 'CVE_CUSTOM_CODE_ENABLED must be false' },
+  { key: 'remote_import', envInvariant: 'CVE_REMOTE_IMPORT_ENABLED must be false' },
+  { key: 'tts', envInvariant: 'CVE_TTS_PROVIDER must be disabled' },
+  { key: 'authoring_adapter', envInvariant: 'CVE_AUTHORING_PROVIDER must be disabled' },
+]);
 
 /**
  * Derives the server origin from a base URL (e.g. "http://127.0.0.1:8080/v1" -> "http://127.0.0.1:8080").
@@ -24,6 +31,207 @@ export function deriveServerOrigin(baseUrl) {
   } catch {
     return baseUrl;
   }
+}
+
+/**
+ * Reads a fetch response body with an active abort signal and strict byte cap.
+ * Ensures stalled response bodies or oversized payloads cannot hang preflight.
+ *
+ * @param {Response} res
+ * @param {AbortSignal} signal
+ * @param {number} maxBytes
+ * @returns {Promise<Buffer>}
+ */
+async function readBoundedBuffer(res, signal, maxBytes) {
+  const contentLengthHeader = res.headers?.get?.('content-length');
+  if (contentLengthHeader !== null && contentLengthHeader !== undefined) {
+    const declaredBytes = Number(contentLengthHeader);
+    if (Number.isFinite(declaredBytes) && declaredBytes > maxBytes) {
+      try {
+        await res.body?.cancel?.();
+      } catch {
+        // Ignore cancel errors
+      }
+      throw new Error(
+        `RESPONSE_BODY_TOO_LARGE: Content-Length (${declaredBytes} bytes) exceeds cap of ${maxBytes} bytes`
+      );
+    }
+  }
+
+  if (res.body && typeof res.body.getReader === 'function') {
+    const reader = res.body.getReader();
+    const chunks = [];
+    let totalBytes = 0;
+
+    const onAbort = () => {
+      reader.cancel().catch(() => {});
+    };
+    signal?.addEventListener?.('abort', onAbort, { once: true });
+
+    try {
+      while (true) {
+        if (signal?.aborted) {
+          throw signal.reason || new Error('Request aborted');
+        }
+        const { done, value } = await reader.read();
+        if (done) break;
+        const buf = Buffer.from(value.buffer, value.byteOffset, value.byteLength);
+        totalBytes += buf.length;
+        if (totalBytes > maxBytes) {
+          await reader.cancel().catch(() => {});
+          throw new Error(
+            `RESPONSE_BODY_TOO_LARGE: Streamed body (${totalBytes} bytes) exceeded cap of ${maxBytes} bytes`
+          );
+        }
+        chunks.push(buf);
+      }
+      return Buffer.concat(chunks, totalBytes);
+    } finally {
+      signal?.removeEventListener?.('abort', onAbort);
+    }
+  }
+
+  // Fallback for custom fetch doubles without ReadableStream
+  const arrayBuf = await res.arrayBuffer();
+  const buf = Buffer.from(arrayBuf);
+  if (buf.length > maxBytes) {
+    throw new Error(
+      `RESPONSE_BODY_TOO_LARGE: Response body (${buf.length} bytes) exceeded cap of ${maxBytes} bytes`
+    );
+  }
+  return buf;
+}
+
+/**
+ * Executes an HTTP GET with an AbortController covering both headers and full body read.
+ *
+ * @param {typeof fetch} fetchFn
+ * @param {string} url
+ * @param {object} options
+ * @param {Record<string, string>} [options.headers]
+ * @param {number} [options.timeoutMs=5000]
+ * @param {number} [options.maxBytes=262144]
+ */
+async function fetchJsonBounded(fetchFn, url, { headers = {}, timeoutMs = 5000, maxBytes = 262144 } = {}) {
+  const controller = new AbortController();
+  let timedOut = false;
+  const timer = setTimeout(() => {
+    timedOut = true;
+    controller.abort(new Error(`Request timed out after ${timeoutMs}ms`));
+  }, timeoutMs);
+
+  try {
+    const res = await fetchFn(url, {
+      method: 'GET',
+      signal: controller.signal,
+      headers: { Accept: 'application/json', ...headers },
+    });
+
+    const rawBuf = await readBoundedBuffer(res, controller.signal, maxBytes);
+    let data = {};
+    if (rawBuf.length > 0) {
+      try {
+        data = JSON.parse(rawBuf.toString('utf8'));
+      } catch {
+        data = {};
+      }
+    }
+
+    return { status: res.status, ok: res.ok, data };
+  } catch (err) {
+    if (timedOut || err?.name === 'AbortError' || err?.name === 'TimeoutError') {
+      throw new Error(`REQUEST_TIMEOUT: GET ${sanitizeUrl(url)} timed out after ${timeoutMs}ms`);
+    }
+    throw err;
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+/**
+ * Validates the `/v1/capabilities` payload fail-closed.
+ * Protected features (`custom_code`, `remote_import`, `tts`, `authoring_adapter`)
+ * MUST be present and explicitly boolean `false`. Missing or non-boolean fields fail closed.
+ *
+ * @param {unknown} caps
+ * @returns {{ valid: boolean; violations: string[] }}
+ */
+export function validateCapabilitiesInvariants(caps) {
+  const violations = [];
+
+  if (!caps || typeof caps !== 'object' || Array.isArray(caps)) {
+    return {
+      valid: false,
+      violations: ['Capabilities response payload must be a non-null JSON object'],
+    };
+  }
+
+  const features = caps.features;
+  if (!features || typeof features !== 'object' || Array.isArray(features)) {
+    violations.push('Capabilities payload is missing required "features" object');
+  } else {
+    for (const { key, envInvariant } of PROTECTED_CAPABILITY_FEATURES) {
+      if (!(key in features)) {
+        violations.push(`Protected capability feature "features.${key}" is missing (${envInvariant})`);
+      } else if (typeof features[key] !== 'boolean') {
+        violations.push(
+          `Protected capability feature "features.${key}" must be explicitly boolean false, got ${typeof features[key]} (${JSON.stringify(features[key])}) (${envInvariant})`
+        );
+      } else if (features[key] !== false) {
+        violations.push(`${envInvariant} (features.${key}=true)`);
+      }
+    }
+  }
+
+  // Also check custom-html-v1 engine if engines is a map
+  if (caps.engines && typeof caps.engines === 'object' && !Array.isArray(caps.engines)) {
+    if ('custom-html-v1' in caps.engines && caps.engines['custom-html-v1'] !== false) {
+      violations.push('Engine "custom-html-v1" must be explicitly disabled (false)');
+    }
+  }
+
+  // Verify required profiles
+  const profiles = caps.profiles;
+  if (!profiles || typeof profiles !== 'object' || Array.isArray(profiles)) {
+    violations.push('Missing required profiles: mp4-720p-v1 and/or preview-360p-v1');
+  } else {
+    const mp4Profile = profiles['mp4-720p-v1'];
+    const previewProfile = profiles['preview-360p-v1'];
+    const hasMp4 = Boolean(mp4Profile && typeof mp4Profile === 'object' && mp4Profile.supported !== false);
+    const hasPreview = Boolean(
+      previewProfile && typeof previewProfile === 'object' && previewProfile.supported !== false
+    );
+
+    if (!hasMp4 || !hasPreview) {
+      violations.push('Missing required profiles: mp4-720p-v1 and/or preview-360p-v1');
+    }
+  }
+
+  return {
+    valid: violations.length === 0,
+    violations,
+  };
+}
+
+/**
+ * Extracts subsystem health from either `/readyz` checks (`'ok'`) or legacy subsystems (`true`).
+ * @param {object} readyzData
+ * @param {'database' | 'storage' | 'renderer'} key
+ * @param {boolean} defaultWhenOk
+ * @returns {'HEALTHY' | 'UNAVAILABLE'}
+ */
+function resolveSubsystemHealth(readyzData, key, defaultWhenOk = false) {
+  if (readyzData && typeof readyzData === 'object') {
+    if (readyzData.checks && typeof readyzData.checks === 'object' && key in readyzData.checks) {
+      const val = readyzData.checks[key];
+      return val === 'ok' || val === true ? 'HEALTHY' : 'UNAVAILABLE';
+    }
+    if (readyzData.subsystems && typeof readyzData.subsystems === 'object' && key in readyzData.subsystems) {
+      const val = readyzData.subsystems[key];
+      return val === true || val === 'ok' ? 'HEALTHY' : 'UNAVAILABLE';
+    }
+  }
+  return defaultWhenOk ? 'HEALTHY' : 'UNAVAILABLE';
 }
 
 /**
@@ -93,25 +301,12 @@ export async function runStagingPreflight(config, options = {}) {
   // ---------------------------------------------------------------------------
   // Check 2: Live API Liveness Probe (GET /healthz)
   // ---------------------------------------------------------------------------
-  let healthzData = null;
   try {
     const healthUrl = `${origin}/healthz`;
-    const controller = new AbortController();
-    const timer = setTimeout(() => controller.abort(), timeoutMs);
-
-    const res = await fetchFn(healthUrl, {
-      method: 'GET',
-      signal: controller.signal,
-      headers: { Accept: 'application/json' },
-    });
-    clearTimeout(timer);
+    const res = await fetchJsonBounded(fetchFn, healthUrl, { timeoutMs });
 
     if (res.ok) {
-      try {
-        healthzData = await res.json();
-      } catch {
-        healthzData = {};
-      }
+      const healthzData = res.data || {};
       dependencies.api = 'HEALTHY';
       checks.push({
         id: 'PRE-02',
@@ -162,27 +357,21 @@ export async function runStagingPreflight(config, options = {}) {
   // ---------------------------------------------------------------------------
   try {
     const readyUrl = `${origin}/readyz`;
-    const controller = new AbortController();
-    const timer = setTimeout(() => controller.abort(), timeoutMs);
+    const res = await fetchJsonBounded(fetchFn, readyUrl, { timeoutMs });
+    const readyzData = res.data || {};
 
-    const res = await fetchFn(readyUrl, {
-      method: 'GET',
-      signal: controller.signal,
-      headers: { Accept: 'application/json' },
-    });
-    clearTimeout(timer);
+    const dbHealth = resolveSubsystemHealth(readyzData, 'database', res.ok);
+    const storageHealth = resolveSubsystemHealth(readyzData, 'storage', res.ok);
+    const rendererHealth = resolveSubsystemHealth(readyzData, 'renderer', res.ok);
 
-    let readyzData = {};
-    try {
-      readyzData = await res.json();
-    } catch {
-      // Non-JSON body
-    }
+    dependencies.database = dbHealth;
+    dependencies.storage = storageHealth;
+    dependencies.renderer = rendererHealth;
 
-    if (res.ok) {
-      dependencies.database = 'HEALTHY';
-      dependencies.storage = 'HEALTHY';
-      dependencies.renderer = 'HEALTHY';
+    const allSubsystemsHealthy =
+      dbHealth === 'HEALTHY' && storageHealth === 'HEALTHY' && rendererHealth === 'HEALTHY';
+
+    if (res.ok && readyzData.status !== 'not_ready' && allSubsystemsHealthy) {
       checks.push({
         id: 'PRE-03',
         title: 'API Readiness Probe (GET /readyz)',
@@ -192,10 +381,6 @@ export async function runStagingPreflight(config, options = {}) {
       });
     } else {
       ready = false;
-      dependencies.database = readyzData?.subsystems?.database ? 'HEALTHY' : 'UNAVAILABLE';
-      dependencies.storage = readyzData?.subsystems?.storage ? 'HEALTHY' : 'UNAVAILABLE';
-      dependencies.renderer = readyzData?.subsystems?.renderer ? 'HEALTHY' : 'UNAVAILABLE';
-
       const msg = `API readiness probe failed with HTTP status ${res.status} (FAIL_CLOSED)`;
       blockers.push(`API_READINESS_FAIL_CLOSED: ${msg}`);
       checks.push({
@@ -204,7 +389,7 @@ export async function runStagingPreflight(config, options = {}) {
         status: 'FAIL',
         httpStatus: res.status,
         error: msg,
-        subsystems: readyzData?.subsystems,
+        subsystems: readyzData?.checks || readyzData?.subsystems,
       });
     }
   } catch (err) {
@@ -224,55 +409,23 @@ export async function runStagingPreflight(config, options = {}) {
   // ---------------------------------------------------------------------------
   try {
     const capsUrl = `${validatedUrl}/capabilities`;
-    const controller = new AbortController();
-    const timer = setTimeout(() => controller.abort(), timeoutMs);
-
-    const headers = { Accept: 'application/json' };
+    const headers = {};
     if (config.apiKeyA) {
       headers['Authorization'] = `Bearer ${config.apiKeyA}`;
     }
 
-    const res = await fetchFn(capsUrl, {
-      method: 'GET',
-      signal: controller.signal,
-      headers,
-    });
-    clearTimeout(timer);
+    const res = await fetchJsonBounded(fetchFn, capsUrl, { headers, timeoutMs });
 
     if (res.ok) {
-      const caps = await res.json();
-      const features = caps.features || {};
+      const caps = res.data;
+      const { valid, violations } = validateCapabilitiesInvariants(caps);
 
-      // Verify custom code and VideoFlow / remote imports are strictly OFF
-      const violations = [];
-      if (features.custom_code === true) {
-        violations.push('CVE_CUSTOM_CODE_ENABLED must be false');
-      }
-      if (features.remote_import === true) {
-        violations.push('CVE_REMOTE_IMPORT_ENABLED must be false');
-      }
-      if (features.tts === true) {
-        violations.push('CVE_TTS_PROVIDER must be disabled');
-      }
-      if (features.authoring_adapter === true) {
-        violations.push('CVE_AUTHORING_PROVIDER must be disabled');
-      }
-
-      // Verify profiles
-      const profiles = caps.profiles || {};
-      const hasMp4 = Boolean(profiles['mp4-720p-v1']);
-      const hasPreview = Boolean(profiles['preview-360p-v1']);
-
-      if (!hasMp4 || !hasPreview) {
-        violations.push('Missing required profiles: mp4-720p-v1 and/or preview-360p-v1');
-      }
-
-      if (violations.length === 0) {
+      if (valid) {
         checks.push({
           id: 'PRE-04',
           title: 'Capabilities & Invariants Guard (GET /v1/capabilities)',
           status: 'PASS',
-          details: `Required profiles present (mp4-720p-v1, preview-360p-v1). Safety invariants satisfied (custom_code=false, remote_import=false, tts=false, authoring=false).`,
+          details: `Required profiles present (mp4-720p-v1, preview-360p-v1). Safety invariants satisfied (custom_code=false, remote_import=false, tts=false, authoring_adapter=false).`,
         });
       } else {
         ready = false;

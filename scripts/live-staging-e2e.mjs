@@ -161,7 +161,11 @@ async function main() {
     if (result.stages && result.stages.length > 0) {
       process.stdout.write('\nExecuted Verification Stages:\n');
       for (const stage of result.stages) {
-        const mark = stage.passed ? '[PASS]' : '[FAIL]';
+        const mark = stage.passed
+          ? '[PASS]'
+          : stage.status === 'BLOCKED'
+          ? '[BLOCKED]'
+          : '[FAIL]';
         process.stdout.write(`  ${mark} ${stage.id}: ${stage.title} (${stage.durationMs}ms)\n`);
         if (stage.error) {
           process.stdout.write(`         Error: ${stage.error}\n`);
@@ -172,7 +176,8 @@ async function main() {
     process.stdout.write('\n' + '='.repeat(70) + '\n\n');
   }
 
-  if (result.status === 'PASS' || result.ready === true) {
+  const passed = preflightOnly ? result.ready === true : result.status === 'PASS';
+  if (passed) {
     process.exit(0);
   } else if (result.status === 'NOT_READY' || result.ready === false) {
     process.exit(2);
