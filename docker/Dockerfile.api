@@ -8,6 +8,7 @@ WORKDIR /app
 RUN corepack enable && corepack prepare pnpm@12.16.1 --activate
 
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml tsconfig.base.json tsconfig.json ./
+COPY migrations ./migrations
 COPY packages/contracts/package.json packages/contracts/tsconfig*.json ./packages/contracts/
 COPY packages/contracts/src ./packages/contracts/src
 COPY packages/api/package.json packages/api/tsconfig*.json ./packages/api/
@@ -29,12 +30,13 @@ ENV CVE_ENV=development
 RUN corepack enable && corepack prepare pnpm@12.16.1 --activate
 
 COPY --from=builder /app/package.json /app/pnpm-lock.yaml /app/pnpm-workspace.yaml ./
+COPY --from=builder /app/migrations ./migrations
 COPY --from=builder /app/packages/contracts/package.json ./packages/contracts/
 COPY --from=builder /app/packages/contracts/dist ./packages/contracts/dist
 COPY --from=builder /app/packages/api/package.json ./packages/api/
 COPY --from=builder /app/packages/api/dist ./packages/api/dist
 
-RUN pnpm install --frozen-lockfile --prod
+RUN chmod 0555 /app/migrations && chmod 0444 /app/migrations/* && pnpm install --frozen-lockfile --prod
 
 USER node
 

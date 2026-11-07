@@ -114,10 +114,24 @@ export interface MigrationAuditReport {
   errors: string[];
 }
 
-export function resolveDefaultMigrationsDir(): string {
+export function resolveDefaultMigrationsDir(
+  rawEnv: Record<string, string | undefined> = process.env,
+): string {
+  const envDir = rawEnv['CVE_MIGRATIONS_DIR']?.trim();
+  if (envDir) {
+    return path.resolve(envDir);
+  }
   const currentDir = path.dirname(fileURLToPath(import.meta.url));
-  // packages/api/dist/db or packages/api/src/db -> repo root /migrations
-  return path.resolve(currentDir, '../../../../migrations');
+  // packages/api/dist/db or packages/api/src/db -> repo/app root /migrations
+  const relativeRootCandidate = path.resolve(currentDir, '../../../../migrations');
+  if (fs.existsSync(path.join(relativeRootCandidate, 'manifest.json'))) {
+    return relativeRootCandidate;
+  }
+  const cwdCandidate = path.resolve(process.cwd(), 'migrations');
+  if (fs.existsSync(path.join(cwdCandidate, 'manifest.json'))) {
+    return cwdCandidate;
+  }
+  return relativeRootCandidate;
 }
 
 export function sha256File(filePath: string): string {
@@ -140,8 +154,41 @@ export function auditPostgresMigrations(
   migrationsDir = resolveDefaultMigrationsDir(),
 ): MigrationAuditReport {
   const errors: string[] = [];
-  const manifest = loadMigrationManifest(migrationsDir);
   const verifiedMigrations: MigrationAuditReport['verifiedMigrations'] = [];
+
+  const manifestPath = path.join(migrationsDir, 'manifest.json');
+  if (!fs.existsSync(manifestPath)) {
+    return {
+      valid: false,
+      migrationsDir,
+      verifiedMigrations: [],
+      tableCount: 0,
+      rlsEnabledCount: 0,
+      rlsForcedCount: 0,
+      rolesVerified: [],
+      errors: [`Missing migration manifest: ${manifestPath}`],
+    };
+  }
+
+  let manifest: MigrationManifest;
+  try {
+    manifest = loadMigrationManifest(migrationsDir);
+  } catch (err) {
+    return {
+      valid: false,
+      migrationsDir,
+      verifiedMigrations: [],
+      tableCount: 0,
+      rlsEnabledCount: 0,
+      rlsForcedCount: 0,
+      rolesVerified: [],
+      errors: [
+        `Failed to parse migration manifest at ${manifestPath}: ${
+          err instanceof Error ? err.message : String(err)
+        }`,
+      ],
+    };
+  }
 
   if (manifest.system_catalog_sentinel_tenant_id !== SYSTEM_CATALOG_TENANT_ID) {
     errors.push(
@@ -180,14 +227,23 @@ export function auditPostgresMigrations(
     });
   }
 
-  const up0001Sql = fs.readFileSync(
-    path.join(migrationsDir, '0001_tenant_foundation.up.sql'),
-    'utf8',
-  );
-  const down0001Sql = fs.readFileSync(
-    path.join(migrationsDir, '0001_tenant_foundation.down.sql'),
-    'utf8',
-  );
+  const up0001Path = path.join(migrationsDir, '0001_tenant_foundation.up.sql');
+  const down0001Path = path.join(migrationsDir, '0001_tenant_foundation.down.sql');
+  if (!fs.existsSync(up0001Path) || !fs.existsSync(down0001Path)) {
+    return {
+      valid: false,
+      migrationsDir,
+      verifiedMigrations,
+      tableCount: Array.isArray(manifest.tables) ? manifest.tables.length : 0,
+      rlsEnabledCount: 0,
+      rlsForcedCount: 0,
+      rolesVerified: [],
+      errors,
+    };
+  }
+
+  const up0001Sql = fs.readFileSync(up0001Path, 'utf8');
+  const down0001Sql = fs.readFileSync(down0001Path, 'utf8');
 
   // Verify all 21 tables exist in manifest and in 0001 up/down SQL
   const manifestTableNames = manifest.tables.map((t) => t.table);
