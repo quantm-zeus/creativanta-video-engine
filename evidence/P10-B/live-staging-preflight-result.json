@@ -1,0 +1,29 @@
+{
+  "ready": false,
+  "status": "NOT_READY",
+  "timestamp": "2026-11-07T05:32:50.277Z",
+  "targetUrl": "http://127.0.0.1:8080/v1",
+  "dependencies": {
+    "api": "UNAVAILABLE",
+    "database": "UNAVAILABLE",
+    "storage": "UNAVAILABLE",
+    "renderer": "UNAVAILABLE"
+  },
+  "checks": [
+    {
+      "id": "PRE-01",
+      "title": "Target Endpoint Safety & Loopback/Private Restriction",
+      "status": "PASS",
+      "details": "Target URL \"http://127.0.0.1:8080/v1\" is verified loopback or approved private internal domain. Public/production targets denied."
+    },
+    {
+      "id": "PRE-02",
+      "title": "API Liveness Probe (GET /healthz)",
+      "status": "FAIL",
+      "error": "API service unreachable at http://127.0.0.1:8080/ (fetch failed)"
+    }
+  ],
+  "blockers": [
+    "API_SERVICE_UNAVAILABLE: API service unreachable at http://127.0.0.1:8080/ (fetch failed)"
+  ]
+}
