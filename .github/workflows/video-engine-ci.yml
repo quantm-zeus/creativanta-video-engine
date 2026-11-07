@@ -49,3 +49,5 @@ jobs:
               exit 1
             fi
           fi
+      - name: Verify real API process fails closed without backend
+        run: node scripts/api-real-process-smoke.mjs

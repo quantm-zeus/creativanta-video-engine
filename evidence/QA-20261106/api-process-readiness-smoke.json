@@ -1,0 +1,14 @@
+{
+  "probe": "API_REAL_PROCESS_LOOPBACK",
+  "result": "PASS_FAIL_CLOSED",
+  "live_e2e": false,
+  "production_release_authorized": false,
+  "api_process_started": true,
+  "bind": "127.0.0.1",
+  "healthz": 200,
+  "readyz": 503,
+  "reason": "TENANT_REPOSITORY_NOT_CONFIGURED",
+  "custom_code_enabled": false,
+  "remote_import_enabled": false,
+  "note": "The real API process is NOT ready for authenticated jobs. Fix backend and external dependencies before release."
+}

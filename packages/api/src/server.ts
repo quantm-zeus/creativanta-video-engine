@@ -121,6 +121,14 @@ export interface CreateServerOptions {
   clock?: () => Date;
   allowLoopbackForTesting?: boolean;
   allowCustomPortForTesting?: boolean;
+  readinessProbe?: () => DependencyReadiness | Promise<DependencyReadiness>;
+}
+
+/** Each boolean MUST come from an actual live dependency check, not a configured name. */
+export interface DependencyReadiness {
+  database: boolean;
+  storage: boolean;
+  renderer: boolean;
 }
 
 const IDEMPOTENCY_KEY_REGEX = /^[A-Za-z0-9._:-]{1,128}$/;
@@ -315,6 +323,7 @@ export function createServer({
   clock: providedClock,
   allowLoopbackForTesting = false,
   allowCustomPortForTesting = false,
+  readinessProbe,
 }: CreateServerOptions): http.Server {
   const startTime = Date.now();
   const clock = providedClock ?? (() => new Date());
@@ -375,18 +384,43 @@ export function createServer({
       return;
     }
 
-    // Readiness probe
+    // Readiness is fail-closed: liveness is not proof of a usable API.
+    // In particular, the stock entrypoint does not yet wire TenantRepository
+    // and cannot serve authenticated jobs. No probe means NOT READY.
     if (pathname === '/readyz' && method === 'GET') {
-      res.writeHead(200);
+      const checks: Record<keyof DependencyReadiness, 'ok' | 'unavailable' | 'unverified'> = {
+        database: repository ? 'unverified' : 'unavailable',
+        storage: 'unverified',
+        renderer: 'unverified',
+      };
+      let reason: string | undefined = repository
+        ? 'READINESS_PROBE_NOT_CONFIGURED'
+        : 'TENANT_REPOSITORY_NOT_CONFIGURED';
+
+      if (repository && readinessProbe) {
+        try {
+          const probed = await readinessProbe();
+          checks.database = probed.database === true ? 'ok' : 'unavailable';
+          checks.storage = probed.storage === true ? 'ok' : 'unavailable';
+          checks.renderer = probed.renderer === true ? 'ok' : 'unavailable';
+          reason = Object.values(checks).every((v) => v === 'ok')
+            ? undefined
+            : 'DEPENDENCY_UNAVAILABLE';
+        } catch {
+          // A failing probe must not leak credentials or internal details.
+          reason = 'READINESS_PROBE_FAILED';
+        }
+      }
+
+      const ready = reason === undefined;
+      res.setHeader('Cache-Control', 'no-store');
+      res.writeHead(ready ? 200 : 503);
       res.end(
         JSON.stringify({
-          status: 'ready',
+          status: ready ? 'ready' : 'not_ready',
           service: 'creativanta-video-engine-api',
-          checks: {
-            database: 'ok',
-            storage: 'ok',
-            renderer: config.CVE_RENDERER_ADAPTER,
-          },
+          checks,
+          ...(reason ? { reason } : {}),
           timestamp: new Date().toISOString(),
         }),
       );
